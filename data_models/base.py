@@ -22,10 +22,12 @@ import json
 import os
 import sys
 import uuid
-from typing import Any, TypeVar, Self
+
+from typing import Any, Self, TypeVar
 
 from icecream import ic
 from pydantic import BaseModel
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,31 +46,30 @@ class IndalekoBaseModel(BaseModel):
     """
 
     def serialize(self) -> dict[str, Any]:
-        """Serialize the object to a dictionary"""
+        """Serialize the object to a dictionary."""
         return self.model_dump(mode="json", exclude_unset=True, exclude_none=True)
 
     @classmethod
-    def deserialize(cls: type[T], data: dict[str, Any]) -> T:
-        """Deserialize the object from a dictionary"""
+    def deserialize(cls, data: dict[str, Any]) -> Self:
+        """Deserialize the object from a dictionary."""
         if isinstance(data, str):
             return cls(**json.loads(data))
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             return cls(**data)
-        else:
-            raise ValueError(f"Expected str or dict, got {type(data)}")
+        raise ValueError(f"Expected str or dict, got {type(data)}")
 
     @classmethod
-    def get_json_example(cls: type[T]) -> dict:
-        """This will return a JSON compatible encoding as a python dictionary"""
+    def get_json_example(cls) -> dict:
+        """This will return a JSON compatible encoding as a python dictionary."""
         return json.loads(
             cls(**cls.Config.json_schema_extra["example"]).model_dump_json(),
         )
 
     @classmethod
-    def get_example(cls: type[T]) -> T:
+    def get_example(cls) -> Self:
         return cls(**cls.get_json_example())
 
-    def build_arangodb_doc(self, _key: uuid.UUID = None) -> dict:
+    def build_arangodb_doc(self, _key: uuid.UUID | None = None) -> dict:
         """
         Builds a dictionary that can be used to insert the data into ArangoDB.
         If a key is provided, it will be used, otherwise a random UUID is generated.
@@ -105,7 +106,6 @@ class IndalekoBaseModel(BaseModel):
         data = cls.get_example()
         ic(data)
         ic(dir(data))
-        print(data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True))
         serial_data = data.serialize()
         data_check = cls.deserialize(serial_data)
         assert data_check == data

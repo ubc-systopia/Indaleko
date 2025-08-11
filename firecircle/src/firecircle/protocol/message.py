@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import enum
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -99,7 +100,7 @@ class Message(BaseModel):
 
     # Add validators to ensure proper formatting
     @validator("entity_id")
-    def entity_id_must_be_valid(cls, v):
+    def entity_id_must_be_valid(self, v):
         """Ensure entity_id is a valid UUID string."""
         try:
             uuid.UUID(v)
@@ -108,7 +109,7 @@ class Message(BaseModel):
             raise ValueError("entity_id must be a valid UUID string")
 
     @validator("references")
-    def references_must_be_valid(cls, v):
+    def references_must_be_valid(self, v):
         """Ensure all references are valid UUID strings."""
         for ref in v:
             try:

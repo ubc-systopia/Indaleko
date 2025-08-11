@@ -24,6 +24,7 @@ import sys
 
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.music.music_data_model import AmbientMusicData
+
 
 # pylint: enable=wrong-import-position
 
@@ -128,7 +130,7 @@ class SpotifyAmbientData(AmbientMusicData):
     )
 
     class Config:
-        """Configuration and example data for the Spotify ambient data model"""
+        """Configuration and example data for the Spotify ambient data model."""
 
         json_schema_extra = {
             "example": {
@@ -152,9 +154,8 @@ class SpotifyAmbientData(AmbientMusicData):
         }
 
 
-def main():
-    """This allows testing the data models"""
-    print("\nTesting Spotify-specific Ambient Data Model:")
+def main() -> None:
+    """This allows testing the data models."""
     SpotifyAmbientData.test_model_main()
 
 

@@ -27,8 +27,10 @@ import os
 import sys
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+
 
 # Set logging level
 logging.basicConfig(level=logging.INFO)
@@ -59,8 +61,8 @@ try:
 
     # pylint: enable=wrong-import-position
 except ImportError as e:
-    logger.error(f"Import error: {e}")
-    logger.error("This test module requires specific Python packages.")
+    logger.exception(f"Import error: {e}")
+    logger.exception("This test module requires specific Python packages.")
     sys.exit(1)
 
 
@@ -143,8 +145,8 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         expected_hash = mock_md5_instance.hexdigest.return_value[:8]
         expected_collection_name = f"NtfsStorageActivity_{expected_hash}"
 
-        self.assertEqual(recorder._collection_name, expected_collection_name)
-        self.assertEqual(recorder._recorder_id, recorder_id)
+        assert recorder._collection_name == expected_collection_name
+        assert recorder._recorder_id == recorder_id
 
         # Verify service registration was attempted
         mock_register.assert_called_once()
@@ -178,7 +180,7 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         recorder.store_activities.assert_called_once_with(self.mock_activities)
 
         # Verify correct number of activity IDs returned
-        self.assertEqual(len(activity_ids), 5)
+        assert len(activity_ids) == 5
 
     @patch("activity.recorders.storage.base.StorageActivityRecorder._connect_to_db")
     @patch(
@@ -219,14 +221,14 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
             document = recorder._build_ntfs_activity_document(test_activity)
 
             # Verify document structure
-            self.assertIn("Record", document)
-            self.assertIn("Data", document["Record"])
-            self.assertIn("timestamp", document["Record"]["Data"])
-            self.assertIn("file_name", document["Record"]["Data"])
-            self.assertIn("file_path", document["Record"]["Data"])
+            assert "Record" in document
+            assert "Data" in document["Record"]
+            assert "timestamp" in document["Record"]["Data"]
+            assert "file_name" in document["Record"]["Data"]
+            assert "file_path" in document["Record"]["Data"]
 
             # Verify semantic attributes were added
-            self.assertIn("SemanticAttributes", document)
+            assert "SemanticAttributes" in document
 
             # Verify NTFS-specific attribute was added
             ntfs_attr_found = False
@@ -235,7 +237,7 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
                     ntfs_attr_found = True
                     break
 
-            self.assertTrue(ntfs_attr_found)
+            assert ntfs_attr_found
 
     @patch("activity.recorders.storage.base.StorageActivityRecorder._connect_to_db")
     @patch(
@@ -267,7 +269,7 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         )
 
         # Verify timezone is added during validation
-        self.assertIsNotNone(test_activity.timestamp.tzinfo)
+        assert test_activity.timestamp.tzinfo is not None
 
         # Build document
         with patch(
@@ -277,8 +279,8 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
 
             # Verify timestamp in document has timezone info
             doc_timestamp = document["Record"]["Data"]["timestamp"]
-            self.assertIsInstance(doc_timestamp, datetime)
-            self.assertIsNotNone(doc_timestamp.tzinfo)
+            assert isinstance(doc_timestamp, datetime)
+            assert doc_timestamp.tzinfo is not None
 
     @patch("activity.recorders.storage.base.StorageActivityRecorder._connect_to_db")
     @patch(
@@ -287,7 +289,7 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
     def test_no_db_mode(self, mock_register, mock_connect):
         """Test recorder operation in no_db mode."""
         # Create recorder with no_db=True
-        recorder = NtfsStorageActivityRecorder(
+        NtfsStorageActivityRecorder(
             collector=self.mock_collector,
             no_db=True,
         )
@@ -314,15 +316,9 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         characteristics = recorder.get_recorder_characteristics()
 
         # Verify characteristics
-        self.assertTrue(
-            any("ACTIVITY_DATA_SYSTEM_ACTIVITY" in str(char) for char in characteristics),
-        )
-        self.assertTrue(
-            any("ACTIVITY_DATA_FILE_ACTIVITY" in str(char) for char in characteristics),
-        )
-        self.assertTrue(
-            any("ACTIVITY_DATA_WINDOWS_SPECIFIC" in str(char) for char in characteristics),
-        )
+        assert any("ACTIVITY_DATA_SYSTEM_ACTIVITY" in str(char) for char in characteristics)
+        assert any("ACTIVITY_DATA_FILE_ACTIVITY" in str(char) for char in characteristics)
+        assert any("ACTIVITY_DATA_WINDOWS_SPECIFIC" in str(char) for char in characteristics)
 
     @patch("activity.recorders.storage.base.StorageActivityRecorder._connect_to_db")
     @patch(
@@ -343,10 +339,10 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         recorder = NtfsStorageActivityRecorder(no_db=True)
 
         # Verify collector class was called twice (first fails, second succeeds)
-        self.assertEqual(mock_collector_class.call_count, 2)
+        assert mock_collector_class.call_count == 2
 
         # Verify we have a collector
-        self.assertIsNotNone(recorder._ntfs_collector)
+        assert recorder._ntfs_collector is not None
 
 
 def main():

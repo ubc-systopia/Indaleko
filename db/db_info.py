@@ -30,11 +30,13 @@ import os
 # import argparse
 import sys
 import threading
+
 from typing import Any
 
 # from arango import ArangoClient
 # import requests
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,13 +51,12 @@ from data_models.db_statistics import IndalekoDBStatisticsDataModel
 from db import IndalekoDBConfig
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoDBInfo:
-    """
-    Class used to obtain information about the database
-    """
+    """Class used to obtain information about the database."""
 
     __db_info_semantic_attributes = {
         "DATABASE_TYPE": "f73abb61-858a-4949-9868-f1b82181f08d",
@@ -76,18 +77,14 @@ class IndalekoDBInfo:
 
     @classmethod
     def get_name_from_uuid(cls: "IndalekoDBInfo", uuid: str) -> str:
-        """
-        Get the name corresponding to a UUID
-        """
+        """Get the name corresponding to a UUID."""
         if not cls.__uuid_to_name:
             cls.__init_semantic_labels()
         return cls.__uuid_to_name.get(uuid, None)
 
     @classmethod
     def __init_semantic_labels(cls: "IndalekoDBInfo") -> None:
-        """
-        Initialize the semantic labels
-        """
+        """Initialize the semantic labels."""
         with cls.__init_lock:
             if not cls.__uuid_to_name:
                 for key, value in cls.__db_info_semantic_attributes.items():
@@ -95,9 +92,7 @@ class IndalekoDBInfo:
                     cls.__uuid_to_name[value] = key
 
     def __init__(self, **kwargs: dict[str, Any]) -> None:
-        """
-        Constructor
-        """
+        """Constructor."""
         self.__init_semantic_labels()
         db_config_file = kwargs.get(
             "db_config_file",
@@ -113,9 +108,7 @@ class IndalekoDBInfo:
         )
 
     def get_collections(self) -> list[str]:
-        """
-        Get the collections from the database
-        """
+        """Get the collections from the database."""
         collections = self.db_config._arangodb.collections()
         return [collection["name"] for collection in collections if not collection["name"].startswith("_")]
 
@@ -223,7 +216,7 @@ class IndalekoDBInfo:
         )
 
 
-def main():
+def main() -> None:
     """Main entry point for grabbing the database information."""
     db_info = IndalekoDBInfo()
     db_data = db_info.get_db_info_data()

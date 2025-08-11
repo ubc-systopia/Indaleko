@@ -12,7 +12,9 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
+
 
 # Set up environment variables
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -30,8 +32,7 @@ try:
     from query.query_processing.query_history import QueryHistory
     from query.query_processing.query_translator.aql_translator import AQLTranslator
     from query.utils.llm_connector.openai_connector import OpenAIConnector
-except ImportError as e:
-    print(f"Failed to import required modules: {e}")
+except ImportError:
     sys.exit(1)
 
 # Set up logging
@@ -169,7 +170,7 @@ def process_query(
             "recorded_in_history": True,
         }
     except Exception as e:
-        logger.error(f"Error processing query '{query}': {e}")
+        logger.exception(f"Error processing query '{query}': {e}")
         return {
             "query": query,
             "success": False,
@@ -249,7 +250,7 @@ def run_all_tests() -> dict[str, list[dict[str, Any]]]:
         return results
 
     except Exception as e:
-        logger.error(f"Error initializing components: {e}")
+        logger.exception(f"Error initializing components: {e}")
         return {"error": str(e)}
 
 
@@ -260,7 +261,7 @@ def save_results(results: dict[str, list[dict[str, Any]]], output_file: str) -> 
             json.dump(results, f, indent=2)
         logger.info(f"Results saved to {output_file}")
     except Exception as e:
-        logger.error(f"Error saving results to {output_file}: {e}")
+        logger.exception(f"Error saving results to {output_file}: {e}")
 
 
 def main():
@@ -285,26 +286,19 @@ def main():
     save_results(results, args.output)
 
     # Print summary
-    total_queries = sum(len(queries) for queries in TEST_QUERIES.values())
-    successful_queries = sum(
+    sum(len(queries) for queries in TEST_QUERIES.values())
+    sum(
         sum(1 for result in category if result.get("success", False))
         for category, category_results in results.items()
         if isinstance(category_results, list)
     )
 
-    recorded_in_history = sum(
+    sum(
         sum(1 for result in category if result.get("recorded_in_history", False))
         for category, category_results in results.items()
         if isinstance(category_results, list)
     )
 
-    print("\nTest Summary:")
-    print(f"Total queries: {total_queries}")
-    print(f"Successful queries: {successful_queries}")
-    print(f"Success rate: {successful_queries / total_queries * 100:.2f}%")
-    print(f"Queries recorded in history: {recorded_in_history}")
-    print(f"Recording rate: {recorded_in_history / total_queries * 100:.2f}%")
-    print(f"Detailed results saved to: {args.output}")
 
 
 if __name__ == "__main__":

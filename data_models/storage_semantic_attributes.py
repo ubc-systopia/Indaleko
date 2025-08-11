@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from enum import Enum
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,9 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class StorageSemanticAttributes(str, Enum):
-    """
-    This class defines the data model for the Indaleko storage semantic attributes.
-    """
+    """This class defines the data model for the Indaleko storage semantic attributes."""
 
     STORAGE_ATTRIBUTES_DEVICE = "3fa47f24-b198-434d-b440-119ec5af4f7d"  # st_dev
     STORAGE_ATTRIBUTES_GID = "64ec8b5a-78ba-4787-ba8d-cb033ec24116"  # st_gid

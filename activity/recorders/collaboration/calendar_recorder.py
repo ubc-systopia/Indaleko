@@ -27,7 +27,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,6 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# Indaleko imports
+from Indaleko import Indaleko
 from activity.collectors.collaboration.calendar.google_calendar import (
     GoogleCalendarCollector,
 )
@@ -71,9 +75,6 @@ from data_models.activity_data_registration import (
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
-# Indaleko imports
-from Indaleko import Indaleko
-
 
 class CalendarRecorder(RecorderBase):
     """Calendar event recorder for Indaleko.
@@ -82,7 +83,7 @@ class CalendarRecorder(RecorderBase):
     Outlook Calendar) into the Indaleko database.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the calendar recorder.
 
         Args:
@@ -165,7 +166,7 @@ class CalendarRecorder(RecorderBase):
                 self._collection = provider_collection.collection
 
         except Exception as e:
-            self.logger.error(f"Error ensuring collection exists: {e}")
+            self.logger.exception(f"Error ensuring collection exists: {e}")
             raise
 
     def get_recorder_characteristics(self) -> list[str]:
@@ -223,7 +224,7 @@ class CalendarRecorder(RecorderBase):
                         processing_time,
                     )
             except Exception as e:
-                self.logger.error(f"Error parsing cursor: {e}")
+                self.logger.exception(f"Error parsing cursor: {e}")
 
     def _create_semantic_attributes(
         self,
@@ -461,7 +462,7 @@ class CalendarRecorder(RecorderBase):
                 stored_count += 1
 
             except Exception as e:
-                self.logger.error(f"Error storing event {event.event_id}: {e}")
+                self.logger.exception(f"Error storing event {event.event_id}: {e}")
 
         self.logger.info(f"Stored {stored_count} calendar events")
 
@@ -497,7 +498,7 @@ class CalendarRecorder(RecorderBase):
                     # Try to create Google Calendar collector
                     collector = GoogleCalendarCollector(**kwargs)
                 except ImportError:
-                    self.logger.error(
+                    self.logger.exception(
                         "Google API libraries not available. Please install required packages.",
                     )
                     return 0
@@ -537,11 +538,10 @@ class CalendarRecorder(RecorderBase):
         """
         if isinstance(data, list) and all(isinstance(event, CalendarEvent) for event in data):
             return data
-        else:
-            self.logger.error(
-                "Invalid data format. Expected list of CalendarEvent objects.",
-            )
-            return []
+        self.logger.error(
+            "Invalid data format. Expected list of CalendarEvent objects.",
+        )
+        return []
 
     def store_data(self, data: list[CalendarEvent]) -> None:
         """Store processed data in the database.
@@ -616,7 +616,7 @@ class CalendarRecorder(RecorderBase):
             )
 
         except Exception as e:
-            self.logger.error(f"Error registering with service manager: {e}")
+            self.logger.exception(f"Error registering with service manager: {e}")
 
     def get_latest_db_update(self) -> datetime.datetime:
         """Get the timestamp of the latest database update.
@@ -690,5 +690,5 @@ class CalendarRecorder(RecorderBase):
             return list(cursor)
 
         except Exception as e:
-            self.logger.error(f"Error querying calendar events: {e}")
+            self.logger.exception(f"Error querying calendar events: {e}")
             return []

@@ -29,12 +29,13 @@ import os
 import struct
 import sys
 import time
+
 from ctypes import wintypes
 from datetime import UTC, datetime
 
+
 # Make sure we're on Windows
 if not sys.platform.startswith("win"):
-    print("This script only works on Windows")
     sys.exit(1)
 
 # Windows API constants
@@ -213,7 +214,6 @@ def read_usn_journal(handle, journal_id, start_usn, verbose=False):
     )
     if not success:
         error = ctypes.get_last_error()
-        print(f"DeviceIoControl failed with Win32 error code: {error}")
         raise ctypes.WinError(error)
 
     return buffer, bytes_returned.value
@@ -230,15 +230,15 @@ def parse_usn_record(buffer, offset, bytes_returned, verbose=False):
 
     # Read fields manually to avoid alignment issues
     try:
-        major_version = struct.unpack_from("<H", buffer, offset + 4)[0]
-        minor_version = struct.unpack_from("<H", buffer, offset + 6)[0]
+        struct.unpack_from("<H", buffer, offset + 4)[0]
+        struct.unpack_from("<H", buffer, offset + 6)[0]
         file_ref_num = struct.unpack_from("<Q", buffer, offset + 8)[0]
         parent_ref_num = struct.unpack_from("<Q", buffer, offset + 16)[0]
         usn = struct.unpack_from("<Q", buffer, offset + 24)[0]
         timestamp = struct.unpack_from("<Q", buffer, offset + 32)[0]
         reason = struct.unpack_from("<I", buffer, offset + 40)[0]
-        source_info = struct.unpack_from("<I", buffer, offset + 44)[0]
-        security_id = struct.unpack_from("<I", buffer, offset + 48)[0]
+        struct.unpack_from("<I", buffer, offset + 44)[0]
+        struct.unpack_from("<I", buffer, offset + 48)[0]
         file_attributes = struct.unpack_from("<I", buffer, offset + 52)[0]
         file_name_length = struct.unpack_from("<H", buffer, offset + 56)[0]
         file_name_offset = struct.unpack_from("<H", buffer, offset + 58)[0]
@@ -296,8 +296,7 @@ def parse_usn_record(buffer, offset, bytes_returned, verbose=False):
         }
 
         return record, offset + record_length
-    except Exception as e:
-        print(f"Error parsing record at offset {offset}: {e}")
+    except Exception:
         return None, offset + (record_length if record_length > 0 else 4)
 
 
@@ -329,11 +328,11 @@ def create_test_files(volume, num_files=3, verbose=False):
         created_files.append(filepath)
 
         if verbose:
-            print(f"Created test file: {filepath}")
+            pass
 
         # Also read the file to generate read activity
         with open(filepath) as f:
-            content = f.read()
+            f.read()
 
         # And modify it to generate write activity
         with open(filepath, "a") as f:
@@ -356,7 +355,7 @@ def create_test_files(volume, num_files=3, verbose=False):
         created_files.append(new_name)
 
         if verbose:
-            print(f"Created and renamed file: {orig_name} -> {new_name}")
+            pass
 
     return created_files
 
@@ -380,7 +379,7 @@ def check_usn_journal_status(volume, verbose=False):
     if result.returncode == 0:
         output = result.stdout.strip()
         if verbose:
-            print(result.stdout)
+            pass
 
         # Parse output into a dictionary
         info = {}
@@ -390,12 +389,10 @@ def check_usn_journal_status(volume, verbose=False):
                 info[key.strip()] = value.strip()
 
         return info
-    else:
-        print(f"fsutil error: {result.stderr}")
-        return None
+    return None
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="USN Journal Reader using ctypes")
     parser.add_argument(
         "--volume",
@@ -439,27 +436,18 @@ def main():
 
     # Check administrator privileges
     if not is_admin():
-        print("This script requires administrator privileges.")
-        print("Please run as administrator and try again.")
         return
 
     # Check USN journal status with fsutil if requested
     if args.fsutil:
-        print("\n=== USN Journal Status via fsutil ===")
         fsutil_info = check_usn_journal_status(args.volume, args.verbose)
         if fsutil_info:
-            print("\nUSN Journal Information from fsutil:")
-            for key, value in fsutil_info.items():
-                print(f"  {key}: {value}")
-        print()
+            for _key, _value in fsutil_info.items():
+                pass
 
     # Create test files if requested
     if args.create_test_files:
-        print(
-            f"Creating test files on volume {args.volume} to generate USN activity...",
-        )
-        created_files = create_test_files(args.volume, 3, args.verbose)
-        print(f"Created {len(created_files)} test files")
+        create_test_files(args.volume, 3, args.verbose)
 
         # Sleep briefly to allow USN journal to update
         time.sleep(1)
@@ -469,20 +457,14 @@ def main():
         args.volume = f"{args.volume}:"
 
     volume_path = f"\\\\.\\{args.volume}"
-    print(f"Opening volume {volume_path}")
 
     try:
         # Open volume handle
         handle = get_volume_handle(volume_path)
-        print("Successfully opened volume")
 
         try:
             # Query USN journal
             journal_data = query_usn_journal(handle, args.verbose)
-            print(f"Journal ID: {journal_data.UsnJournalID}")
-            print(f"First USN: {journal_data.FirstUsn}")
-            print(f"Next USN: {journal_data.NextUsn}")
-            print(f"Lowest Valid USN: {journal_data.LowestValidUsn}")
 
             # Determine start USN
             start_usn = args.start_usn
@@ -492,21 +474,17 @@ def main():
                     journal_data.LowestValidUsn,
                     journal_data.NextUsn - 100000,
                 )
-                print(f"Using calculated start USN: {start_usn}")
 
             # Read journal records
-            print(f"Reading USN journal records from USN {start_usn}")
             buffer, bytes_returned = read_usn_journal(
                 handle,
                 journal_data.UsnJournalID,
                 start_usn,
                 args.verbose,
             )
-            print(f"Read {bytes_returned} bytes from USN journal")
 
             # First 8 bytes is NextUSN
-            next_usn = struct.unpack_from("<Q", buffer, 0)[0]
-            print(f"Next USN from data: {next_usn}")
+            struct.unpack_from("<Q", buffer, 0)[0]
 
             # Parse records
             records = []
@@ -521,13 +499,9 @@ def main():
                 if record:
                     records.append(record)
 
-            print(f"Found {len(records)} records")
 
             # Limit records if needed
             if len(records) > args.limit:
-                print(
-                    f"Limiting output to {args.limit} records (out of {len(records)})",
-                )
                 records = records[: args.limit]
 
             # Build journal info dictionary for output
@@ -550,25 +524,18 @@ def main():
                     record["record_type"] = "usn_record"
                     f.write(json.dumps(record) + "\n")
 
-            print(f"Saved {len(records)} records to {args.output}")
 
             # Print a few sample records
             if records:
-                print("\nSample Records:")
-                for i, record in enumerate(records[:5]):
-                    print(f"\nRecord {i+1}:")
-                    print(f"  USN: {record['usn']}")
-                    print(f"  File: {record['file_name']}")
-                    print(f"  Reason: {record['reason_text']}")
-                    print(f"  Timestamp: {record['timestamp']}")
-                    print(f"  Attributes: {record['file_attributes_text']}")
+                for _i, record in enumerate(records[:5]):
+                    pass
 
         finally:
             # Close volume handle
             ctypes.windll.kernel32.CloseHandle(handle)
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

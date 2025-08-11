@@ -6,22 +6,20 @@ with OpenAI's API, allowing integration with GPT models and other OpenAI service
 """
 
 import json
+
 from typing import Any, Dict, List, Optional
+
 
 try:
     import openai
+
     from openai import OpenAI
 
     HAS_OPENAI = True
 except ImportError:
     HAS_OPENAI = False
 
-from ..base import (
-    FireCircleMessage,
-    FireCircleRequest,
-    FireCircleResponse,
-    ModelAdapter,
-)
+from adapters.base import FireCircleMessage, FireCircleRequest, FireCircleResponse, ModelAdapter
 
 
 class OpenAIAdapter(ModelAdapter):
@@ -32,7 +30,7 @@ class OpenAIAdapter(ModelAdapter):
         model: str = "gpt-4o",
         api_key: str | None = None,
         organization: str | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new OpenAI adapter.
 

@@ -27,9 +27,11 @@ import os
 import socket
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from textwrap import dedent
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -78,7 +80,7 @@ class StorageActivityRecorder(RecorderBase):
     class and implement the provider-specific logic.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the storage activity recorder.
 
@@ -105,10 +107,10 @@ class StorageActivityRecorder(RecorderBase):
 
         # Storage configuration
         self._collection_name = kwargs.get("collection_name", "StorageActivity")
-        self._db_config_path = kwargs.get("db_config_path", None)
+        self._db_config_path = kwargs.get("db_config_path")
 
         # Get or create collector
-        self._collector = kwargs.get("collector", None)
+        self._collector = kwargs.get("collector")
         self._debug = kwargs.get("debug", False)
 
         # Database connection
@@ -469,7 +471,7 @@ class StorageActivityRecorder(RecorderBase):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_path(
         self,
@@ -668,10 +670,10 @@ class StorageActivityRecorder(RecorderBase):
                     f"Registered storage activity recorder with service manager: {self._recorder_id}",
                 )
             except Exception as e:
-                self._logger.error(f"Error registering with service manager: {e}")
+                self._logger.exception(f"Error registering with service manager: {e}")
 
         except Exception as e:
-            self._logger.error(f"Error creating registration data: {e}")
+            self._logger.exception(f"Error creating registration data: {e}")
 
     # Implement RecorderBase abstract methods
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
@@ -864,7 +866,7 @@ class StorageActivityRecorder(RecorderBase):
         try:
             self.store_activity(data)
         except Exception as e:
-            self._logger.error(f"Failed to store data: {e}")
+            self._logger.exception(f"Failed to store data: {e}")
 
     def update_data(self) -> None:
         """Update the data in the database."""

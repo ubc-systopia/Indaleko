@@ -26,6 +26,7 @@ import logging
 import os
 import sys
 
+
 # Set up environment variables
 current_path = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(os.path.dirname(current_path))
@@ -35,7 +36,8 @@ if root_dir not in sys.path:
 
 # Import Indaleko components
 from db.db_config import IndalekoDBConfig
-from query.analytics.file_statistics import FileStatistics, format_size
+from query.analytics.file_statistics import FileStatistics
+
 
 # Configure logging
 logging.basicConfig(
@@ -45,64 +47,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_analytics_examples(db_config: IndalekoDBConfig | None = None):
+def run_analytics_examples(db_config: IndalekoDBConfig | None = None) -> None:
     """
     Run examples of different analytics capabilities.
 
     Args:
         db_config: Optional database configuration
     """
-    print("\n=== Indaleko Analytics Examples ===\n")
-
     # Create file statistics object
     stats = FileStatistics(db_config)
 
     # Example 1: Basic counts
-    print("\n=== Example 1: Basic File Counts ===")
     total_objects = stats.count_total_objects()
     file_count = stats.count_files()
     directory_count = stats.count_directories()
 
-    print(f"Total Objects: {total_objects:,}")
-    print(f"Files: {file_count:,}")
-    print(f"Directories: {directory_count:,}")
 
     # Example 2: File type distribution
-    print("\n=== Example 2: File Type Distribution ===")
     file_types = stats.get_file_type_distribution()
 
     if file_types:
-        print(f"Found {len(file_types)} different file types")
-        print("\nTop 5 file types:")
         sorted_types = sorted(file_types.items(), key=lambda x: x[1], reverse=True)[:5]
-        for ext, count in sorted_types:
-            print(f".{ext}: {count:,} files")
+        for _ext, _count in sorted_types:
+            pass
 
     # Example 3: File size statistics
-    print("\n=== Example 3: File Size Analysis ===")
     size_stats = stats.get_file_size_statistics()
 
     if size_stats:
-        print(f"File Count: {size_stats['count']:,}")
-        print(f"Total Size: {format_size(size_stats['total_size'])}")
-        print(f"Average Size: {format_size(size_stats['average_size'])}")
-        print(f"Median Size: {format_size(size_stats['median_size'])}")
-        print(f"Smallest File: {format_size(size_stats['min_size'])}")
-        print(f"Largest File: {format_size(size_stats['max_size'])}")
+        pass
 
     # Example 4: File age distribution
-    print("\n=== Example 4: File Age Distribution ===")
     age_distribution = stats.get_file_age_distribution()
 
     if age_distribution:
-        print(f"Found {len(age_distribution)} age ranges")
-        for item in age_distribution:
-            print(
-                f"{item['age_range']}: {item['count']:,} files, {format_size(item['total_size'])}",
-            )
+        for _item in age_distribution:
+            pass
 
     # Example 5: Generate an analytical dashboard
-    print("\n=== Example 5: Calculating Data for Analytics Dashboard ===")
 
     # Create a simple dashboard dictionary
     dashboard = {
@@ -115,29 +97,21 @@ def run_analytics_examples(db_config: IndalekoDBConfig | None = None):
             "total": size_stats.get("total_size", 0),
             "avg_file_size": size_stats.get("average_size", 0),
         },
-        "types": {
-            ext: count
-            for ext, count in sorted(
+        "types": dict(sorted(
                 file_types.items(),
                 key=lambda x: x[1],
                 reverse=True,
-            )[:10]
-        },
+            )[:10]),
         "age_profile": {
             item["age_range"]: {"count": item["count"], "size": item["total_size"]} for item in age_distribution
         },
     }
 
     # Display the dashboard structure (in production, this would feed a UI)
-    print("\nAnalytics Dashboard Data Structure:")
-    for section, data in dashboard.items():
-        print(f"- {section.capitalize()}: {len(data)} metrics")
-    print(
-        "\nThis data structure can be used to power web dashboards, reports, or visualizations.",
-    )
+    for data in dashboard.values():
+        pass
 
     # Example 6: Compute analytics-based indicators and insights
-    print("\n=== Example 6: Computing System Insights ===")
 
     # This demonstrates how the analytics data can be used to generate insights
     insights = []
@@ -186,15 +160,14 @@ def run_analytics_examples(db_config: IndalekoDBConfig | None = None):
         )
 
     # Display insights
-    print("\nSystem Insights:")
     if insights:
-        for i, insight in enumerate(insights, 1):
-            print(f"{i}. {insight}")
+        for _i, _insight in enumerate(insights, 1):
+            pass
     else:
-        print("No significant insights found from current analytics data.")
+        pass
 
 
-def main():
+def main() -> None:
     """Main entry point for the analytics examples."""
     parser = argparse.ArgumentParser(description="Indaleko Analytics Examples")
     parser.add_argument(
@@ -219,9 +192,6 @@ def main():
     # Run examples
     run_analytics_examples(db_config)
 
-    print("\n=== Completed Analytics Examples ===")
-    print("To use analytics in the CLI, run: python -m query.cli --analytics")
-    print("Then use the /analytics command to access file statistics.")
 
 
 if __name__ == "__main__":

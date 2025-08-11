@@ -21,10 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import subprocess
 import sys
+
 from typing import Any
 
 import jsonlines
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,13 +41,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db.db_config import IndalekoDBConfig
 from utils.misc.file_name_management import extract_keys_from_file_name
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoDBUploader:
     """This class can be used when creating uploader(s) for the database."""
 
-    def __init__(self, **kwargs: dict[str, Any]):
+    def __init__(self, **kwargs: dict[str, Any]) -> None:
         """This is the constructor for the database uploader."""
         self.kwargs = kwargs
 
@@ -52,9 +56,7 @@ class IndalekoDBUploader:
     def build_load_string(
         file_name: str, collection_name: str, db: IndalekoDBConfig | None = None,
     ) -> str:
-        """
-        This will build the load string for the arangoimport command.
-        """
+        """This will build the load string for the arangoimport command."""
         if db is None:
             db = IndalekoDBConfig()
         load_string = f"arangoimport -collection {collection_name}"
@@ -80,7 +82,6 @@ class IndalekoDBUploader:
             db = IndalekoDBConfig()
         file_keys = extract_keys_from_file_name(file_name)
         if "collection" not in file_keys:
-            print("Collection name not found in file name")
             return False
         collection = db.db_config.db.collection(file_keys["collection"])
         assert collection, f'Collection {file_keys["collection"]} not found'
@@ -96,31 +97,26 @@ class IndalekoDBUploader:
                 if chunk:
                     collection.import_bulk(chunk)
             success = True
-        except Exception as e:
-            print(f"Error during bulk upload: {e}")
+        except Exception:
+            pass
         return success
 
     @staticmethod
     def external_upload(
         file_name: str, db: IndalekoDBConfig | None = None, chunk_size: int = 1000,
     ) -> bool:
-        """
-        This will upload the data to the database using arangoimport.
-        """
+        """This will upload the data to the database using arangoimport."""
 
     @staticmethod
     def external_upload(
         file_name: str, db: IndalekoDBConfig | None = None,
     ) -> bool:
-        """
-        This will upload the data to the database using arangoimport.
-        """
+        """This will upload the data to the database using arangoimport."""
         if db is None:
             db = IndalekoDBConfig()
 
         file_keys = extract_keys_from_file_name(file_name)
         if "collection" not in file_keys:
-            print("Collection name not found in file name")
             return False
 
         success = False
@@ -133,12 +129,11 @@ class IndalekoDBUploader:
             )
             stdout, stderr = process.communicate()
             if process.returncode != 0:
-                print(f"Error during external upload: {stderr.decode('utf-8')}")
+                pass
             else:
                 success = True
-            print(stdout.decode("utf-8"))
-        except Exception as e:
-            print(f"Exception during external upload: {e}")
+        except Exception:
+            pass
         return success
 
     @staticmethod
@@ -150,23 +145,19 @@ class IndalekoDBUploader:
         """
 
         def __run_docker_cmd(cmd: str) -> bool:
-            print("Running:", cmd)
             result = False
             try:
                 subprocess.run(cmd, check=True, shell=True)
                 result = True
-            except subprocess.CalledProcessError as e:
-                print(f"failed to run the command, got: {e}")
+            except subprocess.CalledProcessError:
+                pass
             return result
 
-        print("{:-^20}".format(""))
-        print("using arangoimport to import objects")
 
         # check if the docker is up
         if not __run_docker_cmd("docker ps"):
             """The docker is not running, so we cannot upload the data."""
-            print("The docker is not running, so we cannot upload the data.")
-            exit(-1)
+            sys.exit(-1)
 
         # read the config file
         config = IndalekoDBConfig().config
@@ -195,12 +186,12 @@ class IndalekoDBUploader:
         ]:
             __run_docker_cmd(
                 f"docker exec -t {container_name} arangoimport --file {dest}/{filename} "
-                + f'--type "jsonl" --collection "{collection_name}" --server.username "{server_username}" '
+                 f'--type "jsonl" --collection "{collection_name}" --server.username "{server_username}" '
                 f'--server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}',
             )
 
 
-def main():
+def main() -> None:
     """This is the main function for the database uploader."""
     ic("Testing the database uploader.")
 

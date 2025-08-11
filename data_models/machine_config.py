@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from uuid import UUID
 
 from icecream import ic
 from pydantic import Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,13 +41,12 @@ from data_models.timestamp import IndalekoTimestampDataModel
 from platforms.data_models.hardware import Hardware as hardware
 from platforms.data_models.software import Software as software
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoMachineConfigDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the MachineConfig collection.
-    """
+    """This class defines the data model for the MachineConfig collection."""
 
     Record: IndalekoRecordDataModel = Field(
         ...,
@@ -78,7 +79,7 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
     )
 
     class Config:
-        """Configuration for the machine config data model"""
+        """Configuration for the machine config data model."""
 
         json_schema_extra = {
             "example": {
@@ -91,8 +92,8 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """Main function for the machine config data model"""
+def main() -> None:
+    """Main function for the machine config data model."""
     ic("Testing Machine Config Data Model")
     IndalekoMachineConfigDataModel.test_model_main()
 

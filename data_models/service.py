@@ -24,6 +24,7 @@ import sys
 from icecream import ic
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,6 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoRecordDataModel
 from data_models.service_identifier import IndalekoServiceIdentifierDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -56,8 +58,8 @@ class IndalekoServiceDataModel(IndalekoServiceIdentifierDataModel):
         }
 
 
-def main():
-    """This allows testing the service data model"""
+def main() -> None:
+    """This allows testing the service data model."""
     ic("Testing Service Data Model")
     ic(IndalekoServiceDataModel.Config.json_schema_extra["example"])
     # IndalekoServiceDataModel.test_model_main()

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import uuid
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -38,7 +39,7 @@ class RecommendationProvider(ABC):
     activity context, entity relationships, etc.).
     """
 
-    def __init__(self, source_type: RecommendationSource, debug: bool = False):
+    def __init__(self, source_type: RecommendationSource, debug: bool = False) -> None:
         """
         Initialize the recommendation provider.
 
@@ -113,7 +114,7 @@ class RecommendationProvider(ABC):
 
         # Use provided weights or equal weights
         if weights is None:
-            weights = {k: 1.0 for k in factors}
+            weights = dict.fromkeys(factors, 1.0)
 
         # Ensure all factors have weights
         for k in factors:

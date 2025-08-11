@@ -37,7 +37,7 @@ class EntityProfile:
         capabilities: list[str],
         default_model: str,
         default_provider: str = "anthropic",
-    ):
+    ) -> None:
         """
         Initialize a new entity profile.
 

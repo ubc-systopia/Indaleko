@@ -24,10 +24,12 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import datetime
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +47,7 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
+
 
 # pylint: enable=wrong-import-position
 
@@ -122,8 +125,7 @@ class TestCollectorV2(BaseActivityCollector):
 
             # Try to create the collector
             self.ntfs_collector = NtfsStorageActivityCollectorV2(**ntfs_collector_args)
-        except Exception as e:
-            print(f"Warning: Failed to create NTFS collector: {e}")
+        except Exception:
             import traceback
 
             traceback.print_exc()
@@ -145,11 +147,7 @@ class TestCollectorV2(BaseActivityCollector):
 
                 is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
                 if not is_admin:
-                    print("\n*** WARNING: Not running as administrator. ***")
-                    print("*** USN Journal access typically requires admin rights. ***")
-                    print(
-                        "*** Consider running this script as administrator for best results. ***\n",
-                    )
+                    pass
             except Exception:
                 # Ignore if we can't check admin status
                 pass
@@ -157,9 +155,7 @@ class TestCollectorV2(BaseActivityCollector):
             # Start monitoring
             try:
                 self.ntfs_collector.start_monitoring()
-                print("Successfully started NTFS monitoring")
-            except Exception as e:
-                print(f"Error starting monitoring: {e}")
+            except Exception:
                 import traceback
 
                 traceback.print_exc()
@@ -193,7 +189,6 @@ class TestCollectorV2(BaseActivityCollector):
                         f.write(f"Modified at {datetime.now()}\n")
                         f.flush()
 
-                print(f"Created test files in {test_dir}")
 
                 # Create and rename a file
                 orig_name = os.path.join(test_dir, f"rename_test_{timestamp}.txt")
@@ -203,10 +198,8 @@ class TestCollectorV2(BaseActivityCollector):
 
                 new_name = os.path.join(test_dir, f"renamed_{timestamp}.txt")
                 os.rename(orig_name, new_name)
-                print(f"Created and renamed file: {orig_name} -> {new_name}")
 
-            except Exception as e:
-                print(f"Error creating test files: {e}")
+            except Exception:
                 import traceback
 
                 traceback.print_exc()
@@ -214,25 +207,17 @@ class TestCollectorV2(BaseActivityCollector):
             # Collect data from the NTFS collector
             try:
                 self.ntfs_collector.collect_data()
-                print("Successfully collected NTFS data")
-            except Exception as e:
-                print(f"Error collecting data: {e}")
+            except Exception:
                 import traceback
 
                 traceback.print_exc()
         else:
-            print("Warning: NTFS collector not available")
+            pass
 
     def get_activities(self):
         """Get the collected activities."""
         if hasattr(self, "ntfs_collector") and self.ntfs_collector:
-            activities = self.ntfs_collector.get_activities()
-            print(
-                f"TestCollectorV2.get_activities(): Got {len(activities)} activities from ntfs_collector",
-            )
-            return activities
-        else:
-            print("TestCollectorV2.get_activities(): No ntfs_collector available")
+            return self.ntfs_collector.get_activities()
         return []
 
     def stop_monitoring(self):
@@ -344,10 +329,8 @@ class TestCollectorV2(BaseActivityCollector):
             collector.collect_data()
 
             # Let it run for a bit longer to gather events
-            print("\nWaiting for events to be collected (this may take 15 seconds)...")
             for i in range(15):
                 time.sleep(1)
-                print(".", end="", flush=True)
 
                 # Create a new file every 5 seconds to generate more activity
                 if i % 5 == 0:
@@ -362,47 +345,35 @@ class TestCollectorV2(BaseActivityCollector):
                                 f.write(
                                     f"Extra test file created at {datetime.now()}\n",
                                 )
-                            print(f"\nCreated extra test file: {test_file}")
-                    except Exception as e:
-                        print(f"\nError creating extra test file: {e}")
+                    except Exception:
+                        pass
 
-            print("\nFinished waiting. Checking for collected activities...")
 
             # Get the activities
             activities = collector.get_activities()
-            print(f"Collector reports {len(activities)} activities collected")
-            print(f"Collector object: {collector}")
 
             # If activities is empty but the collector has internal activities, use those
             if len(activities) == 0 and hasattr(collector, "ntfs_collector"):
-                print("Checking internal NTFS collector directly...")
                 if collector.ntfs_collector:
                     direct_activities = collector.ntfs_collector.get_activities()
-                    print(
-                        f"Internal NTFS collector has {len(direct_activities)} activities",
-                    )
                     activities = direct_activities
 
             # Print out what we found
-            if debug or True:  # Always show activities for now
-                print(f"\nCollected {len(activities)} activities:")
-                for i, activity in enumerate(activities[:10], 1):  # Show first 10
-                    print(
-                        f"{i}. {activity.file_name} - {activity.activity_type} - {activity.timestamp}",
-                    )
+            if True:  # Always show activities for now
+                for i, _activity in enumerate(activities[:10], 1):  # Show first 10
+                    pass
 
                 if len(activities) > 10:
-                    print(f"... and {len(activities) - 10} more")
+                    pass
 
             # Stop monitoring
             collector.stop_monitoring()
 
             return {"activities": activities}
 
-        except Exception as e:
+        except Exception:
             import traceback
 
-            print(f"Error collecting data: {e}")
             traceback.print_exc()
             return None
 

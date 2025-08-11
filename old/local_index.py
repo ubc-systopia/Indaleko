@@ -14,7 +14,7 @@ class ContainerRelationship:
         "_to_field": {"type": "string", "rule": {"type", "uuid"}},
     }
 
-    def __init__(self, db, start, end, collection):
+    def __init__(self, db, start, end, collection) -> None:
         self._from = start
         self._to = end
         db[collection].insert(self._dict_)
@@ -24,14 +24,12 @@ class ContainerRelationship:
 
 
 class FileSystemObject:
-    """
-    This class represents a file system object's meta-data
-    """
+    """This class represents a file system object's meta-data."""
 
     ObjectCount = 0  # track how many
     RelationshipCount = 0  # track how many
 
-    def __init__(self, path: str, root=False):
+    def __init__(self, path: str, root=False) -> None:
         self.root = root
         self.uuid = str(uuid.uuid4())
         self.url = "file:///" + path
@@ -53,14 +51,14 @@ class FileSystemObject:
 
 class LocalFileSystemMetadata:
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def get_output_file_name(self):
-        assert False, "get_output_file_name not implemented in base class: please override"
+    def get_output_file_name(self) -> None:
+        raise AssertionError("get_output_file_name not implemented in base class: please override")
 
     def get_uri_for_file(self, file_name: str) -> str:
-        assert False, "get_uri_for_file not implemented in base class: please override"
+        raise AssertionError("get_uri_for_file not implemented in base class: please override")
 
 
 class LocalIndex:
@@ -70,7 +68,7 @@ class LocalIndex:
     DefaultOutputFile = "output.json"
     DefaultConfigFile = "config.ini"
 
-    def __init__(self, parser: argparse.ArgumentParser = None):
+    def __init__(self, parser: argparse.ArgumentParser | None = None) -> None:
         if parser is not None:
             self.parser = parser
         else:
@@ -94,7 +92,7 @@ class LocalIndex:
             if hasattr(logging, "FATAL"):
                 logging_levels.append("FATAL")
         else:
-            logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
+            logging_levels = sorted(set(logging.getLevelNamesMapping()))
         self.__setup_defaults__()
         logging.basicConfig(level=logging.WARNING)
         self.logger = logging.getLogger(__name__)
@@ -198,17 +196,12 @@ class LocalIndex:
         return self
 
 
-def main():
+def main() -> None:
     # Note that this script is designed to be a class library, so if someone
     # runs it directly, I'll point them at the correct version to run.
     # We _could_ change it so that it runs the correct version, but that
     # seems unnecessary.
-    print("This script is a general library used by platform specific ingesters.")
-    print("You are running on " + platform.system())
-    print(
-        f"The ingester script should be called something like {platform.system().lower()}_local_index.py",
-    )
-    print("Please run that script instead.")
+    pass
 
 
 if __name__ == "__main__":

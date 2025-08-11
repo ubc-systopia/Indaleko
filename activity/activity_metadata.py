@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+
 from textwrap import dedent
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -101,10 +103,9 @@ class ActivityCollectionMetadata(IndalekoSingleton):
     )
 
 
-def main():
+def main() -> None:
     """Main entry point for the module."""
-    metadata = ActivityCollectionMetadata()
-    print(metadata.default_metadata.model_dump_json(indent=4))
+    ActivityCollectionMetadata()
 
 
 if __name__ == "__main__":

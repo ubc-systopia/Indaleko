@@ -22,7 +22,7 @@ import argparse
 
 
 class IndalekoWindows:
-    """This contains Windows specific definitions used in Indaleko"""
+    """This contains Windows specific definitions used in Indaleko."""
 
     FILE_ATTRIBUTES = {
         "FILE_ATTRIBUTE_READONLY": 0x00000001,
@@ -68,7 +68,7 @@ class IndalekoWindows:
         return " | ".join(file_attributes)
 
 
-def main():
+def main() -> None:
     """This is the test code for the IndalekoWindows class."""
     parser = argparse.ArgumentParser(description="Indaleko Windows test logic")
     parser.add_argument(
@@ -80,12 +80,10 @@ def main():
     )
     args = parser.parse_args()
     if args.attr == 0xFFFFFFFF:
-        print("Testing all attributes")
-        for attr, value in IndalekoWindows.FILE_ATTRIBUTES.items():
-            print(f"{attr} = {value}")
-            print(f"{attr} = {value}")
+        for _attr, _value in IndalekoWindows.FILE_ATTRIBUTES.items():
+            pass
     else:
-        print(f"{args.attr} = {IndalekoWindows.map_file_attributes(args.attr)}")
+        pass
 
 
 if __name__ == "__main__":

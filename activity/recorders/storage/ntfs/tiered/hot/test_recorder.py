@@ -29,8 +29,10 @@ import sys
 import tempfile
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -41,6 +43,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # Import the recorder class to test
+import pytest
+
 from activity.collectors.storage.data_models.storage_activity_data_model import (
     NtfsStorageActivityData,
     StorageActivityType,
@@ -100,7 +104,7 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
             def default(self, obj):
                 if isinstance(obj, uuid.UUID):
                     return str(obj)
-                elif isinstance(obj, datetime):
+                if isinstance(obj, datetime):
                     return obj.isoformat()
                 return str(
                     obj,
@@ -133,50 +137,47 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
 
     def test_recorder_initialization(self):
         """Test that the recorder initializes properly."""
-        self.assertEqual(self.recorder._ttl_days, 4)
-        self.assertEqual(self.recorder._name, "NTFS Hot Tier Recorder")
-        self.assertEqual(self.recorder._provider_type, StorageProviderType.LOCAL_NTFS)
-        self.assertIsNotNone(self.recorder._frn_entity_cache)
-        self.assertIsNotNone(self.recorder._path_entity_cache)
+        assert self.recorder._ttl_days == 4
+        assert self.recorder._name == "NTFS Hot Tier Recorder"
+        assert self.recorder._provider_type == StorageProviderType.LOCAL_NTFS
+        assert self.recorder._frn_entity_cache is not None
+        assert self.recorder._path_entity_cache is not None
 
     def test_get_recorder_name(self):
         """Test get_recorder_name method."""
-        self.assertEqual(self.recorder.get_recorder_name(), "NTFS Hot Tier Recorder")
+        assert self.recorder.get_recorder_name() == "NTFS Hot Tier Recorder"
 
     def test_get_recorder_id(self):
         """Test get_recorder_id method."""
-        self.assertEqual(
-            self.recorder.get_recorder_id(),
-            uuid.UUID("f4dea3b8-5d3e-48ad-9b2c-0e72c9a1b867"),
-        )
+        assert self.recorder.get_recorder_id() == uuid.UUID("f4dea3b8-5d3e-48ad-9b2c-0e72c9a1b867")
 
     def test_get_recorder_characteristics(self):
         """Test get_recorder_characteristics method."""
         characteristics = self.recorder.get_recorder_characteristics()
-        self.assertGreaterEqual(len(characteristics), 2)
+        assert len(characteristics) >= 2
 
     def test_get_collector_class_model(self):
         """Test get_collector_class_model method."""
         model = self.recorder.get_collector_class_model()
-        self.assertIn("NtfsStorageActivityData", model)
-        self.assertIn("StorageActivityType", model)
+        assert "NtfsStorageActivityData" in model
+        assert "StorageActivityType" in model
 
     def test_get_json_schema(self):
         """Test get_json_schema method."""
         schema = self.recorder.get_json_schema()
-        self.assertIsInstance(schema, dict)
-        self.assertIn("properties", schema)
+        assert isinstance(schema, dict)
+        assert "properties" in schema
 
     def test_cache_duration(self):
         """Test cache_duration method."""
         duration = self.recorder.cache_duration()
-        self.assertEqual(duration.total_seconds(), 15 * 60)  # 15 minutes
+        assert duration.total_seconds() == 15 * 60  # 15 minutes
 
     def test_get_cursor(self):
         """Test get_cursor method."""
         context_id = uuid.uuid4()
         cursor = self.recorder.get_cursor(context_id)
-        self.assertIsInstance(cursor, uuid.UUID)
+        assert isinstance(cursor, uuid.UUID)
 
     def test_calculate_initial_importance(self):
         """Test _calculate_initial_importance method."""
@@ -197,7 +198,7 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
         importance2 = self.recorder._calculate_initial_importance(temp_activity)
 
         # Document should have higher importance than temp file
-        self.assertGreater(importance1, importance2)
+        assert importance1 > importance2
 
         # Test directory importance
         dir_activity = {}
@@ -212,7 +213,7 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
         regular_activity["is_directory"] = False
         regular_activity["activity_type"] = "create"
         importance4 = self.recorder._calculate_initial_importance(regular_activity)
-        self.assertGreater(importance3, importance4)
+        assert importance3 > importance4
 
     def test_process_jsonl_file(self):
         """Test process_jsonl_file method."""
@@ -220,16 +221,15 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
         # that our implementation handles errors gracefully
 
         # Test with a non-existent file
-        with patch("os.path.exists", return_value=False):
-            with self.assertRaises(FileNotFoundError):
-                self.recorder.process_jsonl_file("/non-existent.jsonl")
+        with patch("os.path.exists", return_value=False), pytest.raises(FileNotFoundError):
+            self.recorder.process_jsonl_file("/non-existent.jsonl")
 
         # Success case is tested by real implementation in Phase 8
 
     def test_get_description(self):
         """Test get_description method."""
         description = self.recorder.get_description()
-        self.assertIn("hot tier", description.lower())
+        assert "hot tier" in description.lower()
 
     @patch(
         "activity.recorders.storage.ntfs.tiered.hot.recorder.NtfsHotTierRecorder._enhance_activity_data",
@@ -250,7 +250,7 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
             return_value={"test": "document"},
         ):
             result = self.recorder.store_activity(self.test_data)
-            self.assertEqual(result, self.test_data.activity_id)
+            assert result == self.test_data.activity_id
             self.recorder._build_hot_tier_document.assert_called_once()
             self.recorder._collection.insert.assert_called_once_with(
                 {"test": "document"},
@@ -264,7 +264,7 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
             return_value={"test": "document"},
         ):
             result = self.recorder.store_activity(self.test_data.model_dump())
-            self.assertIsInstance(result, uuid.UUID)
+            assert isinstance(result, uuid.UUID)
             self.recorder._collection.insert.assert_called_once()
 
 

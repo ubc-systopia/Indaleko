@@ -10,7 +10,7 @@ from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.query_translator.translator_base import TranslatorBase
 
 
-# ruff: noqa: S101,S311,FBT001,FBT002
+# ruff: noqa: S101
 
 
 class AQLQueryConverter(TranslatorBase):
@@ -58,23 +58,21 @@ class AQLQueryConverter(TranslatorBase):
             n_truth,
         )
         aql_query = llm_connector.generate_query(dynamic_prompt)
-        
+
         # Handle the new OpenAIConnector response format
-        if hasattr(aql_query, 'aql_query'):
+        if hasattr(aql_query, "aql_query"):
             aql_statement = aql_query.aql_query
+        elif hasattr(aql_query, "query"):
+            aql_statement = aql_query.query
         else:
-            # For newer versions, the response might be different
-            if hasattr(aql_query, 'query'):
-                aql_statement = aql_query.query
-            else:
-                # Fallback to string representation if needed
-                aql_statement = str(aql_query)
-        
+            # Fallback to string representation if needed
+            aql_statement = str(aql_query)
+
         assert self.validate_query(aql_statement), "Generated AQL query is invalid"
-        
+
         # Handle case where FOR is not found in the query (which would be unusual but possible)
         if "FOR" in aql_statement:
-            return aql_statement[aql_statement.index("FOR"):] # trim preamble
+            return aql_statement[aql_statement.index("FOR") :]  # trim preamble
         return aql_statement
 
     def validate_query(self, query: str) -> bool:
@@ -88,9 +86,16 @@ class AQLQueryConverter(TranslatorBase):
             bool: True if the query is valid, False otherwise
         """
         return (
-            "FOR" in query and "RETURN" in query and
-            any(keyword in query for keyword in(
-                    ".Record", ".SemanticAttributes", ".Timestamp", ".Data", ".URI",
+            "FOR" in query
+            and "RETURN" in query
+            and any(
+                keyword in query
+                for keyword in (
+                    ".Record",
+                    ".SemanticAttributes",
+                    ".Timestamp",
+                    ".Data",
+                    ".URI",
                 )
             )
         )
@@ -111,9 +116,10 @@ class AQLQueryConverter(TranslatorBase):
 
     def _create_translation(
         self,
-        selected_md_attributes:dict[str, Any],
+        selected_md_attributes: dict[str, Any],
         collections: dict[str, str],
-        geo_coordinates: str, n_truth: int,
+        geo_coordinates: str,
+        n_truth: int,
     ) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.
@@ -129,7 +135,7 @@ class AQLQueryConverter(TranslatorBase):
             str: The prompt for the LLM
         """
         system_prompt = dedent(
-        """
+            """
         You are an assistant that generates ArangoDB queries for a Unified Personal Index
         (UPI) system. The UPI stores metadata about digital objects (e.g., files, directories)
         in an ArangoDB database. Given a dictionary called selected_md_attributes, generate the
@@ -275,20 +281,22 @@ class AQLQueryConverter(TranslatorBase):
                                code i.e.
         insert newlines between LET statements, FILTER conditions, and the RETURN statement.
         """
-        f"""\n Number of truth attributes: {n_truth!s}
+            f"""\n Number of truth attributes: {n_truth!s}
             \n Schema: {self.dynamic_db_schema!s},
         """,
         )
 
-        system_prompt = system_prompt.replace("{geo_coords}", geo_coordinates).\
-            replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS)).\
-                replace("{LONG_TAG}", str(SemanticMetadata.LONG_TAGS)).\
-                    replace("{LIST_TAGS}", str(SemanticMetadata.LIST_TAGS)).\
-                        replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS)).\
-                            replace("{dynamic_activity_providers}", str(collections))
+        system_prompt = (
+            system_prompt.replace("{geo_coords}", geo_coordinates)
+            .replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS))
+            .replace("{LONG_TAG}", str(SemanticMetadata.LONG_TAGS))
+            .replace("{LIST_TAGS}", str(SemanticMetadata.LIST_TAGS))
+            .replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS))
+            .replace("{dynamic_activity_providers}", str(collections))
+        )
         user_prompt = "Dictionary: " + str(selected_md_attributes)
 
         return {
-            "system" : system_prompt,
-            "user" : user_prompt,
+            "system": system_prompt,
+            "user": user_prompt,
         }

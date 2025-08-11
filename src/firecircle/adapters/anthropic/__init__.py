@@ -6,22 +6,20 @@ with Anthropic's API, allowing integration with Claude models and other Anthropi
 """
 
 import json
+
 from typing import Any, Dict, List, Optional
+
 
 try:
     import anthropic
+
     from anthropic import Anthropic
 
     HAS_ANTHROPIC = True
 except ImportError:
     HAS_ANTHROPIC = False
 
-from ..base import (
-    FireCircleMessage,
-    FireCircleRequest,
-    FireCircleResponse,
-    ModelAdapter,
-)
+from adapters.base import FireCircleMessage, FireCircleRequest, FireCircleResponse, ModelAdapter
 
 
 class AnthropicAdapter(ModelAdapter):
@@ -31,7 +29,7 @@ class AnthropicAdapter(ModelAdapter):
         self,
         model: str = "claude-3-opus-20240229",
         api_key: str | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Anthropic adapter.
 

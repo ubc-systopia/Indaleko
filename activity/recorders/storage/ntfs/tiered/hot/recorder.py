@@ -49,8 +49,10 @@ import sys
 import time
 import traceback
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -78,6 +80,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # Import ServiceManager upfront to avoid late binding issues
 
 
@@ -96,7 +99,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
     DEFAULT_TTL_DAYS = 4
     DEFAULT_RECORDER_ID = uuid.UUID("f4dea3b8-5d3e-48ad-9b2c-0e72c9a1b867")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the hot tier recorder.
 
@@ -195,7 +198,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 storage_location="hot_tier",
             )
         except Exception as e:
-            self._logger.error(f"Error setting up metadata: {e}")
+            self._logger.exception(f"Error setting up metadata: {e}")
             # Create minimal metadata
             self._metadata = StorageActivityMetadata(
                 provider_type=StorageProviderType.LOCAL_NTFS,
@@ -250,7 +253,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 temp_collection_name = self._collection_name
 
             # Prepare registration data
-            registration_kwargs = {
+            {
                 "Identifier": str(self._recorder_id),
                 "Name": self._name,
                 "Description": self._description,
@@ -332,17 +335,17 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Retrieved entity collection: {entity_collection.name}",
                 )
             except Exception as collection_error:
-                self._logger.error(
+                self._logger.exception(
                     f"Error getting entity collection: {collection_error}",
                 )
                 raise
 
         except Exception as e:
-            self._logger.error(f"Error setting up collections: {e}")
+            self._logger.exception(f"Error setting up collections: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
-    def _setup_indices(self):
+    def _setup_indices(self) -> None:
         """Set up required indices for the hot tier recorder."""
         try:
             # Set up TTL index on hot tier collection
@@ -408,11 +411,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             self._logger.info("Finished setting up indices")
 
         except Exception as e:
-            self._logger.error(f"Error setting up indices: {e}")
+            self._logger.exception(f"Error setting up indices: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
-    def _setup_ttl_index(self):
+    def _setup_ttl_index(self) -> None:
         """Set up TTL index for automatic expiration of hot tier data."""
         try:
             # Calculate TTL in seconds
@@ -436,8 +439,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Created TTL index with {self._ttl_days} day expiration",
                 )
             except Exception as idx_err:
-                self._logger.error(f"Error creating TTL index: {idx_err}")
-                self._logger.error(
+                self._logger.exception(f"Error creating TTL index: {idx_err}")
+                self._logger.exception(
                     "This may be due to an unsupported ArangoDB version or configuration",
                 )
                 self._logger.warning(
@@ -445,8 +448,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 )
 
         except Exception as e:
-            self._logger.error(f"Error setting up TTL index: {e}")
-            self._logger.error(
+            self._logger.exception(f"Error setting up TTL index: {e}")
+            self._logger.exception(
                 "This may be due to an unsupported ArangoDB version or configuration",
             )
             self._logger.warning(
@@ -486,12 +489,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                             activity = NtfsStorageActivityData(**activity_data)
                             activities.append(activity)
                     except json.JSONDecodeError as e:
-                        self._logger.error(
+                        self._logger.exception(
                             f"Error parsing JSON on line {line_count}: {e}",
                         )
                         continue
                     except Exception as e:
-                        self._logger.error(
+                        self._logger.exception(
                             f"Error processing activity on line {line_count}: {e}",
                         )
                         continue
@@ -505,12 +508,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Stored {len(activity_ids)} activities in the database",
                 )
                 return activity_ids
-            else:
-                self._logger.warning(f"No valid activities found in {file_path}")
-                return []
+            self._logger.warning(f"No valid activities found in {file_path}")
+            return []
 
         except Exception as e:
-            self._logger.error(f"Error processing JSONL file {file_path}: {e}")
+            self._logger.exception(f"Error processing JSONL file {file_path}: {e}")
             raise
 
     def process_collector_activities(self, collector) -> list[uuid.UUID]:
@@ -540,12 +542,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Stored {len(activity_ids)} activities in the database",
                 )
                 return activity_ids
-            else:
-                self._logger.warning("No activities retrieved from collector")
-                return []
+            self._logger.warning("No activities retrieved from collector")
+            return []
 
         except Exception as e:
-            self._logger.error(f"Error processing activities from collector: {e}")
+            self._logger.exception(f"Error processing activities from collector: {e}")
             raise
 
     def _calculate_initial_importance(self, activity_data: dict) -> float:
@@ -740,7 +741,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 f"Inserting entity into collection {self._entity_collection_name}",
             )
             try:
-                result = entity_collection.insert(entity_doc)
+                entity_collection.insert(entity_doc)
                 self._logger.debug("Entity created successfully")
 
                 # Cache the mapping
@@ -749,18 +750,18 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
                 return entity_id
             except Exception as insert_error:
-                self._logger.error(f"Failed to insert entity: {insert_error}")
+                self._logger.exception(f"Failed to insert entity: {insert_error}")
                 # Still return the generated ID so we can proceed
                 return entity_id
 
         except Exception as e:
-            self._logger.error(f"Entity creation error: {e}")
+            self._logger.exception(f"Entity creation error: {e}")
             # Generate a v4 UUID as fallback
             fallback_id = uuid.uuid4()
             self._logger.debug(f"Using fallback UUID: {fallback_id}")
             return fallback_id
 
-    def _update_entity_frn(self, entity_id: uuid.UUID, frn: str, volume: str):
+    def _update_entity_frn(self, entity_id: uuid.UUID, frn: str, volume: str) -> None:
         """
         Update entity with a new FRN.
 
@@ -775,7 +776,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         try:
             # Update entity with new FRN
-            entity_collection = self._db.get_collection(self._entity_collection_name)
+            self._db.get_collection(self._entity_collection_name)
 
             # Use both top-level fields and Properties to ensure compatibility with both lookup patterns
             query = """
@@ -807,10 +808,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
 
         except Exception as e:
-            self._logger.error(f"Error updating entity FRN: {e}")
+            self._logger.exception(f"Error updating entity FRN: {e}")
             self._logger.debug(f"Update error details: {traceback.format_exc()}")
 
-    def _update_entity_metadata(self, entity_id: uuid.UUID, activity_data: dict):
+    def _update_entity_metadata(self, entity_id: uuid.UUID, activity_data: dict) -> None:
         """
         Update entity metadata based on activity.
 
@@ -932,7 +933,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                                 self._path_entity_cache[path_key] = entity_id
 
                 except Exception as lookup_error:
-                    self._logger.error(
+                    self._logger.exception(
                         f"Error looking up entity by FRN+Volume: {lookup_error}",
                     )
                     self._logger.debug(
@@ -967,7 +968,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     )
 
                 except Exception as get_error:
-                    self._logger.error(
+                    self._logger.exception(
                         f"Failed to retrieve entity {entity_id}: {get_error}",
                     )
                     return
@@ -991,7 +992,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         # Initialize new dict
                         current_doc["Properties"] = {}
                 except Exception as convert_error:
-                    self._logger.error(
+                    self._logger.exception(
                         f"Could not fix Properties structure: {convert_error}",
                     )
                     return
@@ -1100,13 +1101,13 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 result = entity_collection.update(str(entity_id), update_fields)
                 self._logger.debug(f"Entity update completed: {result}")
             except Exception as update_error:
-                self._logger.error(f"Entity update operation failed: {update_error}")
+                self._logger.exception(f"Entity update operation failed: {update_error}")
                 # Log the update document for debugging
-                self._logger.error(f"Failed update document: {update_fields}")
+                self._logger.exception(f"Failed update document: {update_fields}")
                 # Don't re-raise - we want to continue processing other activities
 
         except Exception as e:
-            self._logger.error(f"Error updating entity metadata: {e}")
+            self._logger.exception(f"Error updating entity metadata: {e}")
             import traceback
 
             self._logger.debug(f"Error details: {traceback.format_exc()}")
@@ -1261,7 +1262,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Successfully updated {updates} activities in context",
                 )
             except Exception as e:
-                self._logger.error(f"Error batch updating activity context: {e}")
+                self._logger.exception(f"Error batch updating activity context: {e}")
 
         self._logger.debug("Will store activities in groups of 5 for stability")
 
@@ -1296,7 +1297,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
             except Exception as e:
                 error_count += 1
-                self._logger.error(f"ERROR storing activity {i+1}: {e}")
+                self._logger.exception(f"ERROR storing activity {i+1}: {e}")
                 # Don't let one failure stop the entire batch
                 continue
 
@@ -1345,7 +1346,6 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Track if this activity has FRN data for lookup
         has_frn_data = False
-        frn_lookup_success = False
 
         # Convert dict to NtfsStorageActivityData if needed
         if isinstance(activity_data, dict):
@@ -1356,7 +1356,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     f"Converted to NtfsStorageActivityData with ID {activity_data.activity_id}",
                 )
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Error converting dict to NtfsStorageActivityData: {e}",
                 )
                 self._logger.debug(
@@ -1389,7 +1389,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         f"Converted enhanced data with ID {activity_data.activity_id}",
                     )
             except Exception as e:
-                self._logger.error(f"Error integrating with activity context: {e}")
+                self._logger.exception(f"Error integrating with activity context: {e}")
                 self._logger.debug(
                     f"Context integration error details: {traceback.format_exc()}",
                 )
@@ -1416,13 +1416,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
             # Consider this a successful FRN lookup if we have entity_id in the document
             if has_frn_data and "entity_id" in document and document["entity_id"]:
-                frn_lookup_success = True
                 self._frn_lookup_stats["success"] += 1
             elif has_frn_data:
                 self._frn_lookup_stats["failed"] += 1
 
         except Exception as e:
-            self._logger.error(f"Error building hot tier document: {e}")
+            self._logger.exception(f"Error building hot tier document: {e}")
             self._logger.debug(
                 f"Document building error details: {traceback.format_exc()}",
             )
@@ -1459,15 +1458,15 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
         except TypeError as e:
             # If serialization fails, print detailed information
-            self._logger.error(f"Document serialization failed: {e}")
+            self._logger.exception(f"Document serialization failed: {e}")
             self._logger.debug(f"Document keys: {list(document.keys())}")
             # Try serializing each field separately to identify the problem
             for key, value in document.items():
                 try:
-                    serialized = json.dumps({key: value}, default=uuid_safe_serializer)
+                    json.dumps({key: value}, default=uuid_safe_serializer)
                     self._logger.debug(f"Field '{key}' serialized OK")
                 except Exception as field_err:
-                    self._logger.error(
+                    self._logger.exception(
                         f"ERROR in field '{key}': {field_err}, type: {type(value)}",
                     )
                     if isinstance(value, dict):
@@ -1480,7 +1479,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )
 
         # Use the serialized document for insertion
-        result = self._collection.insert(serialized_doc)
+        self._collection.insert(serialized_doc)
         self._logger.debug(
             f"Successfully inserted document with ID {activity_data.activity_id}",
         )
@@ -1531,10 +1530,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
 
             # Return results
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting activities by entity: {e}")
+            self._logger.exception(f"Error getting activities by entity: {e}")
             return []
 
     def get_activities_by_time_window(
@@ -1588,10 +1587,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
 
             # Return results
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting activities by time window: {e}")
+            self._logger.exception(f"Error getting activities by time window: {e}")
             return []
 
     def get_recent_activities(
@@ -1667,10 +1666,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
 
             # Return results
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting recent activities by type: {e}")
+            self._logger.exception(f"Error getting recent activities by type: {e}")
             return []
 
     def get_rename_activities(
@@ -1721,10 +1720,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             )
 
             # Return results
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting rename activities: {e}")
+            self._logger.exception(f"Error getting rename activities: {e}")
             return []
 
     def get_hot_tier_statistics(self) -> dict[str, Any]:
@@ -1815,7 +1814,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error getting hot tier statistics: {e}")
+            self._logger.exception(f"Error getting hot tier statistics: {e}")
             return {"error": str(e)}
 
     def increment_search_hit(self, activity_id: uuid.UUID) -> bool:
@@ -1856,7 +1855,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return True
 
         except Exception as e:
-            self._logger.error(f"Error incrementing search hit: {e}")
+            self._logger.exception(f"Error incrementing search hit: {e}")
             return False
 
     def mark_entity_searched(self, entity_id: uuid.UUID) -> bool:
@@ -1884,7 +1883,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     self.increment_search_hit(uuid.UUID(activity_id))
 
             # Update entity importance
-            entity_collection = self._db.get_collection(self._entity_collection_name)
+            self._db.get_collection(self._entity_collection_name)
 
             query = """
                 UPDATE @entity_id WITH {
@@ -1905,7 +1904,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return True
 
         except Exception as e:
-            self._logger.error(f"Error marking entity as searched: {e}")
+            self._logger.exception(f"Error marking entity as searched: {e}")
             return False
 
     def get_recorder_name(self) -> str:
@@ -2056,7 +2055,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             self._logger.info("Hot tier data updated successfully")
 
         except Exception as e:
-            self._logger.error(f"Error updating hot tier data: {e}")
+            self._logger.exception(f"Error updating hot tier data: {e}")
 
     def get_latest_db_update(self) -> dict[str, Any]:
         """
@@ -2107,7 +2106,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 }
 
         except Exception as e:
-            self._logger.error(f"Error getting latest update: {e}")
+            self._logger.exception(f"Error getting latest update: {e}")
             return {"tier": "hot", "error": str(e), "ttl_days": self._ttl_days}
 
     def process_data(self, data: Any) -> dict[str, Any]:
@@ -2169,7 +2168,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                             try:
                                 self._update_entity_metadata(entity_id, activity)
                             except Exception as e:
-                                self._logger.error(
+                                self._logger.exception(
                                     f"Error updating entity metadata: {e}",
                                 )
 
@@ -2185,7 +2184,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return processed_data
 
         except Exception as e:
-            self._logger.error(f"Error enhancing processed data: {e}")
+            self._logger.exception(f"Error enhancing processed data: {e}")
             # Return original processed data as fallback
             return processed_data
 
@@ -2224,10 +2223,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             try:
                 self.store_activity(data)
             except Exception as e:
-                self._logger.error(f"Failed to store data in hot tier: {e}")
+                self._logger.exception(f"Failed to store data in hot tier: {e}")
 
         except Exception as e:
-            self._logger.error(f"Error storing data in hot tier: {e}")
+            self._logger.exception(f"Error storing data in hot tier: {e}")
 
 
 # Command-line interface
@@ -2295,14 +2294,8 @@ if __name__ == "__main__":
     logger = logging.getLogger("NtfsHotTierRecorder")
 
     # Display configuration
-    print("=== NTFS Hot Tier Recorder ===")
-    print(f"- Input file: {args.input}")
-    print(f"- TTL days: {args.ttl_days}")
-    print(f"- Debug mode: {'Enabled' if args.debug else 'Disabled'}")
-    print(f"- Database: {'Disabled' if args.no_db else 'Enabled'}")
     if args.db_config:
-        print(f"- DB Config: {args.db_config}")
-    print()
+        pass
 
     try:
         # Create recorder
@@ -2318,57 +2311,39 @@ if __name__ == "__main__":
         activity_ids = recorder.process_jsonl_file(args.input)
         end_time = time.time()
 
-        print(
-            f"\nProcessed {len(activity_ids)} activities in {end_time - start_time:.2f} seconds",
-        )
 
         # Display statistics
         if hasattr(recorder, "_db") and recorder._db:
-            print("\nHot Tier Statistics:")
             stats = recorder.get_hot_tier_statistics()
 
             if "total_count" in stats:
-                print(f"  Total activities: {stats['total_count']}")
+                pass
 
             if "by_type" in stats:
-                print("  Activities by type:")
-                for activity_type, count in stats["by_type"].items():
-                    print(f"    {activity_type}: {count}")
+                for _activity_type, _count in stats["by_type"].items():
+                    pass
 
             if "by_importance" in stats:
-                print("  Activities by importance:")
-                for importance, count in stats["by_importance"].items():
-                    print(f"    {importance}: {count}")
+                for _importance, _count in stats["by_importance"].items():
+                    pass
 
             if "by_time" in stats:
-                print("  Activities by time:")
-                for time_range, count in stats["by_time"].items():
-                    print(f"    {time_range}: {count}")
+                for _time_range, _count in stats["by_time"].items():
+                    pass
 
         # Display some activities if not in stats-only mode
         if not args.stats_only and hasattr(recorder, "_db") and recorder._db and len(activity_ids) > 0:
-            print(f"\nShowing {min(args.limit, len(activity_ids))} recent activities:")
 
             # Get recent activities
             recent = recorder.get_recent_activities(hours=24, limit=args.limit)
 
-            for i, activity in enumerate(recent[: args.limit]):
+            for _i, activity in enumerate(recent[: args.limit]):
                 data = activity.get("Record", {}).get("Data", {})
-                print(f"Activity {i+1}:")
-                print(f"  Type: {data.get('activity_type', 'Unknown')}")
-                print(f"  File: {data.get('file_name', 'Unknown')}")
-                print(f"  Path: {data.get('file_path', 'Unknown')}")
-                print(f"  Time: {data.get('timestamp', 'Unknown')}")
-                print(f"  Importance: {data.get('importance_score', 'Unknown'):.2f}")
-                print(f"  Entity ID: {data.get('entity_id', 'Unknown')}")
-                print()
 
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
-        print(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         import traceback
 
         traceback.print_exc()
         sys.exit(1)
 
-    print("\nDone.")

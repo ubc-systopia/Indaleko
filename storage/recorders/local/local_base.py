@@ -27,12 +27,15 @@ import inspect
 import os
 import sys
 import uuid
+
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import psutil
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +55,7 @@ from storage.recorders.base import BaseStorageRecorder
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -66,7 +70,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
     @staticmethod
     def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-        """Load the machine configuration"""
+        """Load the machine configuration."""
         if keys.get("debug"):
             ic(f"local_recorder_mixin.load_machine_config: {keys}")
         if "machine_config_file" not in keys:
@@ -88,7 +92,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         )
 
     class local_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
-        """This is the mixin for the local recorder"""
+        """This is the mixin for the local recorder."""
 
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
@@ -97,7 +101,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
     @staticmethod
     def local_run(keys: dict[str, str]) -> dict | None:
-        """Run the recorder"""
+        """Run the recorder."""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
         config_data = cli.get_config_data()
@@ -132,22 +136,21 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         ):
             kwargs["storage_description"] = config_data["InputFileKeys"]["storage"]
 
-        def record(recorder: BaseLocalStorageRecorder, **kwargs):
+        def record(recorder: BaseLocalStorageRecorder, **kwargs) -> None:
             recorder.record()
 
         def extract_counters(**kwargs):
             recorder = kwargs.get("recorder")
             if recorder:
                 return recorder.get_counts()
-            else:
-                return {}
+            return {}
 
         recorder = recorder_class(**kwargs)
 
         def capture_performance(
             task_func: Callable[..., Any],
-            output_file_name: Path | str = None,
-        ):
+            output_file_name: Path | str | None = None,
+        ) -> None:
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(

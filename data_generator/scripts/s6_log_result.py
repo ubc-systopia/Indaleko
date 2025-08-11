@@ -1,4 +1,5 @@
 """Log the result of the metadata generator."""
+
 import json
 import logging
 
@@ -8,8 +9,9 @@ from pathlib import Path
 from textwrap import dedent
 
 
-# ruff: noqa: S101,S311,FBT001,FBT002,G004
+# ruff: noqa: G004
 # pylint: disable=W1203
+
 
 class ResultLogger:
     """
@@ -20,7 +22,6 @@ class ResultLogger:
 
     SPACER = "----------------------------------------------"
     "----------------------------------------------"
-
 
     def __init__(self, result_path: str) -> None:
         """
@@ -35,18 +36,20 @@ class ResultLogger:
 
         self.progress_logger = self.create_logger(
             result_path / "validator_progress.log",
-            "ProgressLogger", progress_formatting,
+            "ProgressLogger",
+            progress_formatting,
         )
         self.result_logger = self.create_logger(
-            result_path / "validator_result.log", "ResultLogger",
+            result_path / "validator_result.log",
+            "ResultLogger",
             result_formatting,
         )
 
     def create_logger(
-            self,
-            log_file: Path | str,
-            logger_name: str | None,
-            formatting: str | None,
+        self,
+        log_file: Path | str,
+        logger_name: str | None,
+        formatting: str | None,
     ) -> Logger:
         """
         Creates a new logger instance.
@@ -93,11 +96,7 @@ class ResultLogger:
         """
         self.progress_logger.info(description)
 
-    def log_process_result(
-            self,
-            description: str,
-            epoch: str,
-            results: dict | None = None) -> None:
+    def log_process_result(self, description: str, epoch: str, results: dict | None = None) -> None:
         """
         Progress Logger: Logs general processes occuring.
 
@@ -113,10 +112,7 @@ class ResultLogger:
 
         self.progress_logger.info(json.dumps(log_data))
 
-    def log_final_result(
-            self,
-            total_epoch:str,
-            results: dict) -> None:
+    def log_final_result(self, total_epoch: str, results: dict) -> None:
         """
         Logs summary of results.
 
@@ -158,13 +154,10 @@ class ResultLogger:
         self.result_logger.info(self.SPACER)
         self.result_logger.info("Indaleko Results:")
         self.result_logger.info(f" Actual Metadata Returned: {results['metadata_number']}")
-        self.result_logger.info(
-            f" Actual Truth Metadata Returned: {results['results'].truth_number}")
+        self.result_logger.info(f" Actual Truth Metadata Returned: {results['results'].truth_number}")
         self.result_logger.info(f" Filler Metadata Returned: {results['results'].filler_number}")
-        self.result_logger.info(
-            f" Metadata Returned From User's Database: {results['results'].original_number}")
-        self.result_logger.info(
-            f" UUID of Indaleko Objects Returned: {results['results'].returned_uuid}")
+        self.result_logger.info(f" Metadata Returned From User's Database: {results['results'].original_number}")
+        self.result_logger.info(f" UUID of Indaleko Objects Returned: {results['results'].returned_uuid}")
         self.result_logger.info(self.SPACER)
         self.result_logger.info("Summary Stats:")
         self.result_logger.info(f" Total epoch: {total_epoch}")

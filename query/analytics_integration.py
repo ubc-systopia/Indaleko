@@ -27,6 +27,7 @@ import os
 
 from query.analytics.file_statistics import FileStatistics, display_report, format_size
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 class AnalyticsIntegration:
     """Integration between the analytics packages and the query CLI."""
 
-    def __init__(self, cli_instance, db_config=None, debug=False):
+    def __init__(self, cli_instance, db_config=None, debug=False) -> None:
         """
         Initialize the AnalyticsIntegration class.
 
@@ -59,7 +60,7 @@ class AnalyticsIntegration:
 
         logger.info("Analytics integration initialized")
 
-    def _register_commands(self):
+    def _register_commands(self) -> None:
         """Register analytics commands with the CLI."""
         # Check if the CLI has the command registration methods
         if not hasattr(self.cli, "register_command") or not callable(
@@ -82,7 +83,7 @@ class AnalyticsIntegration:
                 )
                 logger.info("Added analytics help text")
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            logger.error(
+            logger.exception(
                 f"Error registering analytics commands: {e!s}",
                 exc_info=self.debug,
             )
@@ -129,35 +130,34 @@ class AnalyticsIntegration:
             args = parser.parse_args(args_str.split())
             command = args.command.lower()
 
-            if command == "help" or command == "":
+            if command in {"help", ""}:
                 return self._get_help_text()
 
-            elif command == "stats" or command == "summary":
+            if command in {"stats", "summary"}:
                 return self._run_summary_stats()
 
-            elif command == "files":
+            if command == "files":
                 return self._run_file_analysis()
 
-            elif command == "types" or command == "extensions":
+            if command in {"types", "extensions"}:
                 return self._run_type_analysis()
 
-            elif command == "ages":
+            if command == "ages":
                 return self._run_age_analysis()
 
-            elif command == "report":
+            if command == "report":
                 return self._run_full_report(args.output, args.visualize)
 
-            else:
-                return f"Unknown analytics command: {command}. Type '/analytics help' for available commands."
+            return f"Unknown analytics command: {command}. Type '/analytics help' for available commands."
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error processing analytics command: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
     def _get_help_text(self) -> str:
         """Get the help text for analytics commands."""
-        help_text = """
+        return """
 === Indaleko Analytics Commands ===
 
 Commands:
@@ -177,7 +177,6 @@ Examples:
   /analytics stats
   /analytics report --output ./reports --visualize
 """
-        return help_text
 
     def _run_summary_stats(self) -> str:
         """Run summary statistics analysis."""
@@ -204,7 +203,7 @@ Examples:
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running summary statistics: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
     def _run_file_analysis(self) -> str:
@@ -227,7 +226,7 @@ Examples:
                 result += "\nSize Distribution Analysis:\n"
 
                 # Calculate rough storage distribution
-                total_size = size_stats["total_size"]
+                size_stats["total_size"]
                 large_file_threshold = 100 * 1024 * 1024  # 100 MB
                 medium_file_threshold = 1 * 1024 * 1024  # 1 MB
                 small_file_threshold = 100 * 1024  # 100 KB
@@ -236,15 +235,15 @@ Examples:
                 # (simplified estimation for CLI display)
                 result += "\nEstimated File Size Distribution:\n"
                 result += (
-                    f"- Very Large Files (>100 MB): ~{size_stats['max_size'] > large_file_threshold and '✓' or '✗'}\n"
+                    f"- Very Large Files (>100 MB): ~{(size_stats['max_size'] > large_file_threshold and '✓') or '✗'}\n"
                 )
                 result += (
-                    f"- Large Files (1-100 MB): ~{size_stats['max_size'] > medium_file_threshold and '✓' or '✗'}\n"
+                    f"- Large Files (1-100 MB): ~{(size_stats['max_size'] > medium_file_threshold and '✓') or '✗'}\n"
                 )
                 result += (
-                    f"- Medium Files (100 KB-1 MB): ~{size_stats['max_size'] > small_file_threshold and '✓' or '✗'}\n"
+                    f"- Medium Files (100 KB-1 MB): ~{(size_stats['max_size'] > small_file_threshold and '✓') or '✗'}\n"
                 )
-                result += f"- Small Files (<100 KB): ~{size_stats['min_size'] < small_file_threshold and '✓' or '✗'}\n"
+                result += f"- Small Files (<100 KB): ~{(size_stats['min_size'] < small_file_threshold and '✓') or '✗'}\n"
 
                 # Add recommendation for visualization
                 result += "\nNote: Run '/analytics report --visualize' for detailed visualization of size distribution."
@@ -253,7 +252,7 @@ Examples:
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file analysis: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
     def _run_type_analysis(self) -> str:
@@ -300,7 +299,7 @@ Examples:
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file type analysis: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
     def _run_age_analysis(self) -> str:
@@ -362,7 +361,7 @@ Examples:
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file age analysis: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
     def _run_full_report(self, output_dir: str = ".", visualize: bool = False) -> str:
@@ -402,7 +401,7 @@ Examples:
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error generating full report: {e!s}"
-            logger.error(error_msg, exc_info=self.debug)
+            logger.exception(error_msg, exc_info=self.debug)
             return error_msg
 
 
@@ -422,7 +421,7 @@ def register_analytics_commands(cli_instance, db_config=None, debug=False):
     return AnalyticsIntegration(cli_instance, db_config, debug)
 
 
-def add_analytics_arguments(parser):
+def add_analytics_arguments(parser) -> None:
     """
     Add analytics-related arguments to the argument parser.
 

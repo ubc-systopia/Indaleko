@@ -23,11 +23,13 @@ import json
 import os
 import platform
 import sys
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Union
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,14 +51,15 @@ from utils.misc.file_name_management import (
     generate_file_name,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoBaseCLI:
-    """Base class for handling main function logic in collectors and recorders"""
+    """Base class for handling main function logic in collectors and recorders."""
 
     class cli_features:
-        """This class provides a set of features requested for the CLI"""
+        """This class provides a set of features requested for the CLI."""
 
         debug = True
         db_config = True
@@ -70,7 +73,7 @@ class IndalekoBaseCLI:
         performance = True
         platform = True
 
-        def __init__(self, **kwargs):
+        def __init__(self, **kwargs) -> None:
             for key, value in kwargs.items():
                 if hasattr(self, key):
                     assert isinstance(
@@ -88,7 +91,7 @@ class IndalekoBaseCLI:
         features: Union["IndalekoBaseCLI.cli_features", None] = None,
     ) -> None:
         """
-        Initialize the main handler with specific service and config classes
+        Initialize the main handler with specific service and config classes.
 
         Args:
             service_class: Type of the service (BaseStorageCollector or BaseStorageRecorder subclass)
@@ -126,14 +129,14 @@ class IndalekoBaseCLI:
         self.help_texts = []
 
     def get_args(self) -> argparse.Namespace:
-        """This method is used to get the arguments"""
+        """This method is used to get the arguments."""
         if not self.args:
             parser = argparse.ArgumentParser(parents=[self.pre_parser], add_help=True)
             self.args = parser.parse_args()
         return self.args
 
     def setup_debug_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the debug parser"""
+        """This method is used to set up the debug parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "debug"):  # only process it once
             return None
@@ -147,7 +150,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_configdir_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the config directory parser"""
+        """This method is used to set up the config directory parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "configdir"):  # only process it once
             return None
@@ -160,7 +163,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_datadir_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the data directory parser"""
+        """This method is used to set up the data directory parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "datadir"):  # only process it once
             return None
@@ -173,7 +176,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_logging_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the logging parser"""
+        """This method is used to set up the logging parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if self.cli_features.platform and not hasattr(pre_args, "platform"):
             self.setup_platform_parser()
@@ -203,7 +206,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_db_config_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the database configuration parser"""
+        """This method is used to set up the database configuration parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "db_config"):  # only process it once
             return None
@@ -222,9 +225,10 @@ class IndalekoBaseCLI:
                 help=f"Database configuration to use (default={default_db_config})",
             )
             return self
+        return None
 
     def setup_offline_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the offline parser"""
+        """This method is used to set up the offline parser."""
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "offline"):  # only process it once
             return None
@@ -238,7 +242,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_machine_config_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the machine configuration parser"""
+        """This method is used to set up the machine configuration parser."""
         if not self.features.machine_config:
             return None
         if self.features.input and not hasattr(self.pre_parser, "inputfile"):
@@ -276,7 +280,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_platform_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the platform parser"""
+        """This method is used to set up the platform parser."""
         if not self.features.platform:
             return None
         pre_args, _ = self.pre_parser.parse_known_args()
@@ -292,7 +296,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_output_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the output parser"""
+        """This method is used to set up the output parser."""
         if self.features.machine_config and not hasattr(
             self.pre_parser,
             "machine_config",
@@ -329,7 +333,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_performance_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the performance parser"""
+        """This method is used to set up the performance parser."""
         if not self.config_data.get("FileServiceName"):
             return None  # there can be no perf data without a service name
         self.pre_parser.add_argument(
@@ -352,7 +356,7 @@ class IndalekoBaseCLI:
         return self
 
     def setup_input_parser(self) -> "IndalekoBaseCLI":
-        """This method is used to set up the input parser"""
+        """This method is used to set up the input parser."""
         if not self.cli_features.input:
             return
         pre_args, _ = self.pre_parser.parse_known_args()
@@ -422,7 +426,7 @@ class IndalekoBaseCLI:
         self.config_data["Timestamp"] = pre_args.timestamp
 
     def get_config_data(self: "IndalekoBaseCLI") -> dict[str, Any]:
-        """This method is used to get the configuration data"""
+        """This method is used to get the configuration data."""
         return self.config_data
 
     def register_command(self, command: str, handler) -> None:
@@ -472,11 +476,11 @@ class IndalekoBaseCLI:
         return "\n".join(self.help_texts)
 
     class default_handler_mixin(IndalekoHandlermixin):
-        """Default handler mixin for the CLI"""
+        """Default handler mixin for the CLI."""
 
         @staticmethod
         def get_platform_name() -> str:
-            """This method is used to get the platform name"""
+            """This method is used to get the platform name."""
             return platform.system()
 
         @staticmethod
@@ -524,11 +528,11 @@ class IndalekoBaseCLI:
         @staticmethod
         def find_machine_config_files(
             config_dir: str | Path,
-            platform: str = None,
-            machine_id: str = None,
+            platform: str | None = None,
+            machine_id: str | None = None,
         ) -> list[str] | None:
             """
-            This method is used to find machine configuration files
+            This method is used to find machine configuration files.
 
             Inputs:
                 - config_dir: The directory where the configuration files are stored
@@ -560,7 +564,7 @@ class IndalekoBaseCLI:
             prefix: str,
             suffix: str,
         ) -> list[str] | None:
-            """This method is used to find data files"""
+            """This method is used to find data files."""
             if not Path(data_dir).exists():
                 return None
             # the hyphen at the end ensures we don't pick up partial matches
@@ -568,7 +572,7 @@ class IndalekoBaseCLI:
             return [
                 fname
                 for fname, _ in find_candidate_files(selection_keys, str(data_dir))
-                if fname.startswith(prefix) and fname.endswith(suffix) and all([key in fname for key in selection_keys])
+                if fname.startswith(prefix) and fname.endswith(suffix) and all(key in fname for key in selection_keys)
             ]
 
         @staticmethod
@@ -594,7 +598,7 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def generate_log_file_name(keys: dict[str, str]) -> str:
-            """This method is used to generate a log file name"""
+            """This method is used to generate a log file name."""
             kwargs = {
                 "service": keys["FileServiceName"],
                 "timestamp": keys["Timestamp"],
@@ -613,9 +617,7 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def generate_perf_file_name(keys: dict[str, str]) -> str:
-            """
-            This method is used to generate a performance file name.
-            """
+            """This method is used to generate a performance file name."""
             kwargs = {
                 "service": keys["FileServiceName"] + "_perf",
                 "timestamp": keys["Timestamp"],
@@ -628,7 +630,7 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-            """This method is used to load a machine configuration"""
+            """This method is used to load a machine configuration."""
             raise NotImplementedError(
                 f"The method {inspect.currentframe().f_code.co_name} must be implemented by the subclass",
             )
@@ -642,7 +644,7 @@ class IndalekoBaseCLI:
         def get_storage_identifier(
             config_data: dict[str, str],
         ) -> str | None:
-            """Default is no storage identifier"""
+            """Default is no storage identifier."""
             if config_data.get("StorageId"):
                 storage_id = config_data["StorageId"]
             elif "InputFileKeys" in config_data and "storage" in config_data["InputFileKeys"]:
@@ -666,7 +668,7 @@ class IndalekoBaseCLI:
         def get_user_identifier(
             config_data: dict[str, str],
         ) -> str | None:
-            """Default is no user identifier"""
+            """Default is no user identifier."""
             if config_data.get("UserId"):
                 user_id = config_data["UserId"]
             elif "InputFileKeys" in config_data and "userid" in config_data["InputFileKeys"]:
@@ -676,8 +678,8 @@ class IndalekoBaseCLI:
             return user_id
 
 
-def main():
-    """Test the main handler"""
+def main() -> None:
+    """Test the main handler."""
     cli = IndalekoBaseCLI()
     args = cli.get_args()
     ic(cli.get_config_data())

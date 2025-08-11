@@ -38,14 +38,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
 import time
+
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -58,6 +59,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
+
 
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
@@ -255,7 +257,7 @@ def main() -> None:
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    logger = logging.getLogger("NtfsRecorderCLI")
+    logging.getLogger("NtfsRecorderCLI")
 
     # Process the JSONL file
     result = process_jsonl_file(
@@ -271,48 +273,28 @@ def main() -> None:
     # Display results
     if args.json_output:
         # Format JSON output for better readability
-        print(json.dumps(result, indent=2))
+        pass
     elif result["success"]:
-        print(f"\nSuccessfully processed activities from {args.input}")
-        print(f"  - Activities processed: {result['activities_processed']}")
-        print(
-            f"  - Processing time: {result['processing_time_seconds']:.2f} seconds",
-        )
-        print(f"  - TTL: {result['ttl_days']} days")
 
         if args.statistics and "statistics" in result:
             stats = result["statistics"]
-            print("\nHot Tier Statistics:")
-            print(f"  - Total activities: {stats.get('total_count', 'N/A')}")
 
             if "by_type" in stats:
-                print("\n  Activity Types:")
-                for activity_type, count in stats["by_type"].items():
-                    print(f"    - {activity_type}: {count}")
+                for _activity_type, _count in stats["by_type"].items():
+                    pass
 
             if "by_importance" in stats:
-                print("\n  Importance Score Distribution:")
-                for score, count in stats["by_importance"].items():
-                    print(f"    - Score {score}: {count}")
+                for _score, _count in stats["by_importance"].items():
+                    pass
 
             if "by_time" in stats:
-                print("\n  Time Distribution:")
-                for time_range, count in stats["by_time"].items():
-                    print(f"    - {time_range}: {count}")
+                for _time_range, _count in stats["by_time"].items():
+                    pass
 
         if args.show_activities and "recent_activities" in result:
-            print("\nRecent Activities:")
-            for i, activity in enumerate(result["recent_activities"], 1):
-                print(f"\n  Activity {i}:")
-                print(f"    - ID: {activity.get('activity_id', 'N/A')}")
-                print(f"    - Time: {activity.get('timestamp', 'N/A')}")
-                print(f"    - Type: {activity.get('activity_type', 'N/A')}")
-                print(f"    - Path: {activity.get('file_path', 'N/A')}")
-                print(
-                    f"    - Importance: {activity.get('importance_score', 'N/A')}",
-                )
+            for _i, _activity in enumerate(result["recent_activities"], 1):
+                pass
     else:
-        print(f"\nERROR: {result.get('error', 'Unknown error')}")
         sys.exit(1)
 
 

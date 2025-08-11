@@ -10,6 +10,7 @@ from storage.incremental_update.models import EntityInfo, EntityType
 from storage.incremental_update.queue_service import EntityResolutionQueue
 from utils.i_logging import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -38,7 +39,7 @@ class EntityResolutionProducer:
     ```
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Initialize the mixin."""
         super().__init__(*args, **kwargs)
         self._resolution_queue = None

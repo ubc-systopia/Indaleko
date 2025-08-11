@@ -1,12 +1,10 @@
 from typing import Any
 
-from .translator_base import TranslatorBase
+from indaleko.query.query_processing.query_translator.translator_base import TranslatorBase
 
 
 class GraphQLTranslator(TranslatorBase):
-    """
-    Translator for converting parsed queries to GraphQL.
-    """
+    """Translator for converting parsed queries to GraphQL."""
 
     def translate(self, parsed_query: dict[str, Any], llm_connector: Any) -> str:
         """
@@ -26,8 +24,7 @@ class GraphQLTranslator(TranslatorBase):
         # Validate and optimize the generated query
         if self.validate_query(graphql_query):
             return self.optimize_query(graphql_query)
-        else:
-            raise ValueError("Generated GraphQL query is invalid")
+        raise ValueError("Generated GraphQL query is invalid")
 
     def validate_query(self, query: str) -> bool:
         """

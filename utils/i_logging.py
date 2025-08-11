@@ -1,4 +1,4 @@
-"""Generic log management for Indaleko"""
+"""Generic log management for Indaleko."""
 
 import argparse
 import datetime
@@ -7,6 +7,7 @@ import logging as _logging
 import os
 import platform
 import sys
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 import utils.misc.file_name_management
+
 from utils.misc.directory_management import indaleko_default_log_dir
 from utils.singleton import IndalekoSingleton
 
@@ -34,7 +36,7 @@ def get_logger(name: str | None = None) -> logging.Logger:
 class IndalekoLogging(IndalekoSingleton):
     """Class for managing Indaleko logging."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize a new instance of the IndalekoLogging class object."""
         if self._initialized:
             return
@@ -111,11 +113,10 @@ class IndalekoLogging(IndalekoSingleton):
         fnargs = {"service": service_name, "timestamp": timestamp, "suffix": "log"}
         if "platform" in kwargs:
             fnargs["platform"] = kwargs["platform"]
-        fname = utils.misc.file_name_management.generate_file_name(**fnargs)
-        return fname
+        return utils.misc.file_name_management.generate_file_name(**fnargs)
 
     @staticmethod
-    def list_service_logs(service_name: str, logs_dir: str = None) -> list:
+    def list_service_logs(service_name: str, logs_dir: str | None = None) -> list:
         """List the log files for a given service."""
         if logs_dir is None:
             logs_dir = indaleko_default_log_dir
@@ -124,29 +125,23 @@ class IndalekoLogging(IndalekoSingleton):
     @staticmethod
     def list_logs(**kwargs) -> list:
         """List all log files filtered against the arguments."""
-        if "log_dir" in kwargs:
-            log_dir = kwargs["log_dir"]
-        else:
-            log_dir = indaleko_default_log_dir
-        logs = os.listdir(log_dir)
-        return logs
+        log_dir = kwargs.get("log_dir", indaleko_default_log_dir)
+        return os.listdir(log_dir)
 
 
 def list_logs(args: argparse.Namespace) -> None:
     """List all log files filtered against the arguments."""
-    print("List logs")
     logs = IndalekoLogging.list_logs()
     if args.service is not None:
         logs = [x for x in logs if args.service in x]
     if args.platform is not None:
         logs = [x for x in logs if args.platform in x]
-    for log in logs:
-        print(f"\t{log}")
+    for _log in logs:
+        pass
 
 
 def cleanup_logs(args: argparse.Namespace) -> None:
     """Cleanup logs."""
-    print(args)
     logging.info("Cleanup logs")
     logs = IndalekoLogging.list_logs()
     if args.service is not None:
@@ -160,13 +155,12 @@ def cleanup_logs(args: argparse.Namespace) -> None:
         if args.log_file in log_name:
             logging.info(f"Skipping log {log_name}")
             continue
-        print(f"\t{log_name}\targs.logfile={args.log_file}")
         logging.info(f"Deleting log {log_name}")
         os.remove(log_name)
 
 
 def prune_logs(args: argparse.Namespace) -> None:
-    """This keeps only the last instance of any given log file"""
+    """This keeps only the last instance of any given log file."""
     # First, let's figure out the prefixes.
     logging.info("Prune logs")
     logs = IndalekoLogging.list_logs()
@@ -194,10 +188,8 @@ def prune_logs(args: argparse.Namespace) -> None:
             os.remove(log_name)
 
 
-def main():
+def main() -> None:
     """Main function for the IndalekoLogging class."""
-    print("Welcome to Indaleko Logging Management")
-    print(f'DEBUG maps to {IndalekoLogging.map_logging_type_to_level("DEBUG")}')
     indaleko_logging = IndalekoLogging(service_name="IndalekoLogging")
     assert indaleko_logging is not None, "IndalekoLogging is None"
     parser = argparse.ArgumentParser(description="Indaleko logging management")

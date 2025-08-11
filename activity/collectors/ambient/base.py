@@ -23,10 +23,12 @@ import datetime
 import logging
 import os
 import sys
+
 from abc import abstractmethod
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,13 +37,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.base import CollectorBase
-
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from activity.collectors.base import CollectorBase
 from utils import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 
@@ -51,7 +53,7 @@ class AmbientCollector(CollectorBase):
 
     @abstractmethod
     def get_ambient_condition_name(self) -> Any:
-        """Get the name of the ambient condition"""
+        """Get the name of the ambient condition."""
 
     @abstractmethod
     def get_ambient_condition_history(
@@ -59,16 +61,16 @@ class AmbientCollector(CollectorBase):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
-        """Get the ambient condition history"""
+        """Get the ambient condition history."""
 
 
-def list_data_collectors_command(args: argparse.Namespace):
-    """List the data collectors available"""
+def list_data_collectors_command(args: argparse.Namespace) -> None:
+    """List the data collectors available."""
     ic(args)
     ic("This needs to be implemented")
 
 
-def main():
+def main() -> None:
     """This is a test interface for the ambient condition base data collector."""
     parser = argparse.ArgumentParser(description="Location provider test interface")
     # pylint: disable=no-member

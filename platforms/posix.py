@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -42,7 +42,7 @@ class IndalekoPosix:
         return " | ".join(file_attributes)
 
 
-def main():
+def main() -> None:
     """Test code for IndalekoPosix class."""
     parser = argparse.ArgumentParser(description="Indaleko Posix test logic")
     parser.add_argument(
@@ -55,15 +55,10 @@ def main():
     args = parser.parse_args()
 
     if args.attr == 0xFF:
-        print("Testing all attributes")
-        for attributes in IndalekoPosix.FILE_ATTRIBUTES.items():
-            print(f"{attributes} = {IndalekoPosix.FILE_ATTRIBUTES[attributes[0]]}")
-            print(
-                f"{attributes} = \
-                  {IndalekoPosix.map_file_attributes(IndalekoPosix.FILE_ATTRIBUTES[attributes[0]])}",
-            )
+        for _attributes in IndalekoPosix.FILE_ATTRIBUTES.items():
+            pass
     else:
-        print(f"{args.attr} = {IndalekoPosix.map_file_attributes(args.attr)}")
+        pass
 
 
 if __name__ == "__main__":

@@ -7,7 +7,9 @@ metadata records to test Indaleko's search capabilities.
 
 import os
 import sys
+
 from pathlib import Path
+
 
 # Bootstrap project root so imports of `utils` and other top-level packages work
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -19,7 +21,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 from tools.data_generator_enhanced.handler_mixin import DataGeneratorHandlerMixin
-
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner

@@ -31,8 +31,10 @@ import signal
 import sys
 import threading
 import time
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -51,6 +53,7 @@ from semantic.collectors.exif.background_processor import schedule_exif_processi
 # Import specialized processors
 from semantic.collectors.mime.background_processor import schedule_mime_processing
 from utils.db.db_file_picker import IndalekoFilePicker
+
 
 # Try to import unstructured processor if available
 try:
@@ -79,7 +82,7 @@ logger = logging.getLogger("IndalekoBgProcessor")
 
 # Available processor types
 class ProcessorType:
-    """Enumeration of available semantic processor types"""
+    """Enumeration of available semantic processor types."""
 
     MIME = "mime"
     CHECKSUM = "checksum"
@@ -88,7 +91,7 @@ class ProcessorType:
 
     @staticmethod
     def get_all() -> list[str]:
-        """Get all available processor types"""
+        """Get all available processor types."""
         return [
             ProcessorType.MIME,
             ProcessorType.CHECKSUM,
@@ -98,7 +101,7 @@ class ProcessorType:
 
     @staticmethod
     def get_enabled() -> list[str]:
-        """Get all enabled processor types"""
+        """Get all enabled processor types."""
         enabled = [ProcessorType.MIME, ProcessorType.CHECKSUM, ProcessorType.EXIF]
         if UNSTRUCTURED_AVAILABLE:
             enabled.append(ProcessorType.UNSTRUCTURED)
@@ -112,7 +115,7 @@ class BackgroundProcessorManager:
     semantic extraction tasks.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         """
         Initialize the background processor manager.
 
@@ -138,13 +141,13 @@ class BackgroundProcessorManager:
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _signal_handler(self, sig, frame):
-        """Handle termination signals"""
+    def _signal_handler(self, sig, frame) -> None:
+        """Handle termination signals."""
         logger.info(f"Received signal {sig}, shutting down...")
         self.stop()
 
     def start(self) -> None:
-        """Start all enabled background processors"""
+        """Start all enabled background processors."""
         logger.info("Starting background processor manager")
 
         # Start processor threads
@@ -170,7 +173,7 @@ class BackgroundProcessorManager:
             logger.info(f"Started {processor_type} processor thread")
 
     def stop(self) -> None:
-        """Stop all background processors"""
+        """Stop all background processors."""
         logger.info("Stopping background processors...")
         self.should_stop.set()
 
@@ -275,7 +278,7 @@ class BackgroundProcessorManager:
                 min_last_processed_days=min_last_processed_days,
                 run_duration=None,
             )
-        elif processor_type == ProcessorType.CHECKSUM:
+        if processor_type == ProcessorType.CHECKSUM:
             file_extensions = processor_config.get("file_extensions", None)
             return schedule_checksum_processing(
                 count=count,
@@ -285,7 +288,7 @@ class BackgroundProcessorManager:
                 run_duration=None,
                 file_extensions=file_extensions,
             )
-        elif processor_type == ProcessorType.EXIF:
+        if processor_type == ProcessorType.EXIF:
             return schedule_exif_processing(
                 count=count,
                 background=True,
@@ -293,17 +296,16 @@ class BackgroundProcessorManager:
                 min_last_processed_days=min_last_processed_days,
                 run_duration=None,
             )
-        elif processor_type == ProcessorType.UNSTRUCTURED and UNSTRUCTURED_AVAILABLE:
+        if processor_type == ProcessorType.UNSTRUCTURED and UNSTRUCTURED_AVAILABLE:
             # Unstructured processing is not yet implemented as a background processor
             # This is a placeholder for future implementation
             logger.warning("Unstructured background processing not yet implemented")
             return 0, 0
-        else:
-            logger.warning(f"Unknown processor type: {processor_type}")
-            return 0, 0
+        logger.warning(f"Unknown processor type: {processor_type}")
+        return 0, 0
 
     def _log_statistics(self) -> None:
-        """Log processor statistics"""
+        """Log processor statistics."""
         logger.info("Background processor statistics:")
         for processor_type, stats in self.stats.items():
             logger.info(
@@ -331,7 +333,7 @@ class BackgroundProcessorManager:
             logger.info(f"Statistics saved to {file_path}")
 
         except Exception as e:
-            logger.error(f"Error saving statistics: {e}")
+            logger.exception(f"Error saving statistics: {e}")
 
 
 def load_config(config_file: str | None = None) -> dict[str, Any]:
@@ -393,12 +395,12 @@ def load_config(config_file: str | None = None) -> dict[str, Any]:
         return default_config
 
     except Exception as e:
-        logger.error(f"Error loading configuration: {e}, using defaults")
+        logger.exception(f"Error loading configuration: {e}, using defaults")
         return default_config
 
 
-def main():
-    """Main function for the unified background processor"""
+def main() -> None:
+    """Main function for the unified background processor."""
     parser = argparse.ArgumentParser(
         description="Indaleko Semantic Background Processor",
     )

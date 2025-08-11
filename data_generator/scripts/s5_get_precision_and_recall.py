@@ -1,22 +1,21 @@
 """Get precision and recall of the search results."""
+
 import math
 
 from typing import NamedTuple
 
 
-# ruff: noqa: S101,S311,FBT001,FBT002
+# ruff: noqa: S101
 
 
-Results = NamedTuple(
-    "Results", [
-        ("truth_number", int),
-        ("filler_number", int),
-        ("original_number", int),
-        ("precision", float),
-        ("recall", float),
-        ("returned_uuid", list),
-    ]
-)
+class Results(NamedTuple):
+    truth_number: int
+    filler_number: int
+    original_number: int
+    precision: float
+    recall: float
+    returned_uuid: list
+
 
 class ResultCalculator:
     """A service for calculating the precision and recall of the search."""
@@ -25,10 +24,10 @@ class ResultCalculator:
         """Initializes the calculator."""
 
     def calculate_stats(
-            self,
-            list_truth: list[str],
-            list_filler: list[str],
-            raw_results:list[str],
+        self,
+        list_truth: list[str],
+        list_filler: list[str],
+        raw_results: list[str],
     ) -> tuple[int, int, list[str]]:
         """
         Calculates the number of truth metadata given the raw_results based on UUID.
@@ -51,7 +50,7 @@ class ResultCalculator:
             if isinstance(result, str):
                 self.logger.log_process(f"Skipping non-dict result: {result[:100]}...")
                 continue
-                
+
             # Handle the case where result doesn't have expected structure
             try:
                 uuid = result["result"]["Record"]["SourceIdentifier"]["Identifier"]
@@ -65,7 +64,7 @@ class ResultCalculator:
                 elif uuid in list_filler:
                     filler_set.add(uuid)
             except (KeyError, TypeError) as e:
-                self.logger.log_process(f"Error processing result: {str(e)}")
+                self.logger.log_process(f"Error processing result: {e!s}")
                 # If we can't extract a UUID, we can't count this result
                 continue
         return len(truth_set), len(filler_set), selected_uuid
@@ -102,13 +101,12 @@ class ResultCalculator:
             return math.nan
         return total_n_truth / n_truth_metadata
 
-
     def run(
-            self,
-            truth_list: list[str],
-            filler_list: list[str],
-            raw_results: list[str],
-            expected_truth_number: int,
+        self,
+        truth_list: list[str],
+        filler_list: list[str],
+        raw_results: list[str],
+        expected_truth_number: int,
     ) -> Results:
         """
         Main function to calculate precision and recall.

@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Make recorder available at the module level
 try:
-    from .recorder import NtfsArchivalMemoryRecorder
+    from ntfs.memory.archival.recorder import NtfsArchivalMemoryRecorder
 except ImportError:
     # Recorder implementation not available yet
     pass

@@ -49,8 +49,10 @@ import socket
 import sys
 import time
 import uuid
+
 from datetime import timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -80,6 +82,7 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 # Import ServiceManager upfront to avoid late binding issues
 from db.service_manager import IndalekoServiceManager
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -91,7 +94,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
     functionality for storing and querying NTFS file system activities.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the NTFS storage activity recorder.
 
@@ -144,7 +147,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                     )
                     kwargs["collector"] = collector
                 except Exception as e:
-                    self._logger.error(f"Failed to create NTFS collector: {e}")
+                    self._logger.exception(f"Failed to create NTFS collector: {e}")
                     # Create a minimal collector that can generate mock data
                     self._logger.warning(
                         "Creating fallback collector with mock data generation",
@@ -160,7 +163,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                     "collector must be an instance of NtfsStorageActivityCollector",
                 )
         except Exception as e:
-            self._logger.error(f"Error during collector setup: {e}")
+            self._logger.exception(f"Error during collector setup: {e}")
             if not kwargs.get("no_db", False):
                 raise  # Only re-raise if we're supposed to connect to the database
 
@@ -187,7 +190,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         try:
             super().__init__(**kwargs)
         except Exception as e:
-            self._logger.error(f"Error during parent initialization: {e}")
+            self._logger.exception(f"Error during parent initialization: {e}")
             if not kwargs.get("no_db", False):
                 raise  # Only re-raise if we're supposed to connect to the database
 
@@ -213,7 +216,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                 # Note: No provenance field is needed as it's now optional
             )
         except Exception as e:
-            self._logger.error(f"Error setting up metadata: {e}")
+            self._logger.exception(f"Error setting up metadata: {e}")
             # Create minimal metadata
             self._metadata = StorageActivityMetadata(
                 provider_type=StorageProviderType.LOCAL_NTFS,
@@ -252,7 +255,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                     f"Successfully updated {updates} activities in context",
                 )
             except Exception as e:
-                self._logger.error(f"Error batch updating activity context: {e}")
+                self._logger.exception(f"Error batch updating activity context: {e}")
 
         # Store each activity in the database
         for activity in activities:
@@ -260,7 +263,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                 activity_id = self.store_activity(activity)
                 activity_ids.append(activity_id)
             except Exception as e:
-                self._logger.error(f"Error storing activity: {e}")
+                self._logger.exception(f"Error storing activity: {e}")
 
         return activity_ids
 
@@ -395,7 +398,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_file_reference(
         self,
@@ -435,7 +438,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_reason_flags(
         self,
@@ -483,7 +486,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_ntfs_specific_statistics(self) -> dict[str, Any]:
         """
@@ -611,14 +614,14 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                     activity_data = NtfsStorageActivityData(**enhanced_data)
                     activity_data.activity_id = original_id
             except Exception as e:
-                self._logger.error(f"Error integrating with activity context: {e}")
+                self._logger.exception(f"Error integrating with activity context: {e}")
                 # Continue with original activity data
 
         # Build document with NTFS-specific attributes
         document = self._build_ntfs_activity_document(activity_data)
 
         # Store in database
-        result = self._collection.add_document(document)
+        self._collection.add_document(document)
 
         return activity_data.activity_id
 
@@ -754,18 +757,8 @@ if __name__ == "__main__":
     logger = logging.getLogger("NtfsStorageActivityRecorder")
 
     # Display configuration
-    print("=== NTFS Storage Activity Recorder ===")
-    print(f"- Volume: {args.volume}")
-    print(f"- Duration: {args.duration if args.duration > 0 else 'Forever'} seconds")
-    print(f"- Debug mode: {'Enabled' if args.debug else 'Disabled'}")
-    print(f"- Database: {'Disabled' if args.no_db else 'Enabled'}")
     if args.db_config:
-        print(f"- DB Config: {args.db_config}")
-    print(f"- Monitor interval: {args.interval} seconds")
-    print(f"- Include close events: {'Yes' if args.include_close else 'No'}")
-    print(f"- Mock data: {'Yes' if args.mock else 'No'}")
-    print(f"- Use volume GUIDs: {'No' if args.no_volume_guids else 'Yes (default)'}")
-    print()
+        pass
 
     try:
         # Create collector with settings from arguments
@@ -785,17 +778,13 @@ if __name__ == "__main__":
         # Create the collector
         try:
             collector = NtfsStorageActivityCollector(**collector_args)
-            print(f"Created NTFS Storage Activity Collector for volume {args.volume}")
         except Exception as e:
-            logger.error(f"Failed to create collector: {e}")
-            print(f"Error creating collector: {e}")
-            print("Creating fallback collector with mock data...")
+            logger.exception(f"Failed to create collector: {e}")
             collector_args["mock"] = True
             collector = NtfsStorageActivityCollector(**collector_args)
 
         # Start monitoring
         collector.start_monitoring()
-        print("Started monitoring NTFS activities...")
 
         # Create recorder if using database
         recorder = None
@@ -807,84 +796,63 @@ if __name__ == "__main__":
                     db_config_path=args.db_config,
                     # Collection name is determined by registration service
                 )
-                print(
-                    "Connected to database, using collection managed by registration service",
-                )
             except Exception as e:
-                logger.error(f"Failed to create recorder: {e}")
-                print(f"Error creating recorder: {e}")
-                print("Running in collection-only mode (no database)")
+                logger.exception(f"Failed to create recorder: {e}")
 
         # Monitor for the specified duration
         if args.duration > 0:
-            print(f"Monitoring for {args.duration} seconds...")
             time.sleep(args.duration)
         else:
-            print("Press Ctrl+C to stop monitoring...")
             try:
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:
-                print("\nMonitoring stopped by user")
+                pass
 
         # Get collected activities
         activities = collector.get_activities()
-        print(f"\nCollected {len(activities)} activities")
 
         # Display activities if not in stats-only mode
         if not args.stats_only and activities:
             display_limit = min(args.limit, len(activities))
-            print(f"\nShowing {display_limit} most recent activities:")
-            for i, activity in enumerate(activities[:display_limit]):
-                print(f"Activity {i+1}:")
-                print(f"  Type: {activity.activity_type}")
-                print(f"  File: {activity.file_name}")
-                print(f"  Path: {activity.file_path}")
-                print(f"  Time: {activity.timestamp}")
-                print()
+            for _i, _activity in enumerate(activities[:display_limit]):
+                pass
 
             if len(activities) > display_limit:
-                print(f"... and {len(activities) - display_limit} more")
+                pass
 
         # Store activities if using database
         if recorder:
             try:
                 # Store the activities
                 activity_ids = recorder.store_activities(activities)
-                print(f"\nStored {len(activity_ids)} activities in the database")
 
                 # Get and display statistics
                 try:
                     stats = recorder.get_ntfs_specific_statistics()
-                    print("\nActivity Statistics:")
 
                     # Format the statistics for better display
                     if "total_count" in stats:
-                        print(f"  Total activities: {stats['total_count']}")
+                        pass
 
                     if "by_type" in stats:
-                        print("  Activities by type:")
-                        for activity_type, count in stats["by_type"].items():
-                            print(f"    {activity_type}: {count}")
+                        for _activity_type, _count in stats["by_type"].items():
+                            pass
 
                     if "by_volume" in stats:
-                        print("  Activities by volume:")
-                        for volume, count in stats["by_volume"].items():
-                            print(f"    {volume}: {count}")
+                        for _volume, _count in stats["by_volume"].items():
+                            pass
 
                     if "monitoring_active" in stats:
-                        print(f"  Monitoring active: {stats['monitoring_active']}")
+                        pass
 
                 except Exception as e:
-                    logger.error(f"Failed to get statistics: {e}")
-                    print(f"Error getting statistics: {e}")
+                    logger.exception(f"Failed to get statistics: {e}")
             except Exception as e:
-                logger.error(f"Failed to store activities: {e}")
-                print(f"Error storing activities: {e}")
+                logger.exception(f"Failed to store activities: {e}")
 
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
-        print(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         import traceback
 
         traceback.print_exc()
@@ -894,9 +862,6 @@ if __name__ == "__main__":
         try:
             if "collector" in locals() and collector:
                 collector.stop_monitoring()
-                print("Monitoring stopped")
         except Exception as e:
-            logger.error(f"Error stopping monitoring: {e}")
-            print(f"Error during cleanup: {e}")
+            logger.exception(f"Error stopping monitoring: {e}")
 
-    print("\nDone.")

@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import logging
+
 from typing import Any
 
 from firecircle.memory.persistence import ConversationMemory, InsightMemory
@@ -37,7 +38,7 @@ class ArchivistIntegration:
     to be retrieved for circle discussions.
     """
 
-    def __init__(self, logger: logging.Logger | None = None):
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         """
         Initialize the Archivist integration.
 
@@ -102,7 +103,7 @@ class ArchivistIntegration:
             return continuation_id
 
         except Exception as e:
-            self.logger.error(f"Error storing conversation in Archivist: {e}")
+            self.logger.exception(f"Error storing conversation in Archivist: {e}")
             return None
 
     def store_insight(self, insight_memory: InsightMemory) -> bool:
@@ -131,7 +132,7 @@ class ArchivistIntegration:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error storing insight in Archivist: {e}")
+            self.logger.exception(f"Error storing insight in Archivist: {e}")
             return False
 
     def search_memories(self, query: str, max_results: int = 5) -> list[dict[str, Any]]:
@@ -157,7 +158,7 @@ class ArchivistIntegration:
             return memories
 
         except Exception as e:
-            self.logger.error(f"Error searching Archivist memories: {e}")
+            self.logger.exception(f"Error searching Archivist memories: {e}")
             return []
 
     def get_continuation_context(self, continuation_id: str) -> dict[str, Any]:
@@ -186,7 +187,7 @@ class ArchivistIntegration:
             return context
 
         except Exception as e:
-            self.logger.error(f"Error getting continuation context: {e}")
+            self.logger.exception(f"Error getting continuation context: {e}")
             return {}
 
     def retrieve_relevant_insights(
@@ -218,5 +219,5 @@ class ArchivistIntegration:
             return insights
 
         except Exception as e:
-            self.logger.error(f"Error retrieving insights from Archivist: {e}")
+            self.logger.exception(f"Error retrieving insights from Archivist: {e}")
             return []

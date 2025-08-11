@@ -23,9 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import configparser
-import json
 import os
 import sys
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +44,7 @@ from query.query_processing.data_models.relationship_query_model import (
 from query.query_processing.enhanced_nl_parser import EnhancedNLParser
 from query.query_processing.relationship_parser import RelationshipParser
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
 
 # pylint: enable=wrong-import-position
 
@@ -71,9 +72,8 @@ def get_api_key(api_key_file: str | None = None) -> str:
 
 def print_section(title, content=None):
     """Helper function to print a formatted section."""
-    print(f"\n{'-' * 5} {title} {'-' * 5}")
     if content is not None:
-        print(content)
+        pass
 
 
 def print_color(text, color=None):
@@ -89,9 +89,9 @@ def print_color(text, color=None):
     }
 
     if color and color in colors:
-        print(f"{colors[color]}{text}{colors['reset']}")
+        pass
     else:
-        print(text)
+        pass
 
 
 def generate_aql_for_relationship(relationship_query: RelationshipQuery) -> str:
@@ -110,7 +110,6 @@ def generate_aql_for_relationship(relationship_query: RelationshipQuery) -> str:
     relationship_type = relationship_query.relationship_type
     source_entity = relationship_query.source_entity
     target_entity = relationship_query.target_entity
-    direction = relationship_query.direction
     time_constraint = relationship_query.time_constraint or {}
     additional_filters = relationship_query.additional_filters or {}
 
@@ -354,7 +353,7 @@ def process_relationship_query(
         print_color("Executing AQL query...", "blue")
         try:
             cursor = db_config._arangodb.aql.execute(aql_query)
-            query_results = [doc for doc in cursor]
+            query_results = list(cursor)
             result["execution_results"] = query_results[:10]  # Limit to first 10 results
             result["result_count"] = len(query_results)
         except Exception as e:
@@ -363,7 +362,6 @@ def process_relationship_query(
 
     # Output as JSON if requested
     if json_output:
-        print(json.dumps(result, indent=2, default=lambda o: str(o)))
         return
 
     # Format and display results
@@ -376,32 +374,30 @@ def process_relationship_query(
 
     # Display source entity
     print_section("Source Entity")
-    print(f"Type: {relationship_query.source_entity.entity_type}")
     if relationship_query.source_entity.identifier:
-        print(f"Identifier: {relationship_query.source_entity.identifier}")
-    for key, value in relationship_query.source_entity.attributes.items():
-        print(f"{key}: {value}")
+        pass
+    for _key, _value in relationship_query.source_entity.attributes.items():
+        pass
 
     # Display target entity if available
     if relationship_query.target_entity:
         print_section("Target Entity")
-        print(f"Type: {relationship_query.target_entity.entity_type}")
         if relationship_query.target_entity.identifier:
-            print(f"Identifier: {relationship_query.target_entity.identifier}")
-        for key, value in relationship_query.target_entity.attributes.items():
-            print(f"{key}: {value}")
+            pass
+        for _key, _value in relationship_query.target_entity.attributes.items():
+            pass
 
     # Display time constraints if available
     if relationship_query.time_constraint:
         print_section("Time Constraints")
-        for key, value in relationship_query.time_constraint.items():
-            print(f"{key}: {value}")
+        for _key, _value in relationship_query.time_constraint.items():
+            pass
 
     # Display additional filters if available
     if relationship_query.additional_filters:
         print_section("Additional Filters")
-        for key, value in relationship_query.additional_filters.items():
-            print(f"{key}: {value}")
+        for _key, _value in relationship_query.additional_filters.items():
+            pass
 
     # Display confidence
     print_section("Confidence", f"{relationship_query.confidence:.2f}")
@@ -416,16 +412,14 @@ def process_relationship_query(
         if "error" in result:
             print_color(f"Error: {result['error']}", "red")
         elif result["result_count"] == 0:
-            print("No results found.")
+            pass
         else:
-            print(f"Found {result['result_count']} results:")
-            for i, res in enumerate(result["execution_results"]):
-                print(f"\nResult {i+1}:")
+            for _i, res in enumerate(result["execution_results"]):
                 if isinstance(res, dict):
-                    for key, value in res.items():
-                        print(f"  {key}: {value}")
+                    for _key, _value in res.items():
+                        pass
                 else:
-                    print(f"  {res}")
+                    pass
 
 
 def main():
@@ -476,30 +470,12 @@ def main():
     if args.examples:
         print_color("Example Relationship Queries:", "blue")
         print_color("\nUser-File Relationships:", "green")
-        print("1. Show files I created last week")
-        print("2. Find documents modified by Alice")
-        print("3. What files have I viewed today?")
 
         print_color("\nFile-File Relationships:", "green")
-        print("1. Find other files in the same folder as report.docx")
-        print("2. Show files derived from source.txt")
-        print("3. What files contain references to budget.xlsx?")
 
         print_color("\nUser-User Relationships:", "green")
-        print("1. What files did I share with Bob?")
-        print("2. Show documents that Alice and I both edited")
-        print("3. Find files that Bob recommended to me last month")
 
         print_color("\nComplex Relationships:", "green")
-        print(
-            "1. Find PDF files I created last week and shared with the marketing team",
-        )
-        print(
-            "2. Show me documents related to the project that Alice and I both worked on",
-        )
-        print(
-            "3. What spreadsheets in the Finance folder have been modified by both me and Bob?",
-        )
 
         return
 

@@ -22,8 +22,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,13 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.characteristics import ActivityCharacteristics
 from activity.collectors.ambient.media.youtube_collector import YouTubeActivityCollector
 from activity.collectors.ambient.media.youtube_data_model import YouTubeVideoActivity
 from activity.recorders.base import RecorderBase
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -56,7 +58,7 @@ class YouTubeActivityRecorder(RecorderBase):
     allowing for rich semantic understanding of user behavior.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the YouTube activity recorder.
 
@@ -84,7 +86,7 @@ class YouTubeActivityRecorder(RecorderBase):
             self._db.connect()
             self._collection = self._db.get_collection(self._collection_name)
         except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
+            logger.exception(f"Failed to connect to database: {e}")
             self._collection = None
 
         # Last update timestamp
@@ -187,7 +189,7 @@ class YouTubeActivityRecorder(RecorderBase):
                 processed_docs.append(doc)
 
             except Exception as e:
-                logger.error(f"Error processing activity data: {e}")
+                logger.exception(f"Error processing activity data: {e}")
                 continue
 
         return processed_docs
@@ -215,7 +217,7 @@ class YouTubeActivityRecorder(RecorderBase):
             docs = self.process_data(activities)
 
             # Store in database
-            result = self._collection.import_documents(
+            self._collection.import_documents(
                 docs,
                 on_duplicate="update",  # Update if duplicate found
             )
@@ -227,7 +229,7 @@ class YouTubeActivityRecorder(RecorderBase):
             return True
 
         except Exception as e:
-            logger.error(f"Error storing YouTube activities: {e}")
+            logger.exception(f"Error storing YouTube activities: {e}")
             return False
 
     def store_data(
@@ -247,11 +249,10 @@ class YouTubeActivityRecorder(RecorderBase):
         """
         if isinstance(data, list):
             return self.store_activities(data)
-        elif isinstance(data, YouTubeVideoActivity):
+        if isinstance(data, YouTubeVideoActivity):
             return self.store_activities([data])
-        else:
-            logger.error(f"Unsupported data type: {type(data)}")
-            return False
+        logger.error(f"Unsupported data type: {type(data)}")
+        return False
 
     def update_data(
         self,
@@ -299,19 +300,16 @@ class YouTubeActivityRecorder(RecorderBase):
             return self.store_activities(activities)
 
         except Exception as e:
-            logger.error(f"Error in collect_and_store: {e}")
+            logger.exception(f"Error in collect_and_store: {e}")
             return False
 
 
-def main():
+def main() -> None:
     """Test the YouTube activity recorder."""
     # This is just a simple test
     collector = YouTubeActivityCollector()
-    recorder = YouTubeActivityRecorder(collector=collector)
+    YouTubeActivityRecorder(collector=collector)
 
-    print(f"Recorder: {recorder.get_recorder_name()}")
-    print(f"Recorder ID: {recorder.get_recorder_id()}")
-    print(f"Description: {recorder.get_description()}")
 
     # Real test would require API credentials
     # success = recorder.collect_and_store()

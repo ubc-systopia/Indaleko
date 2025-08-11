@@ -25,6 +25,7 @@ import sys
 
 import msgpack
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):

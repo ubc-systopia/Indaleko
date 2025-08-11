@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -110,16 +111,12 @@ def create_sample_results():
 
 def main():
     """Test the deduplication functionality."""
-    print("Testing Indaleko Result Deduplication")
-    print("=====================================\n")
 
     # Create sample results
     sample_results = create_sample_results()
-    print(f"Original results count: {len(sample_results)}")
 
     # Test with different similarity thresholds
     for threshold in [0.75, 0.85, 0.95]:
-        print(f"\nTesting with similarity threshold: {threshold}")
 
         # Deduplicate results
         deduped_results = deduplicate_results(
@@ -128,22 +125,15 @@ def main():
         )
 
         # Print statistics
-        print(f"Original count: {deduped_results.original_count}")
-        print(f"Unique count: {deduped_results.unique_count}")
-        print(f"Suppressed count: {deduped_results.suppressed_count}")
-        print(f"Categories: {deduped_results.categories}")
 
         # Display results
-        print("\nFormatted Results:")
-        formatted_display = format_results_for_display(
+        format_results_for_display(
             deduped_results,
             include_duplicates=True,
             max_groups=10,
             include_summary=True,
         )
-        print(formatted_display)
 
-    print("\nTest completed successfully!")
 
 
 if __name__ == "__main__":

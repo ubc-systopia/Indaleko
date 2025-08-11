@@ -3,6 +3,7 @@ import uuid
 
 import pydgraph
 
+
 client_stub = pydgraph.DgraphClientStub("localhost:9080")
 client = pydgraph.DgraphClient(client_stub)
 
@@ -11,9 +12,8 @@ op = pydgraph.Operation(schema=schema)
 client.alter(op)
 
 
-def old_arango_stuff():
+def old_arango_stuff() -> None:
     # ArangoDB connection settings
-    arango_url = "http://localhost:8529"
     arango_username = "tony"
     arango_password = None
     arango_db_name = "Indaleko"
@@ -42,10 +42,8 @@ def old_arango_stuff():
     # Generate and insert UUIDs
     uuids = [str(uuid.uuid4()) for _ in range(num_uuids)]
     dummy_files = [{"objectid": uuid, "creator": "tony"} for uuid in uuids]
-    result = collection.insert_many(dummy_files)
+    collection.insert_many(dummy_files)
 
     end_time = time.time()
-    elapsed_time = end_time - start_time
+    end_time - start_time
 
-    print("UUIDs inserted:", num_uuids)
-    print("Elapsed time:", elapsed_time, "seconds")

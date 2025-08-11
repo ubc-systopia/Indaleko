@@ -48,7 +48,7 @@ from query.query_processing.query_translator.translator_base import TranslatorBa
 
 # pylint: enable=wrong-import-position
 
-# ruff: noqa: S101,S311,FBT001,FBT002,G004
+# ruff: noqa: S101, FBT001, FBT002
 
 
 class AQLTranslator(TranslatorBase):

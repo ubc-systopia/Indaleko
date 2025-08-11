@@ -27,6 +27,7 @@ import os
 import sys
 import uuid
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -40,6 +41,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageActivityType,
 )
 from activity.context.service import IndalekoActivityContextService
+
 
 # pylint: enable=wrong-import-position
 
@@ -56,7 +58,7 @@ class NtfsActivityContextIntegration:
     # Provider ID for NTFS activity context
     NTFS_CONTEXT_PROVIDER_ID = uuid.UUID("f3da4782-5c9e-49b3-a8d1-fb3792e5b2c7")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the NTFS Activity Context Integration.
 
@@ -256,7 +258,7 @@ class NtfsActivityContextIntegration:
         return data_dict
 
 
-def main():
+def main() -> None:
     """Test functionality of NtfsActivityContextIntegration."""
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger("main")

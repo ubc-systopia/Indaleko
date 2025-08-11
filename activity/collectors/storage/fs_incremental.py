@@ -6,22 +6,21 @@ with modification timestamps newer than a stored "last run" timestamp.
 """
 
 import json
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 
 class FsIncrementalCollector:
-    """
-    Collector that scans directories incrementally based on file mtime.
-    """
+    """Collector that scans directories incrementally based on file mtime."""
 
     def __init__(
         self,
         volumes: list[str],
         state_file: str = "data/fs_indexer_state.json",
         patterns: list[str] | None = None,
-    ):
+    ) -> None:
         self.volumes = volumes
         self.state_path = Path(state_file)
         self.patterns = patterns or ["*"]
@@ -39,9 +38,7 @@ class FsIncrementalCollector:
         self.current_run = datetime.now(UTC)
 
     def collect_activities(self) -> list[dict[str, Any]]:
-        """
-        Scan volumes and return list of file events newer than last_run.
-        """
+        """Scan volumes and return list of file events newer than last_run."""
         activities: list[dict[str, Any]] = []
         for vol in self.volumes:
             base = Path(vol)

@@ -21,11 +21,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import builtins
+import contextlib
 import json
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -43,10 +47,7 @@ try:
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
 except ImportError:
-    print("Google API client libraries not found. Please install them with:")
-    print(
-        "pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib",
-    )
+    pass
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ class GoogleOAuthManager:
         token_file: str,
         scopes: list[str],
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the Google OAuth manager.
 
@@ -113,7 +114,7 @@ class GoogleOAuthManager:
                     scopes=token_data.get("scopes"),
                 )
             except Exception as e:
-                logger.error(f"Error loading token file: {e}")
+                logger.exception(f"Error loading token file: {e}")
                 self.credentials = None
 
         # Check if credentials are valid or need refreshing
@@ -127,7 +128,7 @@ class GoogleOAuthManager:
                     self.credentials.refresh(Request())
                     query_user = False
                 except RefreshError as e:
-                    logger.error(f"Error refreshing credentials: {e}")
+                    logger.exception(f"Error refreshing credentials: {e}")
 
             # If refresh failed or no credentials, request new ones
             if query_user:
@@ -155,8 +156,8 @@ class GoogleOAuthManager:
 
             from utils.misc.directory_management import indaleko_default_config_dir
         except ImportError as e:
-            logger.error(f"Error importing required libraries: {e}")
-            logger.error("Make sure google-auth-oauthlib is installed")
+            logger.exception(f"Error importing required libraries: {e}")
+            logger.exception("Make sure google-auth-oauthlib is installed")
             return None
 
         try:
@@ -194,6 +195,7 @@ class GoogleOAuthManager:
 
             # Create a local server to receive the callback
             import socket
+
             from wsgiref.simple_server import make_server
 
             # Find an available port first
@@ -212,7 +214,6 @@ class GoogleOAuthManager:
                 include_granted_scopes="true",
             )
 
-            print("\nPlease visit this URL to authorize this application:", auth_url)
 
             # Set up WSGI callback server
             auth_code = []
@@ -233,19 +234,11 @@ class GoogleOAuthManager:
             # Try to open the browser automatically
             import webbrowser
 
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 webbrowser.open(auth_url)
-                print(
-                    "Your browser should open automatically. If not, please manually open the URL above.",
-                )
-            except:
-                print(
-                    "Unable to open browser automatically. Please manually copy and paste the URL into your browser.",
-                )
 
             # Start local server
             httpd = make_server("localhost", port, wsgi_app)
-            print(f"Waiting for authentication on port {port}...")
 
             # Wait for auth code
             while not auth_code:
@@ -307,7 +300,7 @@ class GoogleOAuthManager:
                             f"Unsupported client_config format: {flow.client_config.keys()}",
                         )
                 except Exception as config_error:
-                    logger.error(f"Error extracting client info: {config_error}")
+                    logger.exception(f"Error extracting client info: {config_error}")
                     # Let's extract the info directly from the auth URL as a fallback
                     # The URL contains the client_id
                     from urllib.parse import parse_qs, urlparse
@@ -335,7 +328,7 @@ class GoogleOAuthManager:
                         else:
                             client_secret = config_data["client_secret"]
                     except Exception as e:
-                        logger.error(
+                        logger.exception(
                             f"Failed to get client_secret from config file: {e}",
                         )
                         raise
@@ -375,7 +368,7 @@ class GoogleOAuthManager:
             return credentials
 
         except Exception as e:
-            logger.error(f"Error obtaining credentials: {e}")
+            logger.exception(f"Error obtaining credentials: {e}")
             return None
 
     def _store_credentials(self) -> bool:
@@ -401,7 +394,7 @@ class GoogleOAuthManager:
             return True
 
         except Exception as e:
-            logger.error(f"Error storing credentials: {e}")
+            logger.exception(f"Error storing credentials: {e}")
             return False
 
     def get_user_info(self) -> dict[str, Any]:
@@ -453,7 +446,7 @@ class GoogleOAuthManager:
             return user_info
 
         except Exception as e:
-            logger.error(f"Error getting user info: {e}")
+            logger.exception(f"Error getting user info: {e}")
             return {}
 
     def build_service(self, api_name: str, api_version: str) -> Any:
@@ -477,5 +470,5 @@ class GoogleOAuthManager:
         try:
             return build(api_name, api_version, credentials=self.credentials)
         except Exception as e:
-            logger.error(f"Error building {api_name} service: {e}")
+            logger.exception(f"Error building {api_name} service: {e}")
             return None

@@ -27,9 +27,11 @@ import logging
 import os
 import struct
 import sys
+
 from ctypes import wintypes
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Constants for USN journal operations (these might not be defined in pywin32)
 FSCTL_QUERY_USN_JOURNAL = 0x000900F4
@@ -333,9 +335,8 @@ def parse_usn_record_v2(
         # Try to move to the next record based on record_length
         if record_length > 0 and offset + record_length <= len(data):
             return None, offset + record_length
-        else:
-            # If we can't determine a proper next offset, skip 4 bytes
-            return None, offset + 4
+        # If we can't determine a proper next offset, skip 4 bytes
+        return None, offset + 4
 
 
 def parse_usn_data(data: bytes, debug: bool = False) -> list[dict[str, Any]]:
@@ -489,7 +490,7 @@ def query_journal_info_ctypes(
         return journal_info
 
     except Exception as e:
-        logger.error(f"Error querying USN journal with ctypes: {e}")
+        logger.exception(f"Error querying USN journal with ctypes: {e}")
         return None
 
 
@@ -564,7 +565,7 @@ def query_journal_info(handle: int, debug: bool = False) -> dict[str, Any] | Non
 
         return journal_info
     except Exception as e:
-        logger.error(f"Error querying USN journal: {e}")
+        logger.exception(f"Error querying USN journal: {e}")
         return None
 
 
@@ -612,7 +613,7 @@ def create_journal(
 
         return True
     except Exception as e:
-        logger.error(f"Error creating USN journal: {e}")
+        logger.exception(f"Error creating USN journal: {e}")
         return False
 
 
@@ -1034,7 +1035,7 @@ def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> int | Non
             None,
         )
 
-        if handle == -1 or handle == 0xFFFFFFFFFFFFFFFF:  # INVALID_HANDLE_VALUE
+        if handle in (-1, 18446744073709551615):  # INVALID_HANDLE_VALUE
             error = ctypes.get_last_error()
             if debug:
                 logger.debug(f"CreateFileW failed with Win32 error code: {error}")
@@ -1046,7 +1047,7 @@ def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> int | Non
         return handle
 
     except Exception as e:
-        logger.error(f"Error opening volume with ctypes: {e}")
+        logger.exception(f"Error opening volume with ctypes: {e}")
         return None
 
 
@@ -1108,7 +1109,7 @@ def get_usn_journal_records(
                             f"Successfully read {len(records)} records using ctypes approach",
                         )
                     return journal_info, records
-                elif debug:
+                if debug:
                     logger.debug(
                         "No records found using ctypes approach, will try PyWin32",
                     )
@@ -1274,7 +1275,7 @@ def create_test_files(
 
         # Also read the file to generate read activity
         with open(filepath) as f:
-            content = f.read()
+            f.read()
 
         # And modify it to generate write activity
         with open(filepath, "a") as f:

@@ -30,10 +30,12 @@ import os
 import random
 import sys
 import uuid
+
 from enum import Enum
 
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,6 +59,7 @@ from data_models import (
 from db import IndalekoDBCollections
 from utils.data_validation import validate_uuid_string
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 
@@ -99,7 +102,7 @@ class IndalekoRelationship:
         objects: tuple[IndalekoRelationshipObject, IndalekoRelationshipObject],
         relationships: list[IndalekoSemanticAttributeDataModel] | None = None,
         source_id: IndalekoSourceIdentifierDataModel | None = None,
-    ):
+    ) -> None:
         """Create an empty relationship object."""
         assert len(objects) == 2, "objects must be a tuple of two objects."
         if source_id is not None:
@@ -133,7 +136,7 @@ class IndalekoRelationship:
             return IndalekoUUIDDataModel(Identifier=uuid.UUID(vertex))
         raise ValueError("vertex must be a UUID or IndalekoUUIDDataModel.")
 
-    def add_relationship(self, key: str, value: str = None) -> None:
+    def add_relationship(self, key: str, value: str | None = None) -> None:
         """Add a relationship to the relationship object."""
         if self.relationships is None:
             self.relationships = {}
@@ -211,7 +214,7 @@ class IndalekoRelationship:
         return IndalekoRelationship(**data)
 
 
-def main():
+def main() -> None:
     """Test the IndalekoRelationship class."""
     random_raw_data = encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())

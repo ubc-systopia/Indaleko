@@ -4,7 +4,8 @@ import sys
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -16,7 +17,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.utils.llm_connector.llm_base import LLMBase
-from data_models.query_history import IndalekoQueryHistoryDataModel
+
+
+if TYPE_CHECKING:
+    from data_models.query_history import IndalekoQueryHistoryDataModel
+
 
 # pylint: enable=wrong-import-position
 

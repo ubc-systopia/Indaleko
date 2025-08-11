@@ -22,10 +22,12 @@ import argparse
 import os
 import readline
 import sys
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +52,7 @@ class IndalekoAssistantCLI:
         api_key: str | None = None,
         model: str = "gpt-4o",
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the CLI.
 
@@ -74,7 +76,7 @@ class IndalekoAssistantCLI:
         conversation = self.assistant.create_conversation()
         self.current_conversation_id = conversation.conversation_id
 
-    def _register_tools(self):
+    def _register_tools(self) -> None:
         """Register the required tools."""
         # Manually register our tools
         registry = get_registry()
@@ -125,8 +127,7 @@ class IndalekoAssistantCLI:
             # Display the response
             self._display_response(response)
 
-        except Exception as e:
-            print(f"Error processing message: {e}")
+        except Exception:
             if self.debug:
                 import traceback
 
@@ -134,27 +135,16 @@ class IndalekoAssistantCLI:
 
         return True
 
-    def _print_help(self):
+    def _print_help(self) -> None:
         """Print help information."""
-        print("\nIndaleko Assistant CLI Help:")
-        print("----------------------------")
-        print("  exit, quit, bye - Exit the CLI")
-        print("  help, ? - Show this help message")
-        print("  tools - List available tools")
-        print("  save - Save the current conversation")
-        print("  new, clear - Start a new conversation")
-        print("\nEnter natural language queries to search your personal data.")
-        print("For example: 'Show me documents with report in the title'")
 
-    def _list_tools(self):
+    def _list_tools(self) -> None:
         """List available tools."""
         registry = get_registry()
-        print("\nAvailable Tools:")
-        print("-----------------")
-        for name, tool in registry.get_all_tools().items():
-            print(f"  {name} - {tool.definition.description}")
+        for _name, _tool in registry.get_all_tools().items():
+            pass
 
-    def _save_conversation(self):
+    def _save_conversation(self) -> None:
         """Save the current conversation to a file."""
         timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
         filename = f"conversation-{timestamp}.json"
@@ -167,15 +157,13 @@ class IndalekoAssistantCLI:
         file_path = os.path.join(log_dir, filename)
         self.assistant.save_conversations(file_path)
 
-        print(f"Conversation saved to {file_path}")
 
-    def _new_conversation(self):
+    def _new_conversation(self) -> None:
         """Start a new conversation."""
         conversation = self.assistant.create_conversation()
         self.current_conversation_id = conversation.conversation_id
-        print("Started a new conversation.")
 
-    def _display_response(self, response: dict[str, Any]):
+    def _display_response(self, response: dict[str, Any]) -> None:
         """
         Display the assistant's response.
 
@@ -183,50 +171,40 @@ class IndalekoAssistantCLI:
             response (Dict[str, Any]): The response data.
         """
         if response.get("action") == "error":
-            print(f"Error: {response.get('response', 'Unknown error')}")
             return
 
-        print(f"\n{response.get('response', 'No response')}")
 
-    def run_interactive(self):
+    def run_interactive(self) -> None:
         """Run the CLI in interactive mode."""
-        print("Welcome to Indaleko Assistant CLI!")
-        print("Type 'help' or '?' for help, 'exit' to quit.")
-
         while True:
             try:
                 command = input(self.PROMPT)
                 if not self.process_command(command):
                     break
             except KeyboardInterrupt:
-                print("\nExiting...")
                 break
-            except Exception as e:
-                print(f"Error: {e}")
+            except Exception:
                 if self.debug:
                     import traceback
 
                     traceback.print_exc()
 
-    def run_batch(self, batch_file: str):
+    def run_batch(self, batch_file: str) -> None:
         """
         Run the CLI in batch mode.
 
         Args:
             batch_file (str): The batch file path.
         """
-        print(f"Running batch file: {batch_file}")
-
         try:
             with open(batch_file) as f:
                 queries = f.readlines()
 
-            for i, query in enumerate(queries, 1):
+            for _i, query in enumerate(queries, 1):
                 query = query.strip()
                 if not query or query.startswith("#"):
                     continue
 
-                print(f"\n--- Query {i}: {query} ---")
 
                 # Process the query
                 response = self.assistant.process_message(
@@ -238,16 +216,15 @@ class IndalekoAssistantCLI:
                 self._display_response(response)
 
         except FileNotFoundError:
-            print(f"Error: Batch file not found: {batch_file}")
-        except Exception as e:
-            print(f"Error processing batch file: {e}")
+            pass
+        except Exception:
             if self.debug:
                 import traceback
 
                 traceback.print_exc()
 
 
-def main():
+def main() -> None:
     """Main function."""
     parser = argparse.ArgumentParser(
         description="Indaleko Assistant CLI with OpenAI Assistant API",
@@ -272,7 +249,6 @@ def main():
     else:
         cli.run_interactive()
 
-    print("Thank you for using Indaleko Assistant!")
 
 
 if __name__ == "__main__":

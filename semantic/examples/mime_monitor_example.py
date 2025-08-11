@@ -24,7 +24,9 @@ import os
 import sys
 import time
 import uuid
+
 from typing import Any
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -42,13 +44,14 @@ from semantic.performance_monitor import (
     monitor_semantic_extraction,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class MonitoredMimeDetector:
     """MIME detector with integrated performance monitoring."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the monitored MIME detector."""
         self.mime_detector = IndalekoSemanticMimeType()
         self.monitor = SemanticExtractorPerformance()
@@ -154,7 +157,7 @@ class MonitoredMimeDetector:
         return self.monitor.get_stats()
 
 
-def main():
+def main() -> None:
     """Main entry point for the example."""
     parser = argparse.ArgumentParser(
         description="MIME Type Detector with Performance Monitoring",
@@ -182,13 +185,11 @@ def main():
     detector = MonitoredMimeDetector()
 
     # Process directory
-    print(f"Processing directory: {args.dir}")
-    start_time = time.time()
+    time.time()
     results = detector.process_directory(args.dir, args.recursive)
-    end_time = time.time()
+    time.time()
 
     # Print results summary
-    print(f"Processed {len(results)} files in {end_time - start_time:.2f} seconds")
 
     # Print file type statistics
     mime_counts = {}
@@ -196,35 +197,23 @@ def main():
         mime_type = result["mime_type"]
         mime_counts[mime_type] = mime_counts.get(mime_type, 0) + 1
 
-    print("\nMIME Type Distribution:")
-    for mime_type, count in sorted(
+    for mime_type, _count in sorted(
         mime_counts.items(),
         key=lambda x: x[1],
         reverse=True,
     ):
-        print(f"  {mime_type}: {count} files")
+        pass
 
     # Print performance stats if requested
     if args.stats:
         stats = detector.get_performance_stats()
-        print("\nPerformance Statistics:")
-        print(f"  Total Files: {stats['total_files']}")
-        print(f"  Total Processing Time: {stats['total_processing_time']:.2f} seconds")
 
         if stats["total_files"] > 0:
-            print(
-                f"  Average Time per File: {stats['avg_processing_time']:.4f} seconds",
-            )
-            print(f"  Files per Second: {stats['files_per_second']:.2f}")
-            print(f"  MB per Second: {stats['bytes_per_second'] / (1024*1024):.2f}")
+            pass
 
-        print("\nFile Type Statistics:")
         for mime_type, type_stats in stats.get("file_type_stats", {}).items():
             if type_stats["count"] > 0:
-                avg_time = type_stats["total_time"] / type_stats["count"]
-                print(
-                    f"  {mime_type}: {type_stats['count']} files, {avg_time:.4f} seconds avg",
-                )
+                type_stats["total_time"] / type_stats["count"]
 
     # Write results to file if requested
     if args.output:
@@ -236,7 +225,6 @@ def main():
                 f,
                 indent=2,
             )
-        print(f"\nResults written to {args.output}")
 
 
 if __name__ == "__main__":

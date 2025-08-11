@@ -26,8 +26,10 @@ import os
 import sys
 import time
 import unittest
+
 from datetime import datetime
 from unittest.mock import MagicMock, patch
+
 
 # Set logging level
 logging.basicConfig(level=logging.INFO)
@@ -55,8 +57,8 @@ try:
 
     # pylint: enable=wrong-import-position
 except ImportError as e:
-    logger.error(f"Import error: {e}")
-    logger.error("This test module requires specific Python packages.")
+    logger.exception(f"Import error: {e}")
+    logger.exception("This test module requires specific Python packages.")
     sys.exit(1)
 
 
@@ -84,11 +86,9 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
                 debug=True,
             )
 
-        self.assertTrue(collector._use_mock)
-        self.assertEqual(collector._volumes, ["C:"])
-        self.assertTrue(
-            collector._use_volume_guids,
-        )  # Volume GUIDs should be the default
+        assert collector._use_mock
+        assert collector._volumes == ["C:"]
+        assert collector._use_volume_guids  # Volume GUIDs should be the default
 
     def test_init_with_disabled_volume_guids(self):
         """Test initialization with volume GUIDs explicitly disabled."""
@@ -103,7 +103,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
                 use_volume_guids=False,
             )
 
-            self.assertFalse(collector._use_volume_guids)
+            assert not collector._use_volume_guids
 
     def test_volume_guid_mapping(self):
         """Test mapping drive letters to volume GUIDs."""
@@ -120,7 +120,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
 
         # Test mapping with the mock machine config
         guid = collector.map_drive_letter_to_volume_guid("C")
-        self.assertEqual(guid, "12345678-1234-1234-1234-123456789abc")
+        assert guid == "12345678-1234-1234-1234-123456789abc"
 
         # Test that results are cached
         self.mock_machine_config.map_drive_letter_to_volume_guid.assert_called_once_with(
@@ -129,7 +129,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
 
         # Call again to verify cache is used
         guid = collector.map_drive_letter_to_volume_guid("C")
-        self.assertEqual(guid, "12345678-1234-1234-1234-123456789abc")
+        assert guid == "12345678-1234-1234-1234-123456789abc"
 
         # Should still be called only once because we're using the cache
         self.mock_machine_config.map_drive_letter_to_volume_guid.assert_called_once()
@@ -149,17 +149,17 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
 
         # Test with a drive letter
         path = collector.get_volume_guid_path("C:")
-        self.assertEqual(path, "\\\\?\\Volume{12345678-1234-1234-1234-123456789abc}\\")
+        assert path == "\\\\?\\Volume{12345678-1234-1234-1234-123456789abc}\\"
 
         # Test with a volume GUID path already
         existing_guid_path = "\\\\?\\Volume{ABCDEF12-1234-5678-9ABC-DEF123456789}\\"
         path = collector.get_volume_guid_path(existing_guid_path)
-        self.assertEqual(path, existing_guid_path)
+        assert path == existing_guid_path
 
         # Test with volume GUIDs disabled
         collector._use_volume_guids = False
         path = collector.get_volume_guid_path("D:")
-        self.assertEqual(path, "\\\\?\\D:\\")
+        assert path == "\\\\?\\D:\\"
 
     def test_fallback_to_drive_letter(self):
         """Test fallback to drive letter when volume GUID mapping fails."""
@@ -179,7 +179,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
 
         # Get volume GUID path should fall back to drive letter format
         path = collector.get_volume_guid_path("C:")
-        self.assertEqual(path, "\\\\?\\C:\\")
+        assert path == "\\\\?\\C:\\"
 
     def test_mock_data_generation(self):
         """Test mock data generation when on non-Windows platforms."""
@@ -196,17 +196,17 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
             activities = collector.get_activities()
 
             # Should have generated some activities
-            self.assertGreater(len(activities), 0)
+            assert len(activities) > 0
 
             # Check activity properties
             for activity in activities:
-                self.assertIsInstance(activity, NtfsStorageActivityData)
-                self.assertIsNotNone(activity.timestamp)
-                self.assertIsNotNone(activity.file_path)
-                self.assertIsNotNone(activity.activity_type)
+                assert isinstance(activity, NtfsStorageActivityData)
+                assert activity.timestamp is not None
+                assert activity.file_path is not None
+                assert activity.activity_type is not None
 
                 # Verify timezone awareness
-                self.assertIsNotNone(activity.timestamp.tzinfo)
+                assert activity.timestamp.tzinfo is not None
 
             # Stop monitoring
             collector.stop_monitoring()
@@ -229,18 +229,18 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         activities = collector.get_activities()
 
         # Should have generated some activities
-        self.assertGreater(len(activities), 0)
+        assert len(activities) > 0
 
         # Verify activity properties
         for activity in activities:
             # Verify proper provider ID
-            self.assertEqual(activity.provider_id, collector._provider_id)
+            assert activity.provider_id == collector._provider_id
 
             # Verify proper provider type
-            self.assertEqual(activity.provider_type, StorageProviderType.LOCAL_NTFS)
+            assert activity.provider_type == StorageProviderType.LOCAL_NTFS
 
             # Verify timestamp has timezone
-            self.assertIsNotNone(activity.timestamp.tzinfo)
+            assert activity.timestamp.tzinfo is not None
 
         # Stop monitoring
         collector.stop_monitoring()
@@ -259,7 +259,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
             )
 
             # Should have fallen back to mock data generation
-            self.assertIsNone(collector._volume_handles.get("C:"))
+            assert collector._volume_handles.get("C:") is None
 
             # Let it generate some activities
             time.sleep(3)
@@ -268,7 +268,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
             activities = collector.get_activities()
 
             # Should have generated some activities despite the error
-            self.assertGreater(len(activities), 0)
+            assert len(activities) > 0
 
             # Stop monitoring
             collector.stop_monitoring()
@@ -290,13 +290,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         time.sleep(2)
 
         # Verify monitoring is active
-        self.assertTrue(collector._active)
+        assert collector._active
 
         # Stop monitoring
         collector.stop_monitoring()
 
         # Verify monitoring is inactive
-        self.assertFalse(collector._active)
+        assert not collector._active
 
         # Get activities collected before stopping
         activities_before = len(collector.get_activities())
@@ -308,7 +308,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         activities_after = len(collector.get_activities())
 
         # Should be the same count (no new activities after stopping)
-        self.assertEqual(activities_before, activities_after)
+        assert activities_before == activities_after
 
     def test_timezone_aware_timestamps(self):
         """Test that all timestamps have timezone information."""
@@ -331,7 +331,7 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
 
         # Verify all timestamps have timezone info
         for activity in activities:
-            self.assertIsNotNone(activity.timestamp.tzinfo)
+            assert activity.timestamp.tzinfo is not None
 
         # Create an activity with naive datetime
         naive_timestamp = datetime.now()  # No timezone
@@ -366,8 +366,8 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
                 break
 
         # Verify the naive timestamp was converted to have timezone info
-        self.assertIsNotNone(test_activity)
-        self.assertIsNotNone(test_activity.timestamp.tzinfo)
+        assert test_activity is not None
+        assert test_activity.timestamp.tzinfo is not None
 
         # Stop monitoring
         collector.stop_monitoring()

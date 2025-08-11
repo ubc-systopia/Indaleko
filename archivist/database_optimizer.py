@@ -27,10 +27,12 @@ import re
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +44,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from query.memory.archivist_memory import ArchivistMemory
 from query.query_processing.query_history import QueryHistory
+
 
 # pylint: enable=wrong-import-position
 
@@ -243,7 +246,7 @@ class DatabaseOptimizer:
     - Tracking the impact of applied optimizations
     """
 
-    def __init__(self, db_connection, archivist_memory=None, query_history=None):
+    def __init__(self, db_connection, archivist_memory=None, query_history=None) -> None:
         """
         Initialize the database optimizer.
 
@@ -268,7 +271,7 @@ class DatabaseOptimizer:
         # Load existing database objects
         self._load_database_info()
 
-    def _load_database_info(self):
+    def _load_database_info(self) -> None:
         """Load information about collections, indexes, and views."""
         # Get collection information
         collections = self.db.collections()
@@ -289,7 +292,7 @@ class DatabaseOptimizer:
                 self._existing_indexes[collection_name] = indexes
 
             except Exception as e:
-                self.logger.error(
+                self.logger.exception(
                     f"Error loading info for collection {collection_name}: {e}",
                 )
 
@@ -300,7 +303,7 @@ class DatabaseOptimizer:
                 view_info = self.db.view(view)
                 self._existing_views[view] = view_info
         except Exception as e:
-            self.logger.error(f"Error loading views: {e}")
+            self.logger.exception(f"Error loading views: {e}")
 
     def _infer_schema(self, document):
         """Infer schema from a document."""
@@ -311,20 +314,19 @@ class DatabaseOptimizer:
                     "type": "object",
                     "properties": {k: get_type(v) for k, v in value.items()},
                 }
-            elif isinstance(value, list):
+            if isinstance(value, list):
                 if value:
                     return {"type": "array", "items": get_type(value[0])}
                 return {"type": "array"}
-            elif isinstance(value, str):
+            if isinstance(value, str):
                 return {"type": "string"}
-            elif isinstance(value, int):
+            if isinstance(value, int):
                 return {"type": "integer"}
-            elif isinstance(value, float):
+            if isinstance(value, float):
                 return {"type": "number"}
-            elif isinstance(value, bool):
+            if isinstance(value, bool):
                 return {"type": "boolean"}
-            else:
-                return {"type": "null"}
+            return {"type": "null"}
 
         return get_type(document)
 
@@ -839,7 +841,7 @@ class DatabaseOptimizer:
 
         # Look for compound index opportunities
         compound_indexes = self._identify_compound_indexes(attribute_access)
-        for fields, info in compound_indexes.items():
+        for info in compound_indexes.values():
             collection = info["collection"]
             attribute_list = info["fields"]
             query_count = info["query_count"]
@@ -948,7 +950,7 @@ class DatabaseOptimizer:
             reverse=True,
         )
 
-    def _has_index(self, collection, fields):
+    def _has_index(self, collection, fields) -> bool:
         """
         Check if a collection already has an index on given fields.
 
@@ -974,7 +976,7 @@ class DatabaseOptimizer:
 
         return False
 
-    def _determine_index_type(self, collection, attribute):
+    def _determine_index_type(self, collection, attribute) -> str:
         """
         Determine the appropriate index type for an attribute.
 
@@ -1007,15 +1009,14 @@ class DatabaseOptimizer:
             # For long text fields, consider fulltext
             # For shorter fields or identifiers, use hash
             return "hash"  # We'll use hash by default for strings
-        elif attr_type in ["integer", "number"]:
+        if attr_type in ["integer", "number"]:
             # For numeric fields, use skiplist for range queries
             return "skiplist"
-        elif attr_type == "boolean":
+        if attr_type == "boolean":
             # Hash is better for boolean fields
             return "hash"
-        else:
-            # Default to skiplist for unknown types
-            return "skiplist"
+        # Default to skiplist for unknown types
+        return "skiplist"
 
     def _extract_returned_fields(self, collection, query_ids, max_fields=5):
         """
@@ -1203,7 +1204,7 @@ class DatabaseOptimizer:
         # Group search patterns by collection
         collection_patterns = {}
 
-        for pattern, info in search_patterns.items():
+        for info in search_patterns.values():
             if "collections_fields" not in info:
                 continue
 
@@ -1264,12 +1265,12 @@ class DatabaseOptimizer:
             # Find collections that are often searched together
             collection_pairs = {}
 
-            for pattern, info in search_patterns.items():
-                if "collections_fields" not in info or len(set(cf[0] for cf in info["collections_fields"])) <= 1:
+            for info in search_patterns.values():
+                if "collections_fields" not in info or len({cf[0] for cf in info["collections_fields"]}) <= 1:
                     continue
 
                 # Get unique collections in this pattern
-                collections = list(set(cf[0] for cf in info["collections_fields"]))
+                collections = list({cf[0] for cf in info["collections_fields"]})
 
                 # Create collection pair key (sorted for consistency)
                 key = tuple(sorted(collections))
@@ -1331,7 +1332,7 @@ class DatabaseOptimizer:
         # Sort by estimated impact
         return sorted(recommendations, key=lambda r: r.estimated_impact, reverse=True)
 
-    def _has_view_for_collection(self, collection):
+    def _has_view_for_collection(self, collection) -> bool:
         """
         Check if a view already exists for a collection.
 
@@ -1341,7 +1342,7 @@ class DatabaseOptimizer:
         Returns:
             True if a view exists, False otherwise
         """
-        for view_name, view_info in self._existing_views.items():
+        for view_info in self._existing_views.values():
             # Check if this is an ArangoSearch view
             if view_info.get("type") != "arangosearch":
                 continue
@@ -1625,7 +1626,7 @@ class DatabaseOptimizer:
                 after_performances.append(exec_time)
 
             except Exception as e:
-                self.logger.error(f"Error executing query {query_id}: {e}")
+                self.logger.exception(f"Error executing query {query_id}: {e}")
 
         # Calculate average performance after optimization
         if after_performances:
@@ -1739,7 +1740,7 @@ class DatabaseOptimizer:
         }
 
 
-def main():
+def main() -> None:
     """Test the database optimizer."""
     from Indaleko import Indaleko
 
@@ -1754,25 +1755,16 @@ def main():
     analysis = optimizer.analyze_query_patterns()
 
     # Print index recommendations
-    print("\nIndex Recommendations:")
-    for i, rec in enumerate(analysis.get("index_recommendations", []), 1):
-        print(f"{i}. {rec.short_description()}")
-        print(f"   Impact: {rec.estimated_impact:.2f}")
-        print(f"   Explanation: {rec.explanation}")
+    for _i, _rec in enumerate(analysis.get("index_recommendations", []), 1):
+        pass
 
     # Print view recommendations
-    print("\nView Recommendations:")
-    for i, rec in enumerate(analysis.get("view_recommendations", []), 1):
-        print(f"{i}. {rec.short_description()}")
-        print(f"   Impact: {rec.estimated_impact:.2f}")
-        print(f"   Explanation: {rec.explanation}")
+    for _i, _rec in enumerate(analysis.get("view_recommendations", []), 1):
+        pass
 
     # Print query optimizations
-    print("\nQuery Optimizations:")
-    for i, rec in enumerate(analysis.get("query_optimizations", []), 1):
-        print(f"{i}. {rec.short_description()}")
-        print(f"   Speedup: {rec.estimated_speedup:.2f}x")
-        print(f"   Explanation: {rec.explanation}")
+    for _i, _rec in enumerate(analysis.get("query_optimizations", []), 1):
+        pass
 
 
 if __name__ == "__main__":

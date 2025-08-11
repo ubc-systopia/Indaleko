@@ -1,5 +1,5 @@
 """
-Activity component for Indaleko Streamlit GUI
+Activity component for Indaleko Streamlit GUI.
 
 This module provides the activity context visualization.
 
@@ -26,9 +26,9 @@ from utils.gui.streamlit.components.common import normalize_for_display
 from utils.gui.streamlit.components.connection import connect_to_db
 
 
-def render_activity():
+def render_activity() -> None:
     """
-    Render the activity timeline and context visualization
+    Render the activity timeline and context visualization.
 
     Shows activity over time, with location and context information
     """
@@ -63,9 +63,9 @@ def render_activity():
     if selected_timeline == "Custom Range":
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Start Date")
+            st.date_input("Start Date")
         with col2:
-            end_date = st.date_input("End Date")
+            st.date_input("End Date")
 
     # Activity type selector
     activity_types = [
@@ -76,7 +76,7 @@ def render_activity():
         "Location",
         "Ambient Conditions",
     ]
-    selected_activity_types = st.multiselect(
+    st.multiselect(
         "Activity Types",
         activity_types,
         default=["All Activities"],

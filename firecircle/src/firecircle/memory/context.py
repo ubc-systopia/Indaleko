@@ -25,6 +25,7 @@ import enum
 import json
 import logging
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
@@ -82,7 +83,7 @@ class ContextVariable(BaseModel):
     )
 
     @validator("updated_at")
-    def updated_at_must_be_valid(cls, v, values):
+    def updated_at_must_be_valid(self, v, values):
         """Ensure updated_at is not earlier than created_at."""
         if "created_at" in values and v < values["created_at"]:
             return values["created_at"]
@@ -97,7 +98,7 @@ class CircleContext:
     the circle to share and access contextual information.
     """
 
-    def __init__(self, logger: logging.Logger | None = None):
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         """
         Initialize the circle context.
 
@@ -191,25 +192,23 @@ class CircleContext:
             # Public variables accessible to all
             return variable.value
 
-        elif variable.access_level == AccessLevel.PROTECTED:
+        if variable.access_level == AccessLevel.PROTECTED:
             # Protected variables accessible to creator and allowed entities
             if entity_id == variable.created_by or entity_id in variable.allowed_entities:
                 return variable.value
-            else:
-                self.logger.warning(
-                    f"Entity {entity_id} attempted to access protected variable {key}",
-                )
-                return default
+            self.logger.warning(
+                f"Entity {entity_id} attempted to access protected variable {key}",
+            )
+            return default
 
-        elif variable.access_level == AccessLevel.PRIVATE:
+        if variable.access_level == AccessLevel.PRIVATE:
             # Private variables accessible only to creator
             if entity_id == variable.created_by:
                 return variable.value
-            else:
-                self.logger.warning(
-                    f"Entity {entity_id} attempted to access private variable {key}",
-                )
-                return default
+            self.logger.warning(
+                f"Entity {entity_id} attempted to access private variable {key}",
+            )
+            return default
 
         # Should never get here
         return default
@@ -297,7 +296,7 @@ class CircleContext:
         if variable.access_level == AccessLevel.PUBLIC:
             return variable.metadata
 
-        elif variable.access_level == AccessLevel.PROTECTED:
+        if variable.access_level == AccessLevel.PROTECTED:
             if entity_id == variable.created_by or entity_id in variable.allowed_entities:
                 return variable.metadata
 
@@ -410,15 +409,14 @@ def _make_serializable(value: Any) -> Any:
     """
     if isinstance(value, (str, int, float, bool, type(None))):
         return value
-    elif isinstance(value, (list, tuple)):
+    if isinstance(value, (list, tuple)):
         return [_make_serializable(item) for item in value]
-    elif isinstance(value, dict):
+    if isinstance(value, dict):
         return {str(k): _make_serializable(v) for k, v in value.items()}
-    elif isinstance(value, datetime):
+    if isinstance(value, datetime):
         return value.isoformat()
-    elif isinstance(value, uuid.UUID):
+    if isinstance(value, uuid.UUID):
         return str(value)
-    elif hasattr(value, "to_dict") and callable(value.to_dict):
+    if hasattr(value, "to_dict") and callable(value.to_dict):
         return value.to_dict()
-    else:
-        return str(value)
+    return str(value)

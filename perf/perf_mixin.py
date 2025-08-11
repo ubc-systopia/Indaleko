@@ -23,8 +23,10 @@ import argparse
 import logging
 import os
 import sys
+
 from abc import abstractmethod
 from typing import Any
+
 
 # from icecream import ic
 
@@ -40,26 +42,27 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoPerformanceMixin:
-    """Mixin class to handle performance measurement functionality"""
+    """Mixin class to handle performance measurement functionality."""
 
     @abstractmethod
     def get_platform_config_data(
         self,
         args: argparse.Namespace,
     ) -> None | dict[str, Any]:
-        """Retrieve information about the current platform state (e.g, version data)"""
+        """Retrieve information about the current platform state (e.g, version data)."""
 
     @abstractmethod
     def setup_performance_measurement(self, args: argparse.Namespace) -> None:
-        """Configure performance measurement based on CLI args"""
+        """Configure performance measurement based on CLI args."""
 
     @abstractmethod
     def extract_counters(self) -> dict[str, int]:
-        """Extract performance counters"""
+        """Extract performance counters."""
 
     @abstractmethod
     def record_performance(
@@ -67,14 +70,14 @@ class IndalekoPerformanceMixin:
         perf_data: dict[str, Any],
         args: argparse.Namespace,
     ) -> None:
-        """Record performance data based on configuration"""
+        """Record performance data based on configuration."""
 
 
 class base_performance_mixin(IndalekoPerformanceMixin):
-    """Mixin class to handle performance measurement functionality"""
+    """Mixin class to handle performance measurement functionality."""
 
-    def setup_performance_measurement(self, args):
-        """Configure performance measurement based on CLI args"""
+    def setup_performance_measurement(self, args) -> None:
+        """Configure performance measurement based on CLI args."""
         self.perf_enabled = args.performance_file or args.performance_db
         if self.perf_enabled:
             self.perf_file_name = os.path.join(
@@ -87,11 +90,11 @@ class base_performance_mixin(IndalekoPerformanceMixin):
             )
 
     def extract_counters(self):
-        """Extract performance counters"""
+        """Extract performance counters."""
         return self.get_counts()
 
-    def record_performance(self, perf_data, args):
-        """Record performance data based on configuration"""
+    def record_performance(self, perf_data, args) -> None:
+        """Record performance data based on configuration."""
         if not self.perf_enabled:
             return
 

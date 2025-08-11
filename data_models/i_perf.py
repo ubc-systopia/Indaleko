@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,13 +41,12 @@ T = TypeVar("T", bound="IndalekoPerformanceDataModel")
 from data_models.base import IndalekoBaseModel  # noqa: E402
 from data_models.record import IndalekoRecordDataModel  # noqa: E402
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoPerformanceDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the Indaleko performance data.
-    """
+    """This class defines the data model for the Indaleko performance data."""
 
     Record: IndalekoRecordDataModel = Field(
         None,
@@ -140,7 +141,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
 
     @staticmethod
     def validate_timestamp(ts: str | datetime) -> datetime:
-        """Ensure that the timestamp is in UTC"""
+        """Ensure that the timestamp is in UTC."""
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts)
         if ts.tzinfo is None:
@@ -160,7 +161,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
     @field_validator("ElapsedTime", mode="before")
     @classmethod
     def calculate_elapsed_time(
-        cls: type[T],
+        cls,
         value: float | None = None,
         values: dict[str, Any] | None = None,
     ) -> float:
@@ -206,7 +207,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoPerformanceDataModel.test_model_main()
 

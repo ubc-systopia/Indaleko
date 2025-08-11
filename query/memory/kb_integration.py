@@ -24,7 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +50,7 @@ except ImportError:
 
 
 from utils.cli.base import IndalekoBaseCLI
+
 
 # pylint: enable=wrong-import-position
 
@@ -88,7 +91,7 @@ def enhance_query_with_kb(
     cli_instance: IndalekoBaseCLI,
     query_text: str,
     intent: str = "",
-    entities: list[dict[str, Any]] = None,
+    entities: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Enhance a query using the Knowledge Base if available.
@@ -114,13 +117,12 @@ def enhance_query_with_kb(
 
     try:
         # Enhance query using KB
-        enhanced = cli_instance.kb_integration.enhance_query(
+        return cli_instance.kb_integration.enhance_query(
             query_text=query_text,
             intent=intent,
             extracted_entities=entities or [],
         )
 
-        return enhanced
     except Exception as e:
         logging.exception(f"Error enhancing query with Knowledge Base: {e!s}")
         return {
@@ -137,7 +139,7 @@ def record_query_results(
     query_text: str,
     result_info: dict[str, Any],
     intent: str = "",
-    entities: list[dict[str, Any]] = None,
+    entities: list[dict[str, Any]] | None = None,
 ) -> None:
     """
     Record query results for learning if KB is available.

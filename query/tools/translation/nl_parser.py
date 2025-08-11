@@ -23,6 +23,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -46,7 +47,7 @@ from query.utils.llm_connector.openai_connector import OpenAIConnector
 class NLParserTool(BaseTool):
     """Tool for parsing natural language queries into structured formats."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the NL parser tool."""
         super().__init__()
         self._llm_connector = None

@@ -23,10 +23,12 @@ import json
 import os
 import sys
 import time
+
 from collections.abc import Callable
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +42,7 @@ from data_models import IndalekoRecordDataModel
 from data_models.i_perf import IndalekoPerformanceDataModel
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -48,15 +51,14 @@ class IndalekoPerformance:
 
 
 import os
+
 from datetime import datetime
 
 import psutil
 
 
 class PerformanceData:
-    """
-    This class builds a performance data object for Indaleko.
-    """
+    """This class builds a performance data object for Indaleko."""
 
     def __init__(
         self,
@@ -66,7 +68,7 @@ class PerformanceData:
         ],  # A callable that takes any arguments and returns any type
         *args: Any,  # Positional arguments to be passed to the task_func
         **kwargs: dict[str, Any],  # Keyword arguments to be passed to the task_func
-    ):
+    ) -> None:
         """
         Measures performance data for the given task function.
 
@@ -155,36 +157,26 @@ class PerformanceData:
         )
 
     def get_performance_data(self) -> IndalekoPerformanceDataModel:
-        """
-        Returns the performance data object.
-        """
+        """Returns the performance data object."""
         return self.performance_data
 
     def get_result(self) -> Any:
-        """
-        Returns the result of the task function.
-        """
+        """Returns the result of the task function."""
         return self.result
 
     def serialize(self) -> dict[str, Any]:
-        """
-        Serialize the performance data to a dictionary.
-        """
+        """Serialize the performance data to a dictionary."""
         return json.loads(self.performance_data.model_dump_json())
 
 
 def test_task(wait_time: int = 5) -> int:
-    """
-    A simple test task function.
-    """
+    """A simple test task function."""
     time.sleep(wait_time)
     return wait_time
 
 
-def main():
-    """
-    This is the test code for the IndalekoPerformance class.
-    """
+def main() -> None:
+    """This is the test code for the IndalekoPerformance class."""
     source_identifier = {
         "Identifier": "388adf3b-8a89-4fe5-80cf-a57c6edb52a6",
         "Version": "1.0",

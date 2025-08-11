@@ -1,4 +1,4 @@
-"""
+r"""
 NTFS Storage Activity Collector for Indaleko.
 
 This module provides a collector for NTFS file system activities using the
@@ -62,10 +62,12 @@ import sys
 import threading
 import time
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 # Define Windows constants directly in case they're missing from pywin32
 # These are the USN journal control codes
@@ -291,6 +293,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageProviderType,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -302,7 +305,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
     standardized storage activity records for them.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the NTFS storage activity collector.
 
@@ -337,7 +340,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             raise RuntimeError(
                 "NtfsStorageActivityCollector is only available on Windows",
             )
-        elif not WINDOWS_AVAILABLE:
+        if not WINDOWS_AVAILABLE:
             self._logger.warning(
                 "Running in mock mode because Windows is not available",
             )
@@ -349,7 +352,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         # GUID configuration - volume GUIDs are the default
         self._use_volume_guids = kwargs.get("use_volume_guids", True)  # True by default
         self._volume_guid_mapping = {}
-        self._machine_config = kwargs.get("machine_config", None)
+        self._machine_config = kwargs.get("machine_config")
 
         # If machine_config is provided, try to load it for GUID mapping
         if self._use_volume_guids and self._machine_config:
@@ -365,7 +368,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         "Machine config doesn't have volume GUID mapping capability",
                     )
             except Exception as e:
-                self._logger.error(f"Error accessing machine config: {e}")
+                self._logger.exception(f"Error accessing machine config: {e}")
                 self._use_volume_guids = False
         elif self._use_volume_guids:
             # Try to load machine config from platforms
@@ -432,7 +435,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         if kwargs.get("auto_start", False):
             self.start_monitoring()
 
-    def start_monitoring(self):
+    def start_monitoring(self) -> None:
         """Start monitoring the USN Journal on all configured volumes."""
         if self._active:
             self._logger.debug("Monitoring already active, skipping start")
@@ -457,14 +460,14 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 self._start_volume_monitoring(volume)
                 started_volumes += 1
             except Exception as e:
-                self._logger.error(f"Failed to start monitoring volume {volume}: {e}")
+                self._logger.exception(f"Failed to start monitoring volume {volume}: {e}")
 
         # If no volumes could be monitored, make sure we still generate some mock data
         if started_volumes == 0 and self._volumes:
             self._logger.warning("No volumes could be monitored. Using mock data mode.")
 
             # Start a mock data generation thread
-            def _generate_mock_data():
+            def _generate_mock_data() -> None:
                 while not self._stop_event.is_set():
                     # Periodically add some mock file activities
                     time.sleep(5)
@@ -496,7 +499,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             )
             self._mock_thread.start()
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop monitoring the USN Journal on all volumes."""
         if not self._active:
             self._logger.debug("Monitoring not active, skipping stop")
@@ -530,7 +533,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                     self._logger.debug(f"Closing handle for volume {volume}")
                     win32file.CloseHandle(handle)
             except Exception as e:
-                self._logger.error(f"Error closing handle for volume {volume}: {e}")
+                self._logger.exception(f"Error closing handle for volume {volume}: {e}")
 
         self._logger.debug("Clearing internal data structures")
         self._volume_handles.clear()
@@ -539,7 +542,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         self._processing_thread = None
         self._logger.info("Monitoring stopped")
 
-    def _start_volume_monitoring(self, volume: str):
+    def _start_volume_monitoring(self, volume: str) -> None:
         """
         Start monitoring a specific volume.
 
@@ -548,7 +551,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         """
         # Open the volume
         # Make sure the volume has the correct format (e.g., "C:")
-        if volume.endswith("\\") or volume.endswith("/"):
+        if volume.endswith(("\\", "/")):
             volume = volume[:-1]
         if ":" not in volume and not volume.startswith("\\\\?\\Volume{"):
             volume = f"{volume}:"
@@ -647,7 +650,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 handle = None
                 raise RuntimeError("Running in mock mode")
         except Exception as e:
-            self._logger.error(f"Failed to open volume {volume}: {e}")
+            self._logger.exception(f"Failed to open volume {volume}: {e}")
             # Use a mock handle for testing
             self._logger.warning("Using mock volume handle for testing")
             handle = None
@@ -757,7 +760,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         "AllocationDelta": 0,
                     }
         except Exception as e:
-            self._logger.error(f"Unhandled error in USN journal initialization: {e}")
+            self._logger.exception(f"Unhandled error in USN journal initialization: {e}")
             # Use mock data as fallback
             self._logger.warning("Using mock USN journal info due to unhandled error")
             usn_journal_info = {
@@ -783,7 +786,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         self._journal_threads.append(journal_thread)
         journal_thread.start()
 
-    def _monitor_usn_journal(self, volume: str):
+    def _monitor_usn_journal(self, volume: str) -> None:
         """
         Monitor the USN Journal for a specific volume.
 
@@ -815,7 +818,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             first_usn = journal_info["FirstUsn"]
             next_usn = first_usn
         except (KeyError, TypeError) as e:
-            self._logger.error(f"Invalid journal info structure: {e}")
+            self._logger.exception(f"Invalid journal info structure: {e}")
             self._logger.info(f"Using mock data mode for volume {volume}")
             # Just keep the thread alive until stop signal
             while not self._stop_event.is_set():
@@ -957,8 +960,8 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         if is_real_usn_journal and not self._use_mock and WINDOWS_AVAILABLE:
             try:
 
-                def _generate_file_activity():
-                    """Generate real file activity in the background to ensure USN journal has content"""
+                def _generate_file_activity() -> None:
+                    """Generate real file activity in the background to ensure USN journal has content."""
                     test_dir = os.path.join(volume, "Indaleko_Test")
                     if not os.path.exists(test_dir):
                         try:
@@ -1084,7 +1087,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             else:
                                 self._logger.debug("No new USN records found")
                         except Exception as parse_err:
-                            self._logger.error(f"Error parsing USN data: {parse_err}")
+                            self._logger.exception(f"Error parsing USN data: {parse_err}")
 
                         # Update the next USN for the next read
                         next_usn = read_data[0]
@@ -1160,14 +1163,14 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                     f"Added activity for {file_name} of type {activity_type}",
                                 )
                             except Exception as rec_err:
-                                self._logger.error(
+                                self._logger.exception(
                                     f"Error processing USN record: {rec_err}",
                                 )
 
                         # Brief sleep to avoid hammering the system
                         time.sleep(0.1)
                     except Exception as usn_err:
-                        self._logger.error(
+                        self._logger.exception(
                             f"Error reading USN journal on volume {volume}: {usn_err}",
                         )
                         # Fall back to simulated data for a while
@@ -1289,12 +1292,12 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             # Continue with simulated data
                             pass
             except Exception as e:
-                self._logger.error(f"Error in USN journal monitoring loop: {e}")
+                self._logger.exception(f"Error in USN journal monitoring loop: {e}")
                 time.sleep(5)  # Wait a bit before retrying
 
         self._logger.info(f"Stopped monitoring USN journal on volume {volume}")
 
-    def _event_processing_thread(self):
+    def _event_processing_thread(self) -> None:
         """Process events from the queue."""
         while not self._stop_event.is_set() or not self._event_queue.empty():
             try:
@@ -1311,9 +1314,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 self._event_queue.task_done()
 
             except Exception as e:
-                self._logger.error(f"Error processing event: {e}")
+                self._logger.exception(f"Error processing event: {e}")
 
-    def _process_event(self, event: dict[str, Any]):
+    def _process_event(self, event: dict[str, Any]) -> None:
         """
         Process a USN journal event.
 
@@ -1403,49 +1406,47 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             # Mock logic based on bit pattern
             if reason_flags % 7 == 0:
                 return StorageActivityType.CREATE
-            elif reason_flags % 7 == 1:
+            if reason_flags % 7 == 1:
                 return StorageActivityType.MODIFY
-            elif reason_flags % 7 == 2:
+            if reason_flags % 7 == 2:
                 return StorageActivityType.DELETE
-            elif reason_flags % 7 == 3:
+            if reason_flags % 7 == 3:
                 return StorageActivityType.CLOSE
-            elif reason_flags % 7 == 4:
+            if reason_flags % 7 == 4:
                 return StorageActivityType.RENAME
-            elif reason_flags % 7 == 5:
+            if reason_flags % 7 == 5:
                 return StorageActivityType.SECURITY_CHANGE
-            elif reason_flags % 7 == 6:
+            if reason_flags % 7 == 6:
                 return StorageActivityType.ATTRIBUTE_CHANGE
-            else:
-                return StorageActivityType.OTHER
+            return StorageActivityType.OTHER
 
         # Real Windows logic using USN reason flags
         try:
             # Use our global constants directly for clarity
             if reason_flags & USN_REASON_FILE_CREATE:
                 return StorageActivityType.CREATE
-            elif reason_flags & USN_REASON_FILE_DELETE:
+            if reason_flags & USN_REASON_FILE_DELETE:
                 return StorageActivityType.DELETE
-            elif reason_flags & USN_REASON_RENAME_OLD_NAME or reason_flags & USN_REASON_RENAME_NEW_NAME:
+            if reason_flags & USN_REASON_RENAME_OLD_NAME or reason_flags & USN_REASON_RENAME_NEW_NAME:
                 return StorageActivityType.RENAME
-            elif reason_flags & USN_REASON_SECURITY_CHANGE:
+            if reason_flags & USN_REASON_SECURITY_CHANGE:
                 return StorageActivityType.SECURITY_CHANGE
-            elif (
+            if (
                 reason_flags & USN_REASON_EA_CHANGE
                 or reason_flags & USN_REASON_BASIC_INFO_CHANGE
                 or reason_flags & USN_REASON_COMPRESSION_CHANGE
                 or reason_flags & USN_REASON_ENCRYPTION_CHANGE
             ):
                 return StorageActivityType.ATTRIBUTE_CHANGE
-            elif reason_flags & USN_REASON_CLOSE:
+            if reason_flags & USN_REASON_CLOSE:
                 return StorageActivityType.CLOSE
-            elif (
+            if (
                 reason_flags & USN_REASON_DATA_OVERWRITE
                 or reason_flags & USN_REASON_DATA_EXTEND
                 or reason_flags & USN_REASON_DATA_TRUNCATION
             ):
                 return StorageActivityType.MODIFY
-            else:
-                return StorageActivityType.OTHER
+            return StorageActivityType.OTHER
         except Exception as e:
             self._logger.warning(
                 f"Error determining activity type: {e}, using mock logic",
@@ -1647,8 +1648,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
 
             # Build path with volume GUID if available
             if volume_guid_path:
-                path = f"{volume_guid_path}...\\{file_name}"
-                return path
+                return f"{volume_guid_path}...\\{file_name}"
 
         # Fall back to drive letter if GUID not available
         # For now, just return a partial path with volume and file name

@@ -33,9 +33,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import unittest
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -184,9 +186,9 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
     def test_init(self):
         """Test initialization of the recorder."""
         # Check basic initialization
-        self.assertEqual(self.recorder._ttl_days, 30)
-        self.assertEqual(self.recorder._collection_name, "ntfs_activities_warm")
-        self.assertIsNotNone(self.recorder._scorer)
+        assert self.recorder._ttl_days == 30
+        assert self.recorder._collection_name == "ntfs_activities_warm"
+        assert self.recorder._scorer is not None
 
     def test_store_activity(self):
         """Test storing an activity in the warm tier."""
@@ -200,20 +202,20 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         result = self.recorder.store_activity(activity)
 
         # Check that the activity was stored
-        self.assertEqual(result, activity.activity_id)
-        self.assertEqual(len(self.recorder._collection.documents), 1)
+        assert result == activity.activity_id
+        assert len(self.recorder._collection.documents) == 1
 
         # Check stored document structure
-        stored_doc = list(self.recorder._collection.documents.values())[0]
-        self.assertIn("Record", stored_doc)
-        self.assertIn("Data", stored_doc["Record"])
+        stored_doc = next(iter(self.recorder._collection.documents.values()))
+        assert "Record" in stored_doc
+        assert "Data" in stored_doc["Record"]
 
         # Check that timestamp is preserved
         data = stored_doc["Record"]["Data"]
-        self.assertEqual(data["timestamp"], activity.timestamp.isoformat())
+        assert data["timestamp"] == activity.timestamp.isoformat()
 
         # Check that TTL timestamp was added
-        self.assertIn("ttl_timestamp", data)
+        assert "ttl_timestamp" in data
 
     def test_aggregation_grouping(self):
         """Test grouping of activities for aggregation."""
@@ -271,13 +273,13 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         grouped = self.recorder.group_activities_for_aggregation(activities)
 
         # Check that activities are properly grouped
-        self.assertEqual(len(grouped), 3)  # 3 groups: create, modify, close
+        assert len(grouped) == 3  # 3 groups: create, modify, close
 
         # Check that each activity type has proper grouping
-        for group, group_activities in grouped.items():
+        for group_activities in grouped.values():
             activity_type = group_activities[0]["Record"]["Data"]["activity_type"]
             for activity in group_activities:
-                self.assertEqual(activity["Record"]["Data"]["activity_type"], activity_type)
+                assert activity["Record"]["Data"]["activity_type"] == activity_type
 
     def test_create_aggregated_activity(self):
         """Test creation of aggregated activity from multiple activities."""
@@ -310,18 +312,18 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         aggregated = self.recorder.create_aggregated_activity(activities, group_key)
 
         # Check basic properties
-        self.assertEqual(aggregated["entity_id"], "1")
-        self.assertEqual(aggregated["activity_type"], "modify")
-        self.assertEqual(aggregated["file_path"], path)
-        self.assertEqual(aggregated["count"], 5)
-        self.assertTrue(aggregated["is_aggregated"])
+        assert aggregated["entity_id"] == "1"
+        assert aggregated["activity_type"] == "modify"
+        assert aggregated["file_path"] == path
+        assert aggregated["count"] == 5
+        assert aggregated["is_aggregated"]
 
         # Check that time range is correct
-        self.assertEqual(aggregated["timestamp"], activities[-1]["Record"]["Data"]["timestamp"])
-        self.assertEqual(aggregated["end_timestamp"], activities[0]["Record"]["Data"]["timestamp"])
+        assert aggregated["timestamp"] == activities[-1]["Record"]["Data"]["timestamp"]
+        assert aggregated["end_timestamp"] == activities[0]["Record"]["Data"]["timestamp"]
 
         # Check that we store the highest importance score
-        self.assertEqual(aggregated["importance_score"], 0.7)  # Maximum from the set
+        assert aggregated["importance_score"] == 0.7  # Maximum from the set
 
     def test_aggregate_activities(self):
         """Test aggregation of multiple activities."""
@@ -390,7 +392,7 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         aggregated = self.recorder.aggregate_activities(activities)
 
         # Check results
-        self.assertEqual(len(aggregated), 3)  # 3 groups: modify, high-importance create, low-importance creates
+        assert len(aggregated) == 3  # 3 groups: modify, high-importance create, low-importance creates
 
         # Verify each type
         modify_aggregated = None
@@ -406,18 +408,18 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
                 low_importance = activity
 
         # Check modify group
-        self.assertIsNotNone(modify_aggregated)
-        self.assertTrue(modify_aggregated["is_aggregated"])
-        self.assertEqual(modify_aggregated["count"], 5)
+        assert modify_aggregated is not None
+        assert modify_aggregated["is_aggregated"]
+        assert modify_aggregated["count"] == 5
 
         # Check high importance wasn't aggregated
-        self.assertIsNotNone(high_importance)
-        self.assertFalse(high_importance.get("is_aggregated", False))
+        assert high_importance is not None
+        assert not high_importance.get("is_aggregated", False)
 
         # Check low importance was aggregated
-        self.assertIsNotNone(low_importance)
-        self.assertTrue(low_importance["is_aggregated"])
-        self.assertEqual(low_importance["count"], 3)
+        assert low_importance is not None
+        assert low_importance["is_aggregated"]
+        assert low_importance["count"] == 3
 
     def test_process_hot_tier_activities(self):
         """Test processing activities from hot tier to warm tier."""
@@ -485,7 +487,7 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         processed = self.recorder.process_hot_tier_activities(activities)
 
         # Check results
-        self.assertEqual(len(processed), 3)  # 3 groups
+        assert len(processed) == 3  # 3 groups
 
         # Check that we have the right activities
         aggregated_count = 0
@@ -497,8 +499,8 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
             else:
                 individual_count += 1
 
-        self.assertEqual(aggregated_count, 2)  # Two aggregated groups
-        self.assertEqual(individual_count, 1)  # One individual high-importance activity
+        assert aggregated_count == 2  # Two aggregated groups
+        assert individual_count == 1  # One individual high-importance activity
 
     @patch.object(NtfsWarmTierRecorder, "transition_from_hot_tier")
     def test_tier_transition_manager(self, mock_transition):
@@ -525,8 +527,8 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         mock_transition.assert_called_once()
 
         # Check result
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["total_activities_transitioned"], 5)
+        assert result["status"] == "success"
+        assert result["total_activities_transitioned"] == 5
 
 
 class TestImportanceScorer(unittest.TestCase):
@@ -541,47 +543,47 @@ class TestImportanceScorer(unittest.TestCase):
         # Recent activity (within 1 day)
         recent_data = {"timestamp": datetime.now(UTC).isoformat()}
         recent_score = self.scorer._calculate_recency_score(recent_data)
-        self.assertGreater(recent_score, 0.9)
+        assert recent_score > 0.9
 
         # Older activity (7 days ago)
         older_data = {"timestamp": (datetime.now(UTC) - timedelta(days=7)).isoformat()}
         older_score = self.scorer._calculate_recency_score(older_data)
-        self.assertLess(older_score, 0.6)
-        self.assertGreater(older_score, 0.4)
+        assert older_score < 0.6
+        assert older_score > 0.4
 
         # Very old activity (30 days ago)
         very_old_data = {"timestamp": (datetime.now(UTC) - timedelta(days=30)).isoformat()}
         very_old_score = self.scorer._calculate_recency_score(very_old_data)
-        self.assertLess(very_old_score, 0.2)
+        assert very_old_score < 0.2
 
     def test_content_score(self):
         """Test content-based scoring."""
         # Important document
         doc_data = {"file_path": "C:/Users/Documents/Project/report.docx", "is_directory": False}
         doc_score = self.scorer._calculate_content_score(doc_data)
-        self.assertGreater(doc_score, 0.6)
+        assert doc_score > 0.6
 
         # Temporary file
         temp_data = {"file_path": "C:/Temp/cache/temp.txt", "is_directory": False}
         temp_score = self.scorer._calculate_content_score(temp_data)
-        self.assertLess(temp_score, 0.4)
+        assert temp_score < 0.4
 
         # Directory test
         dir_data = {"file_path": "C:/Users/Documents/Project", "is_directory": True}
         dir_score = self.scorer._calculate_content_score(dir_data)
-        self.assertGreater(dir_score, doc_score)  # Directories should score higher
+        assert dir_score > doc_score  # Directories should score higher
 
     def test_type_score(self):
         """Test activity type scoring."""
         # Create activity
         create_data = {"activity_type": "create"}
         create_score = self.scorer._calculate_type_score(create_data)
-        self.assertGreater(create_score, 0.6)
+        assert create_score > 0.6
 
         # Close activity
         close_data = {"activity_type": "close"}
         close_score = self.scorer._calculate_type_score(close_data)
-        self.assertLess(close_score, create_score)
+        assert close_score < create_score
 
     def test_overall_scoring(self):
         """Test overall importance scoring with all factors."""
@@ -593,7 +595,7 @@ class TestImportanceScorer(unittest.TestCase):
             "is_directory": False,
         }
         important_score = self.scorer.calculate_importance(important_data)
-        self.assertGreater(important_score, 0.7)
+        assert important_score > 0.7
 
         # Temporary file, old modification
         unimportant_data = {
@@ -603,18 +605,21 @@ class TestImportanceScorer(unittest.TestCase):
             "is_directory": False,
         }
         unimportant_score = self.scorer.calculate_importance(unimportant_data)
-        self.assertLess(unimportant_score, 0.4)
+        assert unimportant_score < 0.4
 
 
 """
 Transition Snapshots Tests: Verify run_transition_with_snapshots behavior
 """
+
+
 class TestWarmTierTransitionSnapshots(unittest.TestCase):
     """Test the warm-tier transition snapshots and compression logic."""
 
     def setUp(self):
         # Create a temporary data directory for snapshots
         import tempfile
+
         self.temp_dir = tempfile.mkdtemp()
 
         # Initialize recorder in no-db mode with snapshot dir
@@ -627,7 +632,7 @@ class TestWarmTierTransitionSnapshots(unittest.TestCase):
         )
 
         # Prepare fake hot-tier documents and processed warm-tier docs
-        self.raw_docs = [{'_key': f'doc{i}', 'foo': 'bar'} for i in range(5)]
+        self.raw_docs = [{"_key": f"doc{i}", "foo": "bar"} for i in range(5)]
         self.processed_docs = self.raw_docs[:2]
 
         # Monkey-patch methods
@@ -639,6 +644,7 @@ class TestWarmTierTransitionSnapshots(unittest.TestCase):
     def tearDown(self):
         # Remove temporary data directory
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_run_transition_with_snapshots_creates_files_and_calls_store(self):
@@ -649,42 +655,46 @@ class TestWarmTierTransitionSnapshots(unittest.TestCase):
             data_root=self.temp_dir,
         )
         # Verify counts
-        self.assertEqual(hot_count, len(self.raw_docs))
-        self.assertEqual(warm_count, len(self.processed_docs))
+        assert hot_count == len(self.raw_docs)
+        assert warm_count == len(self.processed_docs)
 
         # Verify store_activities called with processed docs
         self.recorder.store_activities.assert_called_once_with(self.processed_docs)
 
         # Verify snapshot files exist and have correct line counts
         import os
+
         # Locate snapshot subdirectory
-        snapshot_root = os.path.join(self.temp_dir, 'warm_snapshots')
+        snapshot_root = os.path.join(self.temp_dir, "warm_snapshots")
         subdirs = os.listdir(snapshot_root)
-        self.assertEqual(len(subdirs), 1)
+        assert len(subdirs) == 1
         snapshot_dir = os.path.join(snapshot_root, subdirs[0])
-        hot_path = os.path.join(snapshot_dir, 'hot.jsonl')
-        warm_path = os.path.join(snapshot_dir, 'warm.jsonl')
-        self.assertTrue(os.path.isfile(hot_path))
-        self.assertTrue(os.path.isfile(warm_path))
+        hot_path = os.path.join(snapshot_dir, "hot.jsonl")
+        warm_path = os.path.join(snapshot_dir, "warm.jsonl")
+        assert os.path.isfile(hot_path)
+        assert os.path.isfile(warm_path)
 
         # Check line counts
-        with open(hot_path, 'r', encoding='utf-8') as hf:
-            self.assertEqual(sum(1 for _ in hf), len(self.raw_docs))
-        with open(warm_path, 'r', encoding='utf-8') as wf:
-            self.assertEqual(sum(1 for _ in wf), len(self.processed_docs))
+        with open(hot_path, encoding="utf-8") as hf:
+            assert sum(1 for _ in hf) == len(self.raw_docs)
+        with open(warm_path, encoding="utf-8") as wf:
+            assert sum(1 for _ in wf) == len(self.processed_docs)
+
 
 if __name__ == "__main__":
     # Run tests
     unittest.main()
-    
+
+
 class TestWarmTierTransitionIntegration(unittest.TestCase):
     """Integration test: run transition against a live test database."""
 
     @classmethod
     def setUpClass(cls):
         # Attempt to load real database config
+        import tempfile
+
         from db.db_config import IndalekoDBConfig
-        import tempfile, shutil
 
         # Path to test DB config (adjust as needed)
         config_path = os.path.join(os.environ.get("INDALEKO_ROOT", ""), "config", "indaleko-db-config-local.ini")
@@ -692,36 +702,40 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
             raise unittest.SkipTest(f"Integration DB config not found: {config_path}")
         # Connect to DB
         cls.db_config = IndalekoDBConfig(config_file=config_path)
-        if not getattr(cls.db_config, 'started', False):
+        if not getattr(cls.db_config, "started", False):
             raise unittest.SkipTest("Could not start database for integration test")
         cls.db = cls.db_config
         # Prepare test collections
         import uuid
+
         cls.hot_name = f"test_hot_{uuid.uuid4().hex[:8]}"
         cls.warm_name = f"test_warm_{uuid.uuid4().hex[:8]}"
         # Create or get collections
-        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).create_collection(cls.hot_name)
-        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).create_collection(cls.warm_name)
+        cls.db_config._arangodb.db(cls.db_config.config["database"]["database"]).create_collection(cls.hot_name)
+        cls.db_config._arangodb.db(cls.db_config.config["database"]["database"]).create_collection(cls.warm_name)
         cls.hot_coll = cls.db.get_collection(cls.hot_name)
         cls.warm_coll = cls.db.get_collection(cls.warm_name)
         # Insert test hot-tier docs (older than threshold)
         from datetime import UTC, datetime, timedelta
+
         now = datetime.now(UTC)
         docs = []
         for i in range(5):
-            docs.append({
-                '_key': f'doc{i}',
-                'Record': {'Data': {
-                    'timestamp': (now - timedelta(hours=13)).isoformat(),
-                    'transitioned': False
-                }}
-            })
+            docs.append(
+                {
+                    "_key": f"doc{i}",
+                    "Record": {"Data": {"timestamp": (now - timedelta(hours=13)).isoformat(), "transitioned": False}},
+                },
+            )
         for d in docs:
             cls.hot_coll.insert(d)
         # Create recorder
         tmpdir = tempfile.mkdtemp()
         cls.tmpdir = tmpdir
-        from activity.recorders.storage.ntfs.tiered.warm.recorder import NtfsWarmTierRecorder
+        from activity.recorders.storage.ntfs.tiered.warm.recorder import (
+            NtfsWarmTierRecorder,
+        )
+
         cls.recorder = NtfsWarmTierRecorder(
             ttl_days=1,
             debug=False,
@@ -738,9 +752,10 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # Cleanup test collections and tempdir
-        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).delete_collection(cls.hot_name)
-        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).delete_collection(cls.warm_name)
+        cls.db_config._arangodb.db(cls.db_config.config["database"]["database"]).delete_collection(cls.hot_name)
+        cls.db_config._arangodb.db(cls.db_config.config["database"]["database"]).delete_collection(cls.warm_name)
         import shutil
+
         shutil.rmtree(cls.tmpdir)
 
     def test_integration_transition_writes_db_and_snapshots(self):
@@ -751,14 +766,14 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
             data_root=self.tmpdir,
         )
         # Verify counts
-        self.assertEqual(hot_count, 5)
-        self.assertEqual(warm_count, 5)
+        assert hot_count == 5
+        assert warm_count == 5
         # Verify warm-tier collection has docs
-        self.assertEqual(self.warm_coll.count(), 5)
+        assert self.warm_coll.count() == 5
         # Verify snapshot files exist
-        snapshot_root = os.path.join(self.tmpdir, 'warm_snapshots')
+        snapshot_root = os.path.join(self.tmpdir, "warm_snapshots")
         subdirs = os.listdir(snapshot_root)
-        self.assertEqual(len(subdirs), 1)
+        assert len(subdirs) == 1
         sd = os.path.join(snapshot_root, subdirs[0])
-        self.assertTrue(os.path.isfile(os.path.join(sd, 'hot.jsonl')))
-        self.assertTrue(os.path.isfile(os.path.join(sd, 'warm.jsonl')))
+        assert os.path.isfile(os.path.join(sd, "hot.jsonl"))
+        assert os.path.isfile(os.path.join(sd, "warm.jsonl"))

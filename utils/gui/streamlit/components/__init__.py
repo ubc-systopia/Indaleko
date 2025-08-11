@@ -18,26 +18,34 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .activity import render_activity
-from .analytics import render_analytics
-from .common import display_query_plan, display_search_results, normalize_for_display
-from .connection import connect_to_db, render_connection_status
-from .dashboard import render_dashboard
-from .search import render_search
-from .settings import render_settings
-from .sidebar import render_sidebar
+from indaleko.utils.gui.streamlit.components.activity import render_activity
+from indaleko.utils.gui.streamlit.components.analytics import render_analytics
+from indaleko.utils.gui.streamlit.components.common import (
+    display_query_plan,
+    display_search_results,
+    normalize_for_display,
+)
+from indaleko.utils.gui.streamlit.components.connection import (
+    connect_to_db,
+    render_connection_status,
+)
+from indaleko.utils.gui.streamlit.components.dashboard import render_dashboard
+from indaleko.utils.gui.streamlit.components.search import render_search
+from indaleko.utils.gui.streamlit.components.settings import render_settings
+from indaleko.utils.gui.streamlit.components.sidebar import render_sidebar
+
 
 # Make these available at the component module level
 __all__ = [
+    "connect_to_db",
+    "display_query_plan",
+    "display_search_results",
+    "normalize_for_display",
+    "render_activity",
+    "render_analytics",
+    "render_connection_status",
     "render_dashboard",
     "render_search",
-    "render_analytics",
-    "render_activity",
     "render_settings",
     "render_sidebar",
-    "render_connection_status",
-    "connect_to_db",
-    "normalize_for_display",
-    "display_search_results",
-    "display_query_plan",
 ]

@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from uuid import UUID
 
 from icecream import ic
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +41,7 @@ from data_models.base import IndalekoBaseModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -93,7 +96,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
     @classmethod
     @field_validator("timestamp", mode="before")
     def ensure_timezone(cls, value: datetime):
-        """Ensure that the timestamp is in explicit UTC timezone"""
+        """Ensure that the timestamp is in explicit UTC timezone."""
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
@@ -101,7 +104,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
         return value
 
     class Config:
-        """Sample configuration data for the data model"""
+        """Sample configuration data for the data model."""
 
         json_schema_extra = {
             "example": {
@@ -139,8 +142,8 @@ class BaseSemanticDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     ic(os.path.abspath(__file__))
     ic("Testing base_data_model.py")
     BaseSemanticDataModel.test_model_main()

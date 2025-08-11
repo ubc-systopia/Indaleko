@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import uuid
+
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any

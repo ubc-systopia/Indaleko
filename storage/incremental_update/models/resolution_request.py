@@ -63,7 +63,7 @@ class ResolutionRequest(IndalekoBaseModel):
     last_attempt_time: datetime | None = Field(default=None, description="When the last resolution attempt occurred")
 
     @validator("path_depth", pre=True)
-    def calculate_path_depth(cls, v, values):
+    def calculate_path_depth(self, v, values):
         """Calculate path depth from file_path if not provided."""
         if v == 0 and "entity_info" in values:
             entity_info = values["entity_info"]

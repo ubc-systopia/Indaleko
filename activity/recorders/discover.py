@@ -22,9 +22,11 @@ import argparse
 import logging
 import os
 import sys
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,12 +35,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.discover import IndalekoActivityDataProviderCollectorDiscovery
-from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
-
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from activity.collectors.discover import IndalekoActivityDataProviderCollectorDiscovery
+from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from utils import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 
@@ -58,8 +60,8 @@ class IndalekoActivityDataProviderRecorderDiscovery:
     )
     default_collector_provider_dir = IndalekoActivityDataProviderCollectorDiscovery.default_provider_dir
 
-    def __init__(self, **kwargs):
-        """Set up the recorder discovery mechanism"""
+    def __init__(self, **kwargs) -> None:
+        """Set up the recorder discovery mechanism."""
         self.collectors = IndalekoActivityDataProviderCollectorDiscovery.find_collectors(
             kwargs.get(
                 "collector_dir",
@@ -105,7 +107,7 @@ class IndalekoActivityDataProviderRecorderDiscovery:
         collector_provider_dir: str | None = None,
         recorder_provider_dir: str | None = None,
     ) -> list:
-        """Find the data providers in the specified directory"""
+        """Find the data providers in the specified directory."""
         if recorder_provider_dir is None:
             recorder_provider_dir = IndalekoActivityDataProviderRecorderDiscovery.default_recorder_provider_dir
         if collector_provider_dir is None:
@@ -140,29 +142,29 @@ class IndalekoActivityDataProviderRecorderDiscovery:
 
     @staticmethod
     def initialize_project() -> bool:
-        """Initialize the project"""
+        """Initialize the project."""
         ic("Initialize project")
 
     @staticmethod
-    def list_data_providers(args: argparse.Namespace):
-        """List the data providers available"""
+    def list_data_providers(args: argparse.Namespace) -> None:
+        """List the data providers available."""
         discovery = IndalekoActivityDataProviderRecorderDiscovery()
         for provider in discovery.data_providers:
             ic(provider)
 
     @staticmethod
-    def show_registrations(args: argparse.Namespace):
-        """Show the existing registrations for the data providers"""
+    def show_registrations(args: argparse.Namespace) -> None:
+        """Show the existing registrations for the data providers."""
         ic(f"Show registrations: {args}")
 
 
-def main():
+def main() -> None:
     """
     This is the interactive interface to the activity data provider discovery
     mechanism.
     """
     ic(IndalekoActivityDataProviderRecorderDiscovery.find_data_providers())
-    exit(0)
+    sys.exit(0)
     parser = argparse.ArgumentParser(
         description="Indaleko Activity Data Provider Discovery Tool",
     )

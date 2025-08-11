@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import sys
+
 from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class IndalekoCLIRunnerData(BaseModel):
-    """This class provides a common CLI runner"""
+    """This class provides a common CLI runner."""
 
     GetPreParser: Callable[..., argparse.ArgumentParser | None] | None = None
     SetupLogging: Callable[..., None]

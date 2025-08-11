@@ -23,9 +23,11 @@ import logging
 import os
 import sys
 import uuid
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,13 +44,12 @@ from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 from utils.cli.base import IndalekoBaseCLI
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
-    """
-    This is the class that collects metadata from Windows local file systems.
-    """
+    """This is the class that collects metadata from Windows local file systems."""
 
     windows_platform = "Windows"
     windows_local_collector_name = "collector"
@@ -80,9 +81,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
     @staticmethod
     def windows_to_posix(filename):
-        """
-        Convert a Win32 filename to a POSIX-compliant one.
-        """
+        """Convert a Win32 filename to a POSIX-compliant one."""
         # Define a mapping of Win32 reserved characters to POSIX-friendly characters
         win32_to_posix = {
             "<": "_lt_",
@@ -101,9 +100,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
     @staticmethod
     def posix_to_windows(filename):
-        """
-        Convert a POSIX-compliant filename to a Win32 one.
-        """
+        """Convert a POSIX-compliant filename to a Win32 one."""
         # Define a mapping of POSIX-friendly characters back to Win32 reserved characters
         posix_to_win32 = {
             "_lt_": "<",
@@ -120,7 +117,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             filename = filename.replace(posix_char, win32_char)
         return filename
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         for key, value in self.indaleko_windows_local_collector_service.items():
             if key not in kwargs:
                 kwargs[key] = value
@@ -154,7 +151,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         if mapped_guid is not None:
             uri = "\\\\?\\Volume{" + mapped_guid + "}\\"
         else:
-            print(f"Ugh, cannot map {drive} to a GUID")
             uri = "\\\\?\\" + drive + ":"
         return uri
 
@@ -162,8 +158,8 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         self,
         name: str,
         root: str,
-        last_uri: str = None,
-        last_drive: str = None,
+        last_uri: str | None = None,
+        last_drive: str | None = None,
     ) -> tuple:
         """
         Given a file name and a root directory, this will return a dict
@@ -228,14 +224,14 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         self.last_debug_entry = "None"
         try:
             self.collect_internal()
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             logging.warning("Keyboard interrupt received, stopping collection")
             ic("Keyboard interrupt received, stopping collection")
             ic(self.last_debug_entry)
             ic(self.dir_count)
             ic(self.file_count)
             ic(self.error_count)
-            raise e
+            raise
         return self.data
 
     def collect_internal(self) -> list:
@@ -275,7 +271,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
         @staticmethod
         def get_storage_identifier(args: argparse.Namespace) -> str | None:
-            """This method is used to get the storage identifier for a path"""
+            """This method is used to get the storage identifier for a path."""
             if not hasattr(args, "path"):
                 return None
             if not os.path.exists(args.path):

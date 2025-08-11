@@ -24,11 +24,13 @@ import logging
 import os
 import sys
 import uuid
+
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,13 +49,14 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 
+
 # pylint: enable=wrong-import-position
 
 
 class BaseLocalStorageCollector(BaseStorageCollector):
     """This is the base class for all local storage recorders in Indaleko."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """This is the constructor for the base local storage recorder."""
         if "args" in kwargs:
             self.args = kwargs["args"]
@@ -67,7 +70,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
     @staticmethod
     def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-        """Load the machine configuration"""
+        """Load the machine configuration."""
         if keys.get("debug"):
             ic(f"load_machine_config: {keys}")
         if "machine_config_file" not in keys:
@@ -90,16 +93,15 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
     @staticmethod
     def execute_command(command: str) -> None:
-        """Execute a command"""
+        """Execute a command."""
         result = os.system(command)
         logging.info("Command %s result: %d", command, result)
-        print(f"Command {command} result: {result}")
 
     class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
 
         @staticmethod
         def get_pre_parser() -> argparse.ArgumentParser | None:
-            """This method is used to get the pre-parser"""
+            """This method is used to get the pre-parser."""
             parser = argparse.ArgumentParser(add_help=False)
             default_path = os.path.expanduser("~")
             parser.add_argument(
@@ -112,7 +114,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-            """Load the machine configuration"""
+            """Load the machine configuration."""
             assert "class" in keys, "(machine config) class must be specified"
             return BaseLocalStorageCollector.load_machine_config(keys)
 
@@ -123,7 +125,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
     @staticmethod
     def local_run(keys: dict[str, str]) -> dict | None:
-        """Run the collector"""
+        """Run the collector."""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
         config_data = cli.get_config_data()
@@ -155,20 +157,19 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             ic(config_data)
         collector = collector_class(**kwargs)
 
-        def collect(collector: BaseLocalStorageCollector, **kwargs):
+        def collect(collector: BaseLocalStorageCollector, **kwargs) -> None:
             collector.collect()
 
         def extract_counters(**kwargs):
             collector = kwargs.get("collector")
             if collector:
                 return collector.get_counts()
-            else:
-                return {}
+            return {}
 
         def capture_performance(
             task_func: Callable[..., Any],
             output_file_name: Path | str | None = None,
-        ):
+        ) -> None:
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(

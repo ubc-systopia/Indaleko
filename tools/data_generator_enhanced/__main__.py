@@ -3,5 +3,6 @@
 
 from tools.data_generator_enhanced.cli import main
 
+
 if __name__ == "__main__":
     main()

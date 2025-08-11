@@ -3,6 +3,7 @@ import uuid
 
 from arango import ArangoClient
 
+
 # ArangoDB connection settings
 arango_url = "http://localhost:8529"
 arango_username = "tony"
@@ -38,5 +39,3 @@ result = collection.insert_many(dummy_files)
 end_time = time.time()
 elapsed_time = end_time - start_time
 
-print("UUIDs inserted:", num_uuids)
-print("Elapsed time:", elapsed_time, "seconds")

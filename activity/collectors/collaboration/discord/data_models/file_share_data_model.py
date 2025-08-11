@@ -24,6 +24,7 @@ import sys
 
 from pydantic import AwareDatetime, Field, HttpUrl
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -37,13 +38,12 @@ from activity.collectors.collaboration.data_models.collaboration_data_model impo
 )
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 
+
 # pylint: enable=wrong-import-position
 
 
 class DiscordDataModel(BaseCollaborationDataModel):
-    """
-    Discord-specific implementation of the collaboration data model.
-    """
+    """Discord-specific implementation of the collaboration data model."""
 
     GuildName: str | None = Field(
         None,
@@ -87,13 +87,13 @@ class DiscordDataModel(BaseCollaborationDataModel):
     )
 
     class Config:
-        """Configuration and example data for the Discord data model"""
+        """Configuration and example data for the Discord data model."""
 
         @staticmethod
         def generate_example():
-            """Generate an example for the data model"""
+            """Generate an example for the data model."""
             example = BaseCollaborationDataModel.Config.generate_example()
-            sfd_example = SharedFileData.Config.json_schema_extra["example"]
+            SharedFileData.Config.json_schema_extra["example"]
             example.update(
                 {
                     "CollaborationType": "discord",
@@ -121,9 +121,8 @@ class DiscordDataModel(BaseCollaborationDataModel):
         json_schema_extra = {"example": generate_example()}
 
 
-def main():
-    """This allows testing the data models"""
-    print("\nTesting Spotify-specific Discord Data Model:")
+def main() -> None:
+    """This allows testing the data models."""
     # ic(DiscordDataModel.Config.json_schema_extra)
     SharedFileData.test_model_main()
     # DiscordDataModel.test_model_main()

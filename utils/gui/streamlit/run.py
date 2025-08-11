@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Indaleko Streamlit GUI runner script
+Indaleko Streamlit GUI runner script.
 
 This script provides a convenient way to launch the Streamlit GUI.
 
@@ -21,9 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
+import builtins
+import contextlib
 import os
 import subprocess
 import sys
+
 
 # Set up path to include Indaleko modules
 # Find the Indaleko root directory
@@ -51,13 +54,10 @@ if current_path in sys.path:
     sys.path.remove(current_path)
 sys.path.insert(0, current_path)
 
-print(f"INDALEKO_ROOT set to: {os.environ['INDALEKO_ROOT']}")
-print(f"Python path first entry: {sys.path[0]}")
-print(f"Full Python path: {sys.path}")
 
 
-def main():
-    """Main function to run the Streamlit app"""
+def main() -> None:
+    """Main function to run the Streamlit app."""
     parser = argparse.ArgumentParser(description="Run the Indaleko Streamlit GUI")
     parser.add_argument(
         "--port",
@@ -77,7 +77,6 @@ def main():
 
     # Check that we can find the app
     if not os.path.exists(app_path):
-        print(f"Error: Could not find app.py at {app_path}")
         sys.exit(1)
 
     # Build the command
@@ -88,26 +87,18 @@ def main():
 
     try:
         # Run Streamlit
-        print(f"Starting Indaleko GUI on port {args.port}...")
         subprocess.run(cmd, check=False)
     except KeyboardInterrupt:
-        print("\nShutting down Indaleko GUI...")
-    except Exception as e:
-        print(f"Error running Streamlit: {e}")
+        pass
+    except Exception:
 
         # Check if streamlit is installed
-        try:
+        with contextlib.suppress(builtins.BaseException):
             subprocess.run(
                 ["streamlit", "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False,
             )
-        except:
-            print(
-                "\nStreamlit does not appear to be installed. Please install it with:",
-            )
-            print('\nuv pip install -e ".[gui]"')
 
         sys.exit(1)
 

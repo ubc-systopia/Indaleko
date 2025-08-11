@@ -10,13 +10,13 @@ from storage.incremental_update.models import EntityInfo, EntityType, Resolution
 from storage.incremental_update.queue_service import EntityResolutionQueue
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_db_config():
     """Create a mock database configuration."""
     return MagicMock()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_collections():
     """Create a mock collections instance."""
     mock = MagicMock()
@@ -24,7 +24,7 @@ def mock_collections():
     return mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def queue_service(mock_db_config, mock_collections):
     """Create a queue service with mocked dependencies."""
     with patch("storage.incremental_update.queue_service.IndalekoCollections", return_value=mock_collections):

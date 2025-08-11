@@ -1,4 +1,4 @@
-"""This implements the IP Location Service"""
+"""This implements the IP Location Service."""
 
 import asyncio
 import configparser
@@ -6,11 +6,13 @@ import datetime
 import os
 import sys
 import uuid
+
 from typing import Any
 
 from aiohttp import ClientSession
 from icecream import ic
 from pytile import async_login
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -26,13 +28,14 @@ from activity.collectors.location.data_models.tile_location_data_model import (
     TileLocationDataModel,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class TileLocation(LocationCollector):
-    """This is the Tile Location Service"""
+    """This is the Tile Location Service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.timeout = 10
         self._name = "Tile Location Service"
         self._location = "Tile Location"
@@ -40,8 +43,8 @@ class TileLocation(LocationCollector):
         self.tile_config = self.get_tile_config()
         self.tile_data = self.get_tile_data()
 
-    def get_tile_config(self, config_file: str = None) -> configparser.ConfigParser:
-        """Get the Tile configuration"""
+    def get_tile_config(self, config_file: str | None = None) -> configparser.ConfigParser:
+        """Get the Tile configuration."""
         config = configparser.ConfigParser()
         if config_file is None:
             config_file = os.path.join(
@@ -53,13 +56,12 @@ class TileLocation(LocationCollector):
         return config
 
     def get_tile_data(self) -> list[TileLocationDataModel]:
-        """Get the Tile data"""
+        """Get the Tile data."""
 
         async def get_tile_data_async(email: str, password: str) -> dict:
             async with ClientSession() as session:
                 api = await async_login(email, password, session)
-                tiles = await api.async_get_tiles()
-                return tiles
+                return await api.async_get_tiles()
 
         tiles = asyncio.run(
             get_tile_data_async(
@@ -95,7 +97,7 @@ class TileLocation(LocationCollector):
         return return_data
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the provider characteristics"""
+        """Get the provider characteristics."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
             ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
@@ -103,15 +105,15 @@ class TileLocation(LocationCollector):
         ]
 
     def get_collectorr_name(self) -> str:
-        """Get the provider name"""
+        """Get the provider name."""
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the provider ID"""
+        """Get the provider ID."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> str:
-        """Retrieve data from the provider"""
+        """Retrieve data from the provider."""
         raise NotImplementedError("This method is not implemented yet.")
 
     def retrieve_temporal_data(
@@ -121,7 +123,7 @@ class TileLocation(LocationCollector):
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
     ) -> list[dict]:
-        """Retrieve temporal data from the provider"""
+        """Retrieve temporal data from the provider."""
         raise NotImplementedError("This method is not implemented yet.")
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
@@ -137,7 +139,7 @@ class TileLocation(LocationCollector):
     def cache_duration(self) -> datetime.timedelta:
         """
         Retrieve the maximum duration that data from this provider may be
-        cached
+        cached.
         """
         return datetime.timedelta(minutes=10)
 
@@ -152,18 +154,18 @@ class TileLocation(LocationCollector):
         """
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the provider"""
+        """Get the JSON schema for the provider."""
         return {}
 
     def get_location_name(self) -> str:
-        """Get the location"""
+        """Get the location."""
         location = self._location
         if location is None:
             location = ""
         return location
 
     def get_coordinates(self) -> dict[str, float]:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
@@ -171,7 +173,7 @@ class TileLocation(LocationCollector):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
-        """Get the location history for the location"""
+        """Get the location history for the location."""
         return []
 
     def get_distance(
@@ -179,11 +181,11 @@ class TileLocation(LocationCollector):
         location1: dict[str, float],
         location2: dict[str, float],
     ) -> float:
-        """Get the distance between two locations"""
+        """Get the distance between two locations."""
         raise NotImplementedError("This method is not implemented yet.")
 
 
-def main():
+def main() -> None:
     """This is the interface for testing the Tile location module."""
     tile_location = TileLocation()
     ic(tile_location.get_tile_data())

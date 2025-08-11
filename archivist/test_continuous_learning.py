@@ -17,9 +17,11 @@ import os
 import sys
 import time
 import unittest
+
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
+
 
 # Add the parent directory to the path so we can import our modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -33,6 +35,7 @@ sys.modules["db.i_collections"] = MagicMock()
 from archivist.knowledge_base.data_models.feedback_record import FeedbackType
 from archivist.knowledge_base.data_models.learning_event import LearningEventType
 from data_models.base import IndalekoBaseModel
+
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -174,7 +177,7 @@ class TestContinuousLearning(unittest.TestCase):
         ]
 
         # Perform the discovery
-        discovery_results = self.learning_system.discover_collectors_and_recorders(
+        self.learning_system.discover_collectors_and_recorders(
             force=True,
         )
 
@@ -187,11 +190,8 @@ class TestContinuousLearning(unittest.TestCase):
 
         # Verify the event type is correct
         call_args = self.mock_kb_manager.record_learning_event.call_args
-        self.assertEqual(
-            call_args[1]["event_type"],
-            LearningEventType.pattern_discovery,
-        )
-        self.assertEqual(call_args[1]["source"], "collector_discovery")
+        assert call_args[1]["event_type"] == LearningEventType.pattern_discovery
+        assert call_args[1]["source"] == "collector_discovery"
 
     def test_analyze_collection_schemas(self):
         """Test the analysis of collection schemas."""
@@ -265,19 +265,16 @@ class TestContinuousLearning(unittest.TestCase):
             )
 
             # Verify we got analysis results
-            self.assertIsNotNone(schema_analysis)
-            self.assertIn("collections_analyzed", schema_analysis)
+            assert schema_analysis is not None
+            assert "collections_analyzed" in schema_analysis
 
             # Verify KB manager was called to record the event
             self.mock_kb_manager.record_learning_event.assert_called_once()
 
             # Verify the event type is correct
             call_args = self.mock_kb_manager.record_learning_event.call_args
-            self.assertEqual(
-                call_args[1]["event_type"],
-                LearningEventType.pattern_discovery,
-            )
-            self.assertEqual(call_args[1]["source"], "schema_analysis")
+            assert call_args[1]["event_type"] == LearningEventType.pattern_discovery
+            assert call_args[1]["source"] == "schema_analysis"
 
     def test_learn_from_query_results(self):
         """Test learning from query results."""
@@ -290,8 +287,8 @@ class TestContinuousLearning(unittest.TestCase):
         )
 
         # Verify the learning results
-        self.assertIsNotNone(learning_results)
-        self.assertIn("event_id", learning_results)
+        assert learning_results is not None
+        assert "event_id" in learning_results
 
         # Verify KB manager was called to record the event
         self.mock_kb_manager.record_learning_event.assert_called()
@@ -300,8 +297,8 @@ class TestContinuousLearning(unittest.TestCase):
         first_call_args = self.mock_kb_manager.record_learning_event.call_args_list[0][1]
 
         # Verify the event type is correct
-        self.assertEqual(first_call_args["event_type"], LearningEventType.query_success)
-        self.assertEqual(first_call_args["source"], "query_execution")
+        assert first_call_args["event_type"] == LearningEventType.query_success
+        assert first_call_args["source"] == "query_execution"
 
         # Log the patterns created
         logger.info(f"Created knowledge event with ID {learning_results['event_id']}")
@@ -321,8 +318,8 @@ class TestContinuousLearning(unittest.TestCase):
         )
 
         # Verify the feedback results
-        self.assertIsNotNone(feedback_results)
-        self.assertIn("feedback_id", feedback_results)
+        assert feedback_results is not None
+        assert "feedback_id" in feedback_results
 
         # Verify KB manager was called to record the feedback
         self.mock_kb_manager.record_feedback.assert_called_once()
@@ -331,11 +328,11 @@ class TestContinuousLearning(unittest.TestCase):
         self.mock_kb_manager.get_knowledge_pattern.assert_called_once()
 
         # Verify the updated patterns structure
-        self.assertIn("updated_patterns", feedback_results)
+        assert "updated_patterns" in feedback_results
         if feedback_results["updated_patterns"]:
             pattern = feedback_results["updated_patterns"][0]
-            self.assertIn("pattern_id", pattern)
-            self.assertIn("new_confidence", pattern)
+            assert "pattern_id" in pattern
+            assert "new_confidence" in pattern
 
         # Log the feedback processing results
         logger.info(f"Processed feedback with ID {feedback_results['feedback_id']}")
@@ -430,14 +427,14 @@ class TestContinuousLearning(unittest.TestCase):
         change_results = self.learning_system.detect_collector_changes()
 
         # Verify the change results
-        self.assertIsNotNone(change_results)
-        self.assertIn("status", change_results)
-        self.assertIn("change_detected", change_results)
+        assert change_results is not None
+        assert "status" in change_results
+        assert "change_detected" in change_results
 
         # There should be a new collector type
-        self.assertEqual(change_results["status"], "updated")
-        self.assertTrue(change_results["change_detected"])
-        self.assertIn("semantic", change_results.get("new_collector_types", []))
+        assert change_results["status"] == "updated"
+        assert change_results["change_detected"]
+        assert "semantic" in change_results.get("new_collector_types", [])
 
 
 def run_tests(args):
@@ -449,16 +446,6 @@ def run_tests(args):
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    print("\n===== ContinuousLearningSystem Unit Tests =====\n")
-    print(
-        "Note: The unit tests require the continuous_learning.py module to be present in the archivist/knowledge_base directory.",
-    )
-    print(
-        "These tests are designed to verify the behavior of that module once it's implemented.",
-    )
-    print(
-        "Currently running the demo instead, which shows the expected functionality with mocked objects.\n",
-    )
 
     # Run the demo instead of the tests until the module is implemented
     run_demo(args)
@@ -473,11 +460,7 @@ def run_demo(args):
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    print("\n===== ContinuousLearningSystem Demonstration =====\n")
 
-    print("Note: This is a demonstration with mocked database operations.")
-    print("In a real environment, the system would interact with the database.")
-    print("The demo will show the key capabilities with simulated data.\n")
 
     # Create mock ContinuousLearningSystem
     class MockContinuousLearningSystem:
@@ -685,49 +668,33 @@ def run_demo(args):
     learning_system = MockContinuousLearningSystem(kb_manager=mock_kb_manager)
 
     # 1. Discover collectors and recorders
-    print("\n--- Collector and Recorder Discovery ---\n")
     start_time = time.time()
     discovery_results = learning_system.discover_collectors_and_recorders(force=True)
-    elapsed = time.time() - start_time
+    time.time() - start_time
 
-    print(
-        f"Discovered {discovery_results['total_collectors']} collectors and "
-        f"{discovery_results['total_recorders']} recorders in {elapsed:.3f} seconds",
-    )
 
     # Print a sample of the discovered collectors
-    print("\nSample of discovered collectors:")
-    for collector_type, collectors in discovery_results["collectors"].items():
-        print(f"- {collector_type} collectors: {len(collectors)}")
-        for collector in collectors[:2]:  # Show first 2 of each type
-            print(f"  * {collector['class']} in {collector['module']}")
+    for collectors in discovery_results["collectors"].values():
+        for _collector in collectors[:2]:  # Show first 2 of each type
+            pass
 
     # 2. Analyze collection schemas
-    print("\n--- Collection Schema Analysis ---\n")
     start_time = time.time()
     schema_analysis = learning_system.analyze_collection_schemas(force=True)
-    elapsed = time.time() - start_time
+    time.time() - start_time
 
-    print(
-        f"Analyzed {schema_analysis['collections_analyzed']} collections in {elapsed:.3f} seconds",
-    )
 
     # Print schema changes
     if schema_analysis.get("schema_changes"):
-        print("\nSchema changes detected:")
-        for collection, change in schema_analysis["schema_changes"].items():
-            print(f"- {collection}: {change.get('message', 'Changes detected')}")
+        for _collection, _change in schema_analysis["schema_changes"].items():
+            pass
 
     # Print field usage patterns
     if schema_analysis.get("field_usage_patterns"):
-        print("\nField usage patterns:")
-        for field, usage in list(schema_analysis["field_usage_patterns"].items())[:3]:
-            print(
-                f"- {field}: {usage['percentage']:.1f}% usage, type: {usage['field_type']}",
-            )
+        for _field, _usage in list(schema_analysis["field_usage_patterns"].items())[:3]:
+            pass
 
     # 3. Learning from query results
-    print("\n--- Learning from Query Results ---\n")
 
     # Sample query and results
     sample_query = "Find PDF documents created last week related to project Indaleko"
@@ -755,24 +722,19 @@ def run_demo(args):
         },
     ]
 
-    print(f"Sample query: '{sample_query}'")
-    print(f"With {len(sample_results)} matching documents")
 
     # Perform the learning
     start_time = time.time()
-    learning_results = learning_system.learn_from_query_results(
+    learning_system.learn_from_query_results(
         query_text=sample_query,
         query_results=sample_results,
         execution_time=0.456,
         user_id="demo_user",
     )
-    elapsed = time.time() - start_time
+    time.time() - start_time
 
-    print(f"\nCreated learning event with ID {learning_results['event_id']}")
-    print(f"Processed query learning in {elapsed:.3f} seconds")
 
     # 4. Processing user feedback
-    print("\n--- Processing User Feedback ---\n")
 
     # Sample feedback data
     sample_feedback = {
@@ -786,8 +748,6 @@ def run_demo(args):
         },
     }
 
-    print(f"Sample feedback: Relevance {sample_feedback['relevance']}")
-    print(f"Comment: '{sample_feedback['comment']}'")
 
     # Process the feedback
     start_time = time.time()
@@ -798,45 +758,29 @@ def run_demo(args):
         pattern_id=str(uuid4()),
         user_id="demo_user",
     )
-    elapsed = time.time() - start_time
+    time.time() - start_time
 
-    print(f"\nRecorded feedback with ID {feedback_results['feedback_id']}")
-    print(f"Processed feedback in {elapsed:.3f} seconds")
 
     # Print insights
     if feedback_results.get("additional_insights"):
-        print("\nInsights extracted from feedback:")
-        for insight in feedback_results["additional_insights"]:
-            print(
-                f"- {insight['description']} (confidence: {insight['confidence']:.2f})",
-            )
+        for _insight in feedback_results["additional_insights"]:
+            pass
 
     # 5. Collector change detection
-    print("\n--- Collector Change Detection ---\n")
 
     # Detect changes
     start_time = time.time()
     change_results = learning_system.detect_collector_changes()
-    elapsed = time.time() - start_time
+    time.time() - start_time
 
-    print(f"Detected changes in {elapsed:.3f} seconds:")
-    print(
-        f"- Total collectors: {change_results['total_collectors']} (previous: {change_results['previous_collector_count']})",
-    )
 
     if change_results.get("new_collector_types"):
-        print(
-            f"- New collector types: {', '.join(change_results['new_collector_types'])}",
-        )
+        pass
 
     if change_results.get("removed_collector_types"):
-        print(
-            f"- Removed collector types: {', '.join(change_results['removed_collector_types'])}",
-        )
+        pass
 
-    print(f"\nChange detected: {change_results.get('change_detected', False)}")
 
-    print("\n===== Demonstration Complete =====\n")
 
 
 def main():
@@ -866,15 +810,7 @@ def main():
     elif args.demo:
         run_demo(args)
     else:
-        print("\nPlease specify either --demo or --run-tests")
-        print("\nExample usage:")
-        print(
-            "  python test_continuous_learning.py --demo       # Run the demonstration",
-        )
-        print("  python test_continuous_learning.py --run-tests  # Run the unit tests")
-        print(
-            "  python test_continuous_learning.py --verbose --demo  # Run with verbose logging",
-        )
+        pass
 
 
 if __name__ == "__main__":

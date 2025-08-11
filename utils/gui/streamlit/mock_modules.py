@@ -1,5 +1,5 @@
 """
-Mock implementations of Indaleko modules for GUI development
+Mock implementations of Indaleko modules for GUI development.
 
 This module provides mock implementations of Indaleko classes when the
 real modules cannot be imported. This allows the GUI to run with limited
@@ -38,7 +38,7 @@ def extract_keys_from_file_name(file_name):
     return {}
 
 
-def generate_file_name(**kwargs):
+def generate_file_name(**kwargs) -> str:
     return "mock_file.json"
 
 
@@ -55,7 +55,7 @@ class MockDb:
                     {"storage": "OneDrive", "count": 450},
                     {"storage": "Dropbox", "count": 200},
                 ]
-            elif "extension" in query:
+            if "extension" in query:
                 return [
                     {"extension": "pdf", "count": 250},
                     {"extension": "docx", "count": 180},
@@ -63,7 +63,7 @@ class MockDb:
                     {"extension": "png", "count": 150},
                     {"extension": "xlsx", "count": 90},
                 ]
-            elif "Activity" in query or "timestamp" in query:
+            if "Activity" in query or "timestamp" in query:
                 # Generate dates for the past 7 days with decreasing counts
                 from datetime import datetime, timedelta
 
@@ -75,22 +75,22 @@ class MockDb:
                     count = 15 + (45 - 15) * (1 - i / 7)  # Decreasing trend
                     dates.append({"date": date, "count": int(count)})
                 return dates
-            else:
-                # Generic search results
-                import uuid
-                from datetime import datetime
+            # Generic search results
+            import uuid
 
-                return [
-                    {
-                        "_id": f"Objects/{i}",
-                        "_key": str(uuid.uuid4()),
-                        "Label": f"document{i}.pdf",
-                        "type": "file",
-                        "size": 1024 * (i + 1),
-                        "timestamp": datetime.now(UTC).isoformat(),
-                    }
-                    for i in range(1, 6)
-                ]
+            from datetime import datetime
+
+            return [
+                {
+                    "_id": f"Objects/{i}",
+                    "_key": str(uuid.uuid4()),
+                    "Label": f"document{i}.pdf",
+                    "type": "file",
+                    "size": 1024 * (i + 1),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+                for i in range(1, 6)
+            ]
 
         @staticmethod
         def explain(query, bind_vars=None):
@@ -198,10 +198,10 @@ class MockDb:
 
 
 class MockServiceManager:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return True
 
     def get_collections_metadata(self):
@@ -212,24 +212,24 @@ class MockServiceManager:
 
 
 class MockDBConfig:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
 
 class MockDBInfo:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def get_collections_count(self):
+    def get_collections_count(self) -> int:
         return 5
 
-    def get_documents_count(self):
+    def get_documents_count(self) -> int:
         return 1250
 
-    def get_indexes_count(self):
+    def get_indexes_count(self) -> int:
         return 15
 
-    def get_database_size(self):
+    def get_database_size(self) -> str:
         return "125.5 MB"
 
     def get_collections(self):
@@ -238,22 +238,22 @@ class MockDBInfo:
             {"name": "Relationships", "type": "edge", "status": "loaded", "count": 450},
         ]
 
-    def get_host(self):
+    def get_host(self) -> str:
         return "localhost"
 
-    def get_port(self):
+    def get_port(self) -> int:
         return 8529
 
-    def get_database_name(self):
+    def get_database_name(self) -> str:
         return "indaleko"
 
-    def get_username(self):
+    def get_username(self) -> str:
         return "indaleko"
 
 
 # Mock query processing classes
 class EnhancedNLParser:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def parse(self, query_text):
@@ -264,7 +264,7 @@ class EnhancedNLParser:
 
 
 class EnhancedAQLTranslator:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def translate(self, parsed_query):
@@ -290,7 +290,7 @@ class EnhancedAQLTranslator:
                     "bind_vars": {},
                 },
             )
-        elif "image" in query_text.lower() or "photo" in query_text.lower():
+        if "image" in query_text.lower() or "photo" in query_text.lower():
             return type(
                 "obj",
                 (object,),
@@ -299,19 +299,18 @@ class EnhancedAQLTranslator:
                     "bind_vars": {},
                 },
             )
-        else:
-            return type(
-                "obj",
-                (object,),
-                {
-                    "query": f'FOR obj IN Objects FILTER obj.Label != null AND LIKE(obj.Label, "%{query_text}%", true) RETURN obj',
-                    "bind_vars": {"query_text": query_text},
-                },
-            )
+        return type(
+            "obj",
+            (object,),
+            {
+                "query": f'FOR obj IN Objects FILTER obj.Label != null AND LIKE(obj.Label, "%{query_text}%", true) RETURN obj',
+                "bind_vars": {"query_text": query_text},
+            },
+        )
 
 
 class MockQueryProcessor:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def execute(self, query_text, explain=False, **kwargs):
@@ -331,65 +330,64 @@ class MockQueryProcessor:
             result = MockDb.aql.explain(query_text)
             result["_is_explain_result"] = True
             return result
-        else:
-            # Always return at least some results for testing
-            results = MockDb.aql.execute(query_text)
-            if not results or len(results) == 0:
-                # If no results, return mock data
-                import uuid
-                from datetime import datetime
+        # Always return at least some results for testing
+        results = MockDb.aql.execute(query_text)
+        if not results or len(results) == 0:
+            # If no results, return mock data
+            import uuid
 
-                # Generate mock search results based on query
-                search_term = query_text.lower()
-                results = []
+            from datetime import datetime
 
-                # Add matching mock items - always add at least 5 items
-                for i in range(1, 6):
-                    filename = f"document{i}.pdf"
+            # Generate mock search results based on query
+            search_term = query_text.lower()
+            results = []
+
+            # Add matching mock items - always add at least 5 items
+            for i in range(1, 6):
+                filename = f"document{i}.pdf"
+                results.append(
+                    {
+                        "_id": f"Objects/{i}",
+                        "_key": str(uuid.uuid4()),
+                        "Label": filename,
+                        "type": "file",
+                        "size": 1024 * i,
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "Result": "Mock result",
+                    },
+                )
+
+            # Add a few extra results for queries that mention documents
+            if "doc" in search_term or "file" in search_term:
+                for i in range(6, 9):
                     results.append(
                         {
                             "_id": f"Objects/{i}",
                             "_key": str(uuid.uuid4()),
-                            "Label": filename,
+                            "Label": f"report{i}.docx",
                             "type": "file",
-                            "size": 1024 * i,
+                            "size": 2048 * i,
                             "timestamp": datetime.now(UTC).isoformat(),
                             "Result": "Mock result",
                         },
                     )
 
-                # Add a few extra results for queries that mention documents
-                if "doc" in search_term or "file" in search_term:
-                    for i in range(6, 9):
-                        results.append(
-                            {
-                                "_id": f"Objects/{i}",
-                                "_key": str(uuid.uuid4()),
-                                "Label": f"report{i}.docx",
-                                "type": "file",
-                                "size": 2048 * i,
-                                "timestamp": datetime.now(UTC).isoformat(),
-                                "Result": "Mock result",
-                            },
-                        )
-
-            return results
+        return results
 
 
 class AQLQueryExecutor:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def execute(self, query, bind_vars=None, explain_only=False, **kwargs):
         # Return sample results or explanation
         if explain_only:
             return MockDb.aql.explain(query, bind_vars)
-        else:
-            return MockDb.aql.execute(query, bind_vars)
+        return MockDb.aql.execute(query, bind_vars)
 
 
 class FacetGenerator:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
     def generate(self, results):
@@ -438,17 +436,17 @@ class FacetGenerator:
 
 # Mock platform classes
 class IndalekoMachineConfig:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
 
 # Mock main Indaleko class
 class Indaleko:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass
 
-    def connect(self):
+    def connect(self) -> bool:
         return True
 
-    def get_collection(self, name):
+    def get_collection(self, name) -> None:
         return None

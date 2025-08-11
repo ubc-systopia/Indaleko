@@ -24,11 +24,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import AwareDatetime, Field, model_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +43,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.provenance_data import BaseProvenanceDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
+
 
 # pylint: enable=wrong-import-position
 

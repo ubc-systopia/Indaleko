@@ -28,10 +28,11 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
 
 import matplotlib.pyplot as plt
-from tabulate import tabulate
+
 
 # Set up environment variables and paths
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +47,7 @@ from query.history.data_models.query_history import QueryHistoryData
 from query.query_processing.nl_parser import NLParser
 from query.query_processing.query_history import QueryHistory
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
 
 # Configure logging
 logging.basicConfig(
@@ -208,7 +210,7 @@ def run_queries(
             )
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            logger.error(f"Error processing query '{query}': {e}")
+            logger.exception(f"Error processing query '{query}': {e}")
             results["error_queries"] += 1
             results["queries"].append(
                 {"query": query, "success": False, "error": str(e)},
@@ -221,19 +223,14 @@ def display_error_statistics(nl_parser: NLParser) -> None:
     """Display error statistics collected by the parser."""
     stats = nl_parser.get_error_stats()
 
-    print("\n=== Error Statistics ===")
-    print(f"Total errors: {stats['error_counts']['total']}")
-    print(f"Error rate: {stats['error_rate'] * 100:.2f}%")
 
     # Print error counts by category
-    print("\nErrors by Category:")
     error_categories = {k: v for k, v in stats["error_counts"].items() if k != "total"}
-    for category, count in error_categories.items():
-        print(f"  {category}: {count}")
+    for _category, _count in error_categories.items():
+        pass
 
     # Print common errors
     if stats["common_errors"]:
-        print("\nMost Common Errors:")
         error_table = []
         for error in stats["common_errors"][:5]:  # Show top 5 errors
             error_table.append(
@@ -245,13 +242,6 @@ def display_error_statistics(nl_parser: NLParser) -> None:
                 ],
             )
 
-        print(
-            tabulate(
-                error_table,
-                headers=["Error", "Count", "Stages", "Sample Queries"],
-                tablefmt="grid",
-            ),
-        )
 
 
 def generate_error_visualizations(nl_parser: NLParser, output_dir: str) -> None:
@@ -327,13 +317,8 @@ def test_parser_robustness(
     total_queries = sum(results["total_queries"] for results in all_results.values())
     total_successful = sum(results["successful_queries"] for results in all_results.values())
 
-    print("\n=== Robustness Test Results ===")
-    print(f"Total queries tested: {total_queries}")
-    print(f"Successful queries: {total_successful}")
-    print(f"Success rate: {total_successful / total_queries * 100:.2f}%")
 
     # Display results by category
-    print("\nResults by Query Category:")
     category_table = []
     for category, results in all_results.items():
         success_rate = results["successful_queries"] / results["total_queries"] * 100
@@ -346,13 +331,6 @@ def test_parser_robustness(
             ],
         )
 
-    print(
-        tabulate(
-            category_table,
-            headers=["Category", "Total", "Successful", "Success Rate"],
-            tablefmt="grid",
-        ),
-    )
 
     # Display error statistics
     display_error_statistics(nl_parser)
@@ -428,25 +406,15 @@ def run_specific_query(query: str) -> None:
         logger.info(f"Query '{query}' recorded in query history")
 
         # Display success
-        print(f"\n=== Query: {query} ===")
-        print("Status: Success")
-        print(f"Processing time: {end_time - start_time:.4f} seconds")
-        print(f"Intent: {result.intent}")
-        print(f"Entities: {[entity.name for entity in result.entities.entities]}")
-        print("Recorded in QueryHistory: Yes")
 
-    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ):
         # Display error details
-        print(f"\n=== Query: {query} ===")
-        print("Status: Failed")
-        print(f"Error: {e}")
-        print("Recorded in QueryHistory: No")
 
         # Display error statistics
         display_error_statistics(nl_parser)
 
 
-def main():
+def main() -> None:
     """Main entry point for the error analysis tool."""
     parser = argparse.ArgumentParser(description="Indaleko Query Error Analysis Tool")
 

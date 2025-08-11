@@ -23,7 +23,9 @@ import os
 import subprocess
 import sys
 import tempfile
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
+
 
 # We'll import the CLI base class later in a separate module
 
@@ -53,7 +56,7 @@ class IndalekoAnalyzerManager:
     SNAKE_CASE_ANALYZER = "Indaleko::indaleko_snake_case"
     FILENAME_ANALYZER = "Indaleko::indaleko_filename"
 
-    def __init__(self, db_config: IndalekoDBConfig | None = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """
         Initialize the analyzer manager.
 
@@ -150,8 +153,7 @@ class IndalekoAnalyzerManager:
             result = subprocess.run(
                 command,
                 shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 check=False,
             )
@@ -295,9 +297,8 @@ class IndalekoAnalyzerManager:
         if success and "Successfully created CamelCase analyzer" in output:
             logging.info("Successfully created CamelCase analyzer")
             return True
-        else:
-            logging.error("Failed to create CamelCase analyzer: %s", output)
-            return False
+        logging.error("Failed to create CamelCase analyzer: %s", output)
+        return False
 
     def create_snake_case_analyzer(self) -> bool:
         """
@@ -342,9 +343,8 @@ class IndalekoAnalyzerManager:
         if success and "Successfully created snake_case analyzer" in output:
             logging.info("Successfully created snake_case analyzer")
             return True
-        else:
-            logging.error("Failed to create snake_case analyzer: %s", output)
-            return False
+        logging.error("Failed to create snake_case analyzer: %s", output)
+        return False
 
     def create_filename_analyzer(self) -> bool:
         """
@@ -409,9 +409,8 @@ class IndalekoAnalyzerManager:
         if success and "Successfully created filename analyzer" in output:
             logging.info("Successfully created filename analyzer")
             return True
-        else:
-            logging.error("Failed to create filename analyzer: %s", output)
-            return False
+        logging.error("Failed to create filename analyzer: %s", output)
+        return False
 
     def create_all_analyzers(self) -> dict[str, bool]:
         """
@@ -455,9 +454,8 @@ class IndalekoAnalyzerManager:
         if success and f"Successfully deleted analyzer {analyzer_name}" in output:
             logging.info("Successfully deleted analyzer %s", analyzer_name)
             return True
-        else:
-            logging.error("Failed to delete analyzer %s: %s", analyzer_name, output)
-            return False
+        logging.error("Failed to delete analyzer %s: %s", analyzer_name, output)
+        return False
 
     def test_analyzer(
         self,
@@ -505,32 +503,27 @@ class IndalekoAnalyzerManager:
                     except json.JSONDecodeError:
                         pass
             return True, tokens
-        else:
-            logging.error("Failed to test analyzer %s: %s", analyzer_name, output)
-            return False, []
+        logging.error("Failed to test analyzer %s: %s", analyzer_name, output)
+        return False, []
 
 
 # CLI functionality has been moved to analyzer_manager_cli.py
 # This avoids the circular dependency while preserving inheritance
 
 
-def main():
+def main() -> None:
     """Main entry point for the analyzer manager CLI."""
     try:
         # Import CLI from the separate module to avoid circular dependency
         from db.analyzer_manager_cli import main as cli_main
 
         cli_main()
-    except ImportError as e:
-        print(f"Error importing analyzer_manager_cli: {e}")
-        print("The CLI functionality has been moved to analyzer_manager_cli.py")
+    except ImportError:
         # Fallback to direct analyzer creation
         if "--direct" in sys.argv:
-            print("Executing analyzer creation directly...")
             execute_analyzer_creation()
         else:
-            print("Please use python -m db.analyzer_manager_cli to access the CLI")
-            print("Or use --direct to create analyzers directly")
+            pass
 
 
 def create_custom_analyzers(
@@ -570,8 +563,7 @@ def execute_analyzer_creation(db_config: IndalekoDBConfig | None = None) -> bool
         result = subprocess.run(
             command,
             shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=False,
         )
@@ -584,9 +576,8 @@ def execute_analyzer_creation(db_config: IndalekoDBConfig | None = None) -> bool
                 if "Created" in line and "analyzer" in line:
                     logging.info(line.strip())
             return True
-        else:
-            logging.error(f"Failed to create custom analyzers: {result.stderr}")
-            return False
+        logging.error(f"Failed to create custom analyzers: {result.stderr}")
+        return False
 
     except Exception as e:
         logging.exception(f"Error executing analyzer creation: {e}")
@@ -612,10 +603,9 @@ def create_custom_analyzers_script() -> str:
         return ""
 
     with open(script_path, encoding="utf-8") as f:
-        script_content = f.read()
+        return f.read()
 
     # Return the script content for execution
-    return script_content
 
 
 def get_arangosh_command(db_config: IndalekoDBConfig | None = None) -> str:

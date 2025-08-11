@@ -23,6 +23,7 @@ import logging
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,7 +35,6 @@ from db.analyzer_manager import (
     IndalekoAnalyzerManager,
     create_custom_analyzers,
     execute_analyzer_creation,
-    get_arangosh_command,
 )
 from utils import IndalekoLogging
 
@@ -43,20 +43,17 @@ def list_analyzers(manager: IndalekoAnalyzerManager, verbose: bool = False) -> N
     """List all analyzers in the database."""
     analyzers = manager.list_analyzers()
 
-    print(f"\nFound {len(analyzers)} analyzers:")
     for analyzer in analyzers:
-        name = analyzer.get("name", "unknown")
-        analyzer_type = analyzer.get("type", "unknown")
-        print(f"  - {name} (type: {analyzer_type})")
+        analyzer.get("name", "unknown")
+        analyzer.get("type", "unknown")
 
         if verbose:
             try:
                 import json
 
-                properties = json.loads(analyzer.get("properties", "{}"))
-                print(f"    Properties: {json.dumps(properties, indent=2)}")
+                json.loads(analyzer.get("properties", "{}"))
             except json.JSONDecodeError:
-                print("    Could not parse properties")
+                pass
 
 
 def test_analyzer_creation(
@@ -65,15 +62,11 @@ def test_analyzer_creation(
 ) -> None:
     """Test analyzer creation using different methods."""
     if direct:
-        print("\nTesting direct analyzer creation...")
-        success = execute_analyzer_creation()
-        print(f"Direct creation result: {'✅ Success' if success else '❌ Failed'}")
+        execute_analyzer_creation()
     else:
-        print("\nTesting analyzer creation using Python API...")
         results = create_custom_analyzers()
-        print("Creation results:")
-        for analyzer, success in results.items():
-            print(f"  - {analyzer}: {'✅ Success' if success else '❌ Failed'}")
+        for _analyzer, _success in results.items():
+            pass
 
 
 def test_tokenization(manager: IndalekoAnalyzerManager, verbose: bool = False) -> None:
@@ -99,23 +92,18 @@ def test_tokenization(manager: IndalekoAnalyzerManager, verbose: bool = False) -
         ],
     }
 
-    print("\nTesting tokenization with different analyzers:")
 
     for analyzer_name, texts in test_texts.items():
-        print(f"\nAnalyzer: {analyzer_name}")
         for text in texts:
             success, tokens = manager.test_analyzer(analyzer_name, text)
             if success:
-                print(f"  Original: '{text}'")
-                print(f"  Tokens: {tokens}")
+                pass
             else:
-                print(f"  ❌ Failed to tokenize '{text}'")
+                pass
 
 
 def show_arangosh_command() -> None:
     """Show the arangosh command for creating analyzers."""
-    print("\nArangosh command for creating analyzers:")
-    print(get_arangosh_command())
 
 
 def main() -> None:

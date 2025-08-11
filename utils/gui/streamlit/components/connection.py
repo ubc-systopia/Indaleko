@@ -1,5 +1,5 @@
 """
-Database connection components
+Database connection components.
 
 These components handle database connection and status display.
 
@@ -24,7 +24,7 @@ import os
 import streamlit as st
 
 
-def render_connection_status():
+def render_connection_status() -> None:
     """
     Display the current database connection status.
 
@@ -73,7 +73,7 @@ def connect_to_db(config_file):
         debug_log = None
 
     # Log function that writes to debug container if available
-    def log_debug(message, level="info"):
+    def log_debug(message, level="info") -> None:
         if debug_log:
             if level == "info":
                 debug_log.info(message)
@@ -165,14 +165,13 @@ def connect_to_db(config_file):
                             # Set flag to indicate we're using a real database
                             st.session_state.using_real_db = True
                             return db_service, db_info
-                        else:
-                            log_debug(
-                                "⚠️ Connected but no collections found",
-                                "warning",
-                            )
-                            status_container.warning(
-                                "⚠️ Connected but no collections found",
-                            )
+                        log_debug(
+                            "⚠️ Connected but no collections found",
+                            "warning",
+                        )
+                        status_container.warning(
+                            "⚠️ Connected but no collections found",
+                        )
                     except Exception as e:
                         log_debug(f"❌ Failed to verify connection: {e}", "error")
                         status_container.error(f"❌ Failed to verify connection: {e}")

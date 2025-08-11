@@ -33,8 +33,10 @@ import logging
 import math
 import os
 import re
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # pylint: disable=wrong-import-position
 # Set up environment
@@ -48,6 +50,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 from utils.i_logging import get_logger
+
 
 # pylint: enable=wrong-import-position
 
@@ -184,7 +187,7 @@ class ImportanceScorer:
         (r".*", 0.5),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the importance scorer.
 
@@ -384,7 +387,7 @@ class ImportanceScorer:
             return min(1.0, max(0.1, recency_score))
 
         except Exception as e:
-            self._logger.error(f"Error calculating recency score: {e}")
+            self._logger.exception(f"Error calculating recency score: {e}")
             return 0.5  # Default on error
 
     def _calculate_metadata_importance(self, activity_data: dict[str, Any]) -> float:
@@ -614,22 +617,13 @@ if __name__ == "__main__":
         results.sort(key=lambda x: x["importance_score"], reverse=True)
 
         # Display results
-        print("\n=== Importance Scoring Results ===")
-        for i, result in enumerate(results[:20], 1):
-            print(f"\n{i}. {result['file_path']} ({result['activity_type']})")
-            print(f"   Importance Score: {result['importance_score']:.2f}")
-            print("   Retention Days:")
-            print(f"     Sensory:     {result['retention_days']['sensory']}")
-            print(f"     Short-Term:  {result['retention_days']['short_term']}")
-            print(f"     Long-Term:   {result['retention_days']['long_term']}")
+        for _i, _result in enumerate(results[:20], 1):
+            pass
 
         # Print summary
-        print(f"\nProcessed {len(results)} activities")
         avg_score = sum(r["importance_score"] for r in results) / max(1, len(results))
-        print(f"Average importance score: {avg_score:.2f}")
     else:
         # Run demo test
-        print("\n=== Importance Scorer Demo ===")
 
         # Sample activities
         test_activities = [
@@ -662,23 +656,13 @@ if __name__ == "__main__":
         ]
 
         # Score each activity
-        print("\nScoring sample activities:")
         for activity in test_activities:
             score = scorer.calculate_importance(activity)
             path = activity["file_path"]
             activity_type = activity["activity_type"]
 
-            print(f"\n- {path} ({activity_type})")
-            print(f"  Importance Score: {score:.2f}")
-            print(
-                f"  Retention (Sensory): {scorer.estimate_retention_days(score, 'sensory')} days",
-            )
-            print(
-                f"  Retention (Short-Term): {scorer.estimate_retention_days(score, 'short_term')} days",
-            )
 
         # Test consolidation decision
-        print("\nConsolidation Decisions:")
         activities_with_ages = [
             (test_activities[0], 6),  # 6 hours old
             (test_activities[1], 24),  # 24 hours old
@@ -696,7 +680,4 @@ if __name__ == "__main__":
             )
             path = activity["file_path"]
 
-            print(f"- {path} (Age: {age_hours}h, Score: {score:.2f})")
-            print(f"  Consolidate to Short-Term Memory: {'Yes' if decision else 'No'}")
 
-        print("\nDemo completed successfully!")

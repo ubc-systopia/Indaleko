@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -49,6 +50,7 @@ from utils.misc.directory_management import (
     indaleko_default_config_dir,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -71,7 +73,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         "service_type": IndalekoServiceManager.service_type_machine_configuration,
     }
 
-    def __init__(self: "IndalekoMacOSMachineConfig", **kwargs):
+    def __init__(self: "IndalekoMacOSMachineConfig", **kwargs) -> None:
         self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
             **IndalekoMacOSMachineConfig.macos_machine_config_service,
         )
@@ -89,7 +91,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def find_config_files(
         directory: str,
-        prefix: str = None,
+        prefix: str | None = None,
         suffix: str = ".json",
     ) -> list:
         """This looks for configuration files in the given directory."""
@@ -99,8 +101,8 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def load_config_from_file(
-        config_dir: str = None,
-        config_file: str = None,
+        config_dir: str | None = None,
+        config_file: str | None = None,
         offline: bool = False,
     ) -> "IndalekoMacOSMachineConfig":
         config_data = {}
@@ -170,9 +172,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def get_guid_timestamp_from_file_name(file_name: str) -> tuple:
-        """
-        Use file name to extract the guid
-        """
+        """Use file name to extract the guid."""
         # Regular expression to match the GUID and timestamp
         pattern = r"(?:.*[/\\])?macos-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
         match = re.match(pattern, file_name)
@@ -214,7 +214,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         super().write_config_to_db()
 
 
-def main():
+def main() -> None:
     """Main function for the Indaleko macOS Machine Config service."""
     indaleko_create_secure_directories()  # make sure config/data/logs exist
     parser = argparse.ArgumentParser()
@@ -253,17 +253,13 @@ def main():
     args = parser.parse_args()
 
     if args.list:
-        print("Listing machine configurations in the database.")
 
         configs = IndalekoMacOSMachineConfig.find_configs_in_db(
             IndalekoMacOSMachineConfig.macos_machine_config_uuid_str,
         )
         for config in configs:
-            hostname = "Unknown"
             if "hostname" in config:
-                hostname = config["hostname"]
-            print("Configuration for machine:", hostname)
-            print(json.dumps(config, indent=4))
+                config["hostname"]
         return
 
     if args.delete:
@@ -271,7 +267,6 @@ def main():
         assert IndalekoMacOSMachineConfig.validate_uuid_string(
             args.uuid,
         ), f"UUID {args.uuid} is not a valid UUID."
-        print(f"Deleting machine configuration with UUID {args.uuid}")
         IndalekoMacOSMachineConfig.delete_config_in_db(args.uuid)
         return
 
@@ -279,17 +274,15 @@ def main():
         assert os.path.exists(
             indaleko_default_config_dir,
         ), f"config path {indaleko_default_config_dir} does not exists"
-        print("Listing machine configuration files in the default directory.")
         files = IndalekoMacOSMachineConfig.find_config_files(
             indaleko_default_config_dir,
             IndalekoMacOSMachineConfig.macos_machine_config_file_prefix,
         )
-        for file in files:
-            print(file)
+        for _file in files:
+            pass
         return
 
     if args.add:
-        print("Adding machine configuration to the database.")
         config = IndalekoMacOSMachineConfig.load_config_from_file()
         config.write_config_to_db()
         return

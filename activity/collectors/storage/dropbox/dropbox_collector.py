@@ -30,11 +30,14 @@ import socket
 import sys
 import time
 import uuid
+
 from pathlib import Path
 from urllib.parse import urlencode
 
-import dropbox
 import requests
+
+import dropbox
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,6 +57,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from utils.misc.directory_management import indaleko_default_config_dir
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -72,7 +76,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
     DROPBOX_AUTH_URL = "https://www.dropbox.com/oauth2/authorize"
     DROPBOX_TOKEN_URL = "https://api.dropboxapi.com/oauth2/token"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the Dropbox storage activity collector.
 
@@ -147,7 +151,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         if kwargs.get("auto_start", False):
             self.start_monitoring()
 
-    def start_monitoring(self):
+    def start_monitoring(self) -> None:
         """Start monitoring Dropbox for changes."""
         if self._active:
             return
@@ -170,7 +174,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             # Note: Webhook implementation details would be added here
             self._logger.info("Dropbox webhooks not yet implemented")
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop monitoring Dropbox for changes."""
         if not self._active:
             return
@@ -186,7 +190,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
 
         self._logger.info("Stopped Dropbox monitoring")
 
-    def _poll_for_changes(self):
+    def _poll_for_changes(self) -> None:
         """Poll for changes in Dropbox at regular intervals."""
         while not self._stop_event.is_set():
             try:
@@ -196,10 +200,10 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 # Sleep until next check
                 time.sleep(self._monitor_interval)
             except Exception as e:
-                self._logger.error(f"Error during Dropbox polling: {e}")
+                self._logger.exception(f"Error during Dropbox polling: {e}")
                 time.sleep(self._monitor_interval * 2)  # Wait longer after error
 
-    def _check_for_changes(self):
+    def _check_for_changes(self) -> None:
         """Check for changes in Dropbox since last check."""
         try:
             # If we have a cursor, use it to get changes
@@ -228,9 +232,9 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 self._refresh_access_token()
                 self._dbx = dropbox.Dropbox(self._dropbox_credentials["token"])
             else:
-                self._logger.error(f"Dropbox API error: {e}")
+                self._logger.exception(f"Dropbox API error: {e}")
 
-    def _process_dropbox_entry(self, entry):
+    def _process_dropbox_entry(self, entry) -> None:
         """
         Process a Dropbox entry and create an activity record.
 
@@ -304,7 +308,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             self.add_activity(activity_data)
 
         except Exception as e:
-            self._logger.error(f"Error processing Dropbox entry: {e}")
+            self._logger.exception(f"Error processing Dropbox entry: {e}")
 
     def _determine_activity_type(self, entry) -> StorageActivityType | None:
         """
@@ -330,16 +334,15 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             if hasattr(entry, "id") and entry.id in self._file_operations:
                 # We've seen this file before, so it's a modification
                 return StorageActivityType.MODIFY
-            else:
-                # First time we've seen this file, so it's a creation
-                if hasattr(entry, "id"):
-                    self._file_operations[entry.id] = {
-                        "last_rev": getattr(entry, "rev", None),
-                        "last_modified": getattr(entry, "server_modified", None),
-                    }
-                return StorageActivityType.CREATE
+            # First time we've seen this file, so it's a creation
+            if hasattr(entry, "id"):
+                self._file_operations[entry.id] = {
+                    "last_rev": getattr(entry, "rev", None),
+                    "last_modified": getattr(entry, "server_modified", None),
+                }
+            return StorageActivityType.CREATE
 
-        elif isinstance(entry, dropbox.files.FolderMetadata):
+        if isinstance(entry, dropbox.files.FolderMetadata):
             # For folders, we'll treat them as creations
             return StorageActivityType.CREATE
 
@@ -359,9 +362,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         # Return current activities through the get_activities() method
 
     def _load_dropbox_config(self) -> None:
-        """
-        Load the Dropbox configuration from the config file.
-        """
+        """Load the Dropbox configuration from the config file."""
         if not os.path.exists(self._dropbox_config_file):
             self._logger.warning(
                 f"Config file {self._dropbox_config_file} does not exist",
@@ -379,13 +380,11 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 )
                 self._dropbox_config = None
         except Exception as e:
-            self._logger.error(f"Error loading Dropbox config: {e}")
+            self._logger.exception(f"Error loading Dropbox config: {e}")
             self._dropbox_config = None
 
     def _load_dropbox_credentials(self) -> None:
-        """
-        Load the Dropbox credentials from the token file.
-        """
+        """Load the Dropbox credentials from the token file."""
         try:
             if not os.path.exists(self._dropbox_token_file):
                 self._logger.warning(
@@ -399,13 +398,11 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
 
             self._logger.debug("Loaded Dropbox credentials")
         except Exception as e:
-            self._logger.error(f"Error loading Dropbox credentials: {e}")
+            self._logger.exception(f"Error loading Dropbox credentials: {e}")
             self._dropbox_credentials = None
 
     def _store_dropbox_credentials(self) -> None:
-        """
-        Store the Dropbox credentials in the token file.
-        """
+        """Store the Dropbox credentials in the token file."""
         if self._dropbox_credentials is None:
             self._logger.warning("No credentials to store")
             return
@@ -419,7 +416,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
 
             self._logger.debug("Stored Dropbox credentials")
         except Exception as e:
-            self._logger.error(f"Error storing Dropbox credentials: {e}")
+            self._logger.exception(f"Error storing Dropbox credentials: {e}")
 
     def _query_user_for_credentials(self) -> None:
         """
@@ -438,12 +435,9 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 "client_id": self._dropbox_config["app_key"],
                 "token_access_type": "offline",
             }
-            auth_request_url = f"{self.DROPBOX_AUTH_URL}?{urlencode(params)}"
+            f"{self.DROPBOX_AUTH_URL}?{urlencode(params)}"
 
             # Guide the user through the authorization process
-            print("\n=== Dropbox Authorization ===")
-            print("Please visit the following URL to authorize this application:")
-            print(auth_request_url)
             auth_code = input("Enter the authorization code here: ").strip()
 
             # Exchange the auth code for tokens
@@ -483,10 +477,9 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             # Save the credentials
             self._store_dropbox_credentials()
 
-            print("Dropbox authorization successful!")
 
         except Exception as e:
-            self._logger.error(f"Error during Dropbox authorization: {e}")
+            self._logger.exception(f"Error during Dropbox authorization: {e}")
 
     def _is_token_expired(self) -> bool:
         """
@@ -507,9 +500,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         return time.time() + buffer_time > self._dropbox_credentials["expires_at"]
 
     def _refresh_access_token(self) -> None:
-        """
-        Refresh the access token using the refresh token.
-        """
+        """Refresh the access token using the refresh token."""
         if self._dropbox_credentials is None:
             self._logger.error("No credentials to refresh")
             return
@@ -553,7 +544,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 )
 
         except Exception as e:
-            self._logger.error(f"Error refreshing Dropbox access token: {e}")
+            self._logger.exception(f"Error refreshing Dropbox access token: {e}")
 
     def _parse_datetime(self, dt_str) -> datetime.datetime | None:
         """
@@ -576,7 +567,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 return dt_str
 
             # Parse the string
-            dt = datetime.datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+            dt = datetime.datetime.fromisoformat(dt_str)
 
             # Ensure timezone is set
             if dt.tzinfo is None:
@@ -584,7 +575,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
 
             return dt
         except Exception as e:
-            self._logger.error(f"Error parsing datetime: {e}")
+            self._logger.exception(f"Error parsing datetime: {e}")
             return None
 
 
@@ -603,14 +594,10 @@ if __name__ == "__main__":
     try:
         import time
 
-        print(
-            f"Monitoring Dropbox activities for {collector._monitor_interval * 5} seconds...",
-        )
         time.sleep(collector._monitor_interval * 5)
 
         # Get collected activities
         activities = collector.get_activities()
-        print(f"Collected {len(activities)} activities")
 
         # Print summary by type
         activity_types = {}
@@ -620,12 +607,11 @@ if __name__ == "__main__":
                 activity_types[activity_type] = 0
             activity_types[activity_type] += 1
 
-        print("Activities by type:")
-        for activity_type, count in activity_types.items():
-            print(f"  {activity_type}: {count}")
+        for activity_type in activity_types:
+            pass
 
     except KeyboardInterrupt:
-        print("Monitoring interrupted")
+        pass
     finally:
         # Stop monitoring
         collector.stop_monitoring()

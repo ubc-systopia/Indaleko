@@ -19,9 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import json
 import os
 import sys
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,12 +34,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db import IndalekoDBCollections, IndalekoDBConfig
 from query.memory.archivist_memory import ArchivistMemory
 
+
 # pylint: enable=wrong-import-position
 
 
 def test_create_memory():
     """Test creating an Archivist memory instance and saving it to the database."""
-    print("Creating Archivist memory and saving to database...")
 
     # Create Archivist memory
     memory = ArchivistMemory()
@@ -78,14 +78,10 @@ def test_create_memory():
     memory.memory.content_preferences["image"] = 0.45
 
     # Generate forward prompt (display it but don't use it)
-    forward_prompt = memory.generate_forward_prompt()
-    print("\nGenerated Forward Prompt:")
-    print("=========================")
-    print(forward_prompt)
+    memory.generate_forward_prompt()
 
     # Save to database
     memory.save_memory()
-    print("\nMemory saved to database successfully.")
 
 
 def verify_collection():
@@ -94,11 +90,9 @@ def verify_collection():
     db_config = IndalekoDBConfig()
     collection_name = IndalekoDBCollections.Indaleko_Archivist_Memory_Collection
 
-    print(f"\nVerifying collection {collection_name}...")
 
     # Check if collection exists
     if not db_config._arangodb.has_collection(collection_name):
-        print(f"Error: Collection {collection_name} does not exist.")
         return False
 
     # Get collection
@@ -106,11 +100,9 @@ def verify_collection():
 
     # Count documents
     count = collection.count()
-    print(f"Collection contains {count} documents.")
 
     # Get properties
-    properties = collection.properties()
-    print(f"Collection properties: {json.dumps(properties, indent=2)}")
+    collection.properties()
 
     # Get most recent document
     if count > 0:
@@ -120,35 +112,26 @@ def verify_collection():
             aql,
             bind_vars={"@collection": collection_name},
         )
-        documents = [doc for doc in cursor]
+        documents = list(cursor)
 
         if documents:
             # Print document summary
             doc = documents[0]
-            print("\nMost recent document:")
-            print(f"  Timestamp: {doc.get('Record', {}).get('Timestamp')}")
-            print(f"  Memory ID: {doc.get('ArchivistMemory', {}).get('memory_id')}")
             created_at = doc.get("ArchivistMemory", {}).get("created_at")
             if created_at:
-                print(f"  Created At: {created_at}")
+                pass
 
             # Show goals
             goals = doc.get("ArchivistMemory", {}).get("long_term_goals", [])
             if goals:
-                print("\n  Goals:")
-                for goal in goals:
-                    print(
-                        f"    - {goal.get('name')}: {goal.get('progress', 0) * 100:.0f}% complete",
-                    )
+                for _goal in goals:
+                    pass
 
             # Show insights
             insights = doc.get("ArchivistMemory", {}).get("insights", [])
             if insights:
-                print("\n  Insights:")
-                for insight in insights:
-                    print(
-                        f"    - {insight.get('insight')} (confidence: {insight.get('confidence', 0):.2f})",
-                    )
+                for _insight in insights:
+                    pass
 
             return True
 
@@ -157,49 +140,40 @@ def verify_collection():
 
 def test_load_memory():
     """Test loading Archivist memory from the database."""
-    print("\nLoading Archivist memory from database...")
 
     # Create Archivist memory (which will load from database)
     memory = ArchivistMemory()
 
     # Check if memory was loaded
     if not memory.memory or not memory.memory.memory_id:
-        print("Error: Failed to load memory from database.")
         return False
 
     # Print memory details
-    print(f"Loaded memory ID: {memory.memory.memory_id}")
-    print(f"Created at: {memory.memory.created_at}")
-    print(f"Updated at: {memory.memory.updated_at}")
 
     # Print goals
     if memory.memory.long_term_goals:
-        print("\nGoals:")
-        for goal in memory.memory.long_term_goals:
-            print(f"- {goal.name}: {goal.progress * 100:.0f}% complete")
+        for _goal in memory.memory.long_term_goals:
+            pass
 
     # Print insights
     if memory.memory.insights:
-        print("\nInsights:")
-        for insight in memory.memory.insights:
-            print(f"- {insight.insight} (confidence: {insight.confidence:.2f})")
+        for _insight in memory.memory.insights:
+            pass
 
     # Print topics
     if memory.memory.semantic_topics:
-        print("\nTopics:")
-        for topic, importance in sorted(
+        for _topic, _importance in sorted(
             memory.memory.semantic_topics.items(),
             key=lambda x: x[1],
             reverse=True,
         ):
-            print(f"- {topic}: {importance:.2f}")
+            pass
 
     return True
 
 
 def list_collections():
     """List all collections in the database."""
-    print("\nListing all collections in the database...")
 
     # Connect to ArangoDB
     db_config = IndalekoDBConfig()
@@ -211,11 +185,9 @@ def list_collections():
     user_collections = [c for c in collections if not c["name"].startswith("_")]
 
     # Print collections
-    print(f"Found {len(user_collections)} user collections:")
     for collection in sorted(user_collections, key=lambda x: x["name"]):
         name = collection["name"]
-        count = db_config._arangodb.collection(name).count()
-        print(f"- {name}: {count} documents")
+        db_config._arangodb.collection(name).count()
 
 
 def main():

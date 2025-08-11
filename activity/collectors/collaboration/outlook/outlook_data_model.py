@@ -13,9 +13,7 @@ from activity.collectors.collaboration.data_models.collaboration_data_model impo
 
 
 class OutlookDataModel(BaseCollaborationDataModel):
-    """
-    Outlook-specific implementation of the collaboration data model.
-    """
+    """Outlook-specific implementation of the collaboration data model."""
 
     SharedFileName: str | None = Field(
         None,
@@ -36,7 +34,7 @@ class OutlookDataModel(BaseCollaborationDataModel):
     )
 
     class Config:
-        """Configuration and example data for the Outlook data model"""
+        """Configuration and example data for the Outlook data model."""
 
         json_schema_extra = {
             "example": {
@@ -48,9 +46,8 @@ class OutlookDataModel(BaseCollaborationDataModel):
         }
 
 
-def main():
-    """This allows testing the data models"""
-    print("\nTesting Outlook-specific Ambient Data Model:")
+def main() -> None:
+    """This allows testing the data models."""
     OutlookDataModel.test_model_main()
 
 

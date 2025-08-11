@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -31,6 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from constants.values import IndalekoConstants
 
+
 # pylint: enable=wrong-import-position
 
 indaleko_default_data_dir = IndalekoConstants.default_data_dir
@@ -38,7 +40,7 @@ indaleko_default_config_dir = IndalekoConstants.default_config_dir
 indaleko_default_log_dir = IndalekoConstants.default_log_dir
 
 
-def indaleko_create_secure_directories(directories: list = None) -> None:
+def indaleko_create_secure_directories(directories: list | None = None) -> None:
     """Create secure directories for Indaleko."""
     if directories is None:
         directories = [

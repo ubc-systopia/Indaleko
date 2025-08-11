@@ -21,8 +21,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .continuous_learning import ContinuousLearningSystem
-from .data_models import (
+from knowledge_base.continuous_learning import ContinuousLearningSystem
+from knowledge_base.data_models import (
     FeedbackRecordDataModel,
     FeedbackType,
     KnowledgePatternDataModel,
@@ -30,4 +30,4 @@ from .data_models import (
     LearningEventDataModel,
     LearningEventType,
 )
-from .knowledge_manager import KnowledgeBaseManager
+from knowledge_base.knowledge_manager import KnowledgeBaseManager

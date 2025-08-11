@@ -26,7 +26,9 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -79,7 +81,7 @@ class NtfsSensoryMemoryRecorder:
 
     DEFAULT_RECORDER_ID = uuid.UUID("a1e93f7c-6912-42ae-b31c-8f9a01d87a4e")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the sensory memory recorder.
 
@@ -107,7 +109,7 @@ class NtfsSensoryMemoryRecorder:
 
         self._logger.info(f"Initialized {self._name} (no_db={self._no_db})")
 
-    def connect(self):
+    def connect(self) -> None:
         """Connect to the database."""
         if self._no_db:
             self._logger.info("Skipping database connection (no_db=True)")
@@ -117,7 +119,7 @@ class NtfsSensoryMemoryRecorder:
             # In a real implementation, this would connect to the database
             self._logger.info("Connected to database")
         except Exception as e:
-            self._logger.error(f"Error connecting to database: {e}")
+            self._logger.exception(f"Error connecting to database: {e}")
 
     def get_recorder_name(self) -> str:
         """Get the name of the recorder."""

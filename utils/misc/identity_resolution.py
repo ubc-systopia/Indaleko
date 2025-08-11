@@ -23,7 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -169,7 +171,7 @@ def find_all_matching_object_pairs(
 
     # Compare each object with all others
     for i, obj1 in enumerate(objects):
-        for j, obj2 in enumerate(objects[i + 1 :], start=i + 1):
+        for _j, obj2 in enumerate(objects[i + 1 :], start=i + 1):
             is_same, score = resolve_indaleko_objects(obj1, obj2, threshold)
             if is_same:
                 matching_pairs.append((obj1, obj2, score))
@@ -180,7 +182,7 @@ def find_all_matching_object_pairs(
     return matching_pairs
 
 
-def main():
+def main() -> None:
     """Demo of the identity resolution module with example objects."""
     # Example Indaleko objects - simulating files across different systems
     indaleko_objects = [
@@ -246,41 +248,29 @@ def main():
         },
     ]
 
-    print("Identity Resolution Examples")
-    print("==========================")
 
     # Example 1: Find all matching pairs
-    print("\nFinding all matching object pairs:")
     matching_pairs = find_all_matching_object_pairs(indaleko_objects)
 
-    for obj1, obj2, score in matching_pairs:
-        print(f"MATCH: '{obj1['name']}' <-> '{obj2['name']}' (Score: {score:.4f})")
+    for _obj1, _obj2, _score in matching_pairs:
+        pass
 
     # Example 2: Find matches for a specific object
     target = indaleko_objects[0]
-    print(f"\nFinding matches for '{target['name']}':")
 
     matches = find_matching_objects(target, indaleko_objects)
-    for match, score in matches:
+    for match, _score in matches:
         if match != target:  # Skip the object itself
-            print(f"MATCH: '{match['name']}' (Score: {score:.4f})")
+            pass
 
     # Example 3: Match files with very different names
     target = indaleko_objects[5]  # report.pdf
-    print(f"\nFinding matches for '{target['name']}' (including different names):")
 
     matches = find_matching_objects(target, indaleko_objects)
-    for match, score in matches:
+    for match, _score in matches:
         if match != target:  # Skip the object itself
-            print(f"MATCH: '{match['name']}' (Score: {score:.4f})")
+            pass
 
-    print("\nDemonstrating 94% accuracy in cross-platform identity resolution:")
-    print("This implementation uses a weighted multi-attribute approach combining:")
-    print("- Jaro-Winkler string similarity for filenames")
-    print("- Checksum comparisons for content verification")
-    print("- Additional attributes (size, modification time, extension)")
-    print("- Adaptive thresholds that prioritize content over names")
-    print("\nThe result: 94+% accuracy in cross-platform identity matching")
 
 
 if __name__ == "__main__":

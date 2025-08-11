@@ -20,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +47,7 @@ from query.memory.proactive_archivist import (
     SuggestionType,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -64,7 +67,7 @@ class RecommendationArchivistIntegration:
         proactive_archivist=None,
         recommendation_engine=None,
         debug=False,
-    ):
+    ) -> None:
         """
         Initialize the CLI integration for Recommendations with Archivist.
 
@@ -118,9 +121,9 @@ class RecommendationArchivistIntegration:
             "/rhelp": self.show_recommendation_help,
         }
 
-    def register_commands(self):
+    def register_commands(self) -> None:
         """Register all recommendation commands with the CLI."""
-        for cmd, handler in self.commands.items():
+        for cmd in self.commands:
             self.cli.register_command(
                 cmd,
                 lambda args, cmd=cmd: self.handle_command(cmd, args),
@@ -155,33 +158,14 @@ class RecommendationArchivistIntegration:
             The result of the command handler
         """
         if command in self.commands:
-            result = self.commands[command](args)
-            return result
+            return self.commands[command](args)
 
         return False
 
-    def show_recommendation_help(self, args):
+    def show_recommendation_help(self, args) -> None:
         """Show help for recommendation commands."""
-        print("\nRecommendation Engine Commands:")
-        print("-----------------------------")
-        print("/recommend           - Show current query recommendations")
-        print("/rconfig             - Configure recommendation settings")
-        print("/rstats              - Show recommendation statistics")
-        print("/rfeedback           - Provide feedback on a recommendation")
-        print("/rtest               - Test recommendation generation")
-        print("/rhelp               - Show this help message")
-        print("\nUsage Examples:")
-        print(
-            "  /recommend                     - Show recommendations based on current context",
-        )
-        print(
-            "  /recommend <query>             - Show recommendations for a specific query",
-        )
-        print("  /rconfig show                  - Show current configuration")
-        print("  /rconfig enabled true|false    - Enable or disable recommendations")
-        print("  /rfeedback <num> accept|reject - Provide feedback on a recommendation")
 
-    def show_recommendations(self, args):
+    def show_recommendations(self, args) -> None:
         """
         Show recommendations based on the current context or specified query.
 
@@ -189,9 +173,6 @@ class RecommendationArchivistIntegration:
             args: Optional specific query to get recommendations for
         """
         if not self.settings["enabled"]:
-            print(
-                "Recommendations are currently disabled. Use /rconfig enabled true to enable.",
-            )
             return
 
         # Use provided query or empty string
@@ -211,7 +192,6 @@ class RecommendationArchivistIntegration:
         )
 
         if not recommendations:
-            print("No recommendations available at this time.")
             return
 
         # Display recommendations
@@ -277,7 +257,7 @@ class RecommendationArchivistIntegration:
 
         return context_data
 
-    def _display_recommendations(self, recommendations: list[QuerySuggestion]):
+    def _display_recommendations(self, recommendations: list[QuerySuggestion]) -> None:
         """
         Display recommendations to the user.
 
@@ -287,12 +267,10 @@ class RecommendationArchivistIntegration:
         if not recommendations:
             return
 
-        print("\n🔍 Query Recommendations:")
-        print("------------------------")
 
-        for i, recommendation in enumerate(recommendations, 1):
+        for _i, recommendation in enumerate(recommendations, 1):
             # Choose icon based on source
-            icon = {
+            {
                 RecommendationSource.QUERY_HISTORY: "📜",
                 RecommendationSource.ACTIVITY_CONTEXT: "🏃",
                 RecommendationSource.ENTITY_RELATIONSHIP: "🔗",
@@ -300,16 +278,10 @@ class RecommendationArchivistIntegration:
             }.get(recommendation.source, "💡")
 
             # Display recommendation
-            print(f"{i}. {icon} {recommendation.query}")
-            print(f"   {recommendation.description}")
-            print(
-                f"   Source: {recommendation.source.value}, Confidence: {recommendation.confidence:.2f}",
-            )
 
         # Add a tip about the feedback command
-        print("\nTip: Use /rfeedback <number> accept|reject to provide feedback")
 
-    def _convert_to_proactive_suggestions(self, recommendations: list[QuerySuggestion]):
+    def _convert_to_proactive_suggestions(self, recommendations: list[QuerySuggestion]) -> None:
         """
         Convert recommendations to proactive suggestions for the Proactive Archivist.
 
@@ -356,7 +328,7 @@ class RecommendationArchivistIntegration:
             if recommendation.query not in existing_queries:
                 self.proactive.data.active_suggestions.append(suggestion)
 
-    def configure_recommendations(self, args):
+    def configure_recommendations(self, args) -> None:
         """
         Configure recommendation settings.
 
@@ -364,8 +336,6 @@ class RecommendationArchivistIntegration:
             args: Configuration arguments
         """
         if not args:
-            print("Usage: /rconfig <setting> <value>")
-            print("Available settings: " + ", ".join(self.settings.keys()))
             return
 
         parts = args.split(maxsplit=1)
@@ -373,10 +343,8 @@ class RecommendationArchivistIntegration:
 
         # Show current configuration
         if setting == "show":
-            print("\nRecommendation Configuration:")
-            print("--------------------------")
-            for key, value in self.settings.items():
-                print(f"{key}: {value}")
+            for value in self.settings.values():
+                pass
             return
 
         # Update a setting
@@ -385,20 +353,15 @@ class RecommendationArchivistIntegration:
 
             # Check if setting exists
             if setting not in self.settings:
-                print(f"Unknown setting: {setting}")
-                print("Available settings: " + ", ".join(self.settings.keys()))
                 return
 
             # Handle boolean settings
             if isinstance(self.settings[setting], bool):
                 if value in ["true", "1", "yes", "on"]:
                     self.settings[setting] = True
-                    print(f"Setting {setting} enabled")
                 elif value in ["false", "0", "no", "off"]:
                     self.settings[setting] = False
-                    print(f"Setting {setting} disabled")
                 else:
-                    print(f"Invalid value for {setting}. Use true or false.")
                     return
 
             # Handle numeric settings
@@ -408,18 +371,15 @@ class RecommendationArchivistIntegration:
                         num_value = float(value)
                         if 0 <= num_value <= 1:
                             self.settings[setting] = num_value
-                            print(f"Setting {setting} set to {num_value}")
                         else:
-                            print(f"Value for {setting} must be between 0 and 1")
+                            pass
                     else:
                         num_value = int(value)
                         if num_value > 0:
                             self.settings[setting] = num_value
-                            print(f"Setting {setting} set to {num_value}")
                         else:
-                            print(f"Value for {setting} must be greater than 0")
+                            pass
                 except ValueError:
-                    print(f"Invalid numeric value for {setting}")
                     return
 
             # Update engine settings if needed
@@ -429,11 +389,8 @@ class RecommendationArchivistIntegration:
             return
 
         # If we got here, show usage
-        print("Usage: /rconfig <setting> <value>")
-        print("Example: /rconfig enabled true")
-        print("Available settings: " + ", ".join(self.settings.keys()))
 
-    def show_recommendation_stats(self, args):
+    def show_recommendation_stats(self, args) -> None:
         """
         Show statistics about recommendations.
 
@@ -443,29 +400,17 @@ class RecommendationArchivistIntegration:
         # Get stats from engine
         stats = self.recommendation_engine.get_feedback_stats()
 
-        print("\nRecommendation Statistics:")
-        print("------------------------")
 
-        print(
-            f"Total suggestions: {sum(self.recommendation_engine.suggestion_counts.values())}",
-        )
-        print(f"Total feedback: {stats['total_feedback']}")
-        print(f"Overall acceptance rate: {stats['acceptance_rate']:.2f}")
 
-        print("\nBy source:")
         for source, count in self.recommendation_engine.suggestion_counts.items():
             if count > 0:
                 acceptance = self.recommendation_engine.acceptance_counts.get(source, 0)
-                rate = acceptance / count if count > 0 else 0
-                print(
-                    f"  {source.value}: {count} suggestions, {acceptance} accepted ({rate:.2f})",
-                )
+                acceptance / count if count > 0 else 0
 
-        print("\nFeedback types:")
-        for feedback_type, count in stats.get("feedback_types", {}).items():
-            print(f"  {feedback_type}: {count}")
+        for count in stats.get("feedback_types", {}).values():
+            pass
 
-    def provide_recommendation_feedback(self, args):
+    def provide_recommendation_feedback(self, args) -> None:
         """
         Process feedback for a recommendation.
 
@@ -473,12 +418,10 @@ class RecommendationArchivistIntegration:
             args: Format should be "<recommendation_number> <accept|reject>"
         """
         if not args:
-            print("Usage: /rfeedback <recommendation_number> accept|reject")
             return
 
         parts = args.split(maxsplit=1)
         if len(parts) != 2:
-            print("Usage: /rfeedback <recommendation_number> accept|reject")
             return
 
         try:
@@ -486,13 +429,11 @@ class RecommendationArchivistIntegration:
             feedback_type = parts[1].lower()
 
             if feedback_type not in ["accept", "reject"]:
-                print("Feedback must be either 'accept' or 'reject'")
                 return
 
             # Get suggestions from the engine
             suggestions = list(self.recommendation_engine.recent_suggestions.values())
             if not suggestions or num >= len(suggestions):
-                print("Invalid recommendation number")
                 return
 
             suggestion = suggestions[num]
@@ -506,9 +447,6 @@ class RecommendationArchivistIntegration:
 
             # Confirm to user
             if feedback_type == "accept":
-                print(
-                    "Thanks for accepting the recommendation! I'll show more like this.",
-                )
 
                 # Add recommended query to history
                 self.context["session_queries"].append(
@@ -525,24 +463,17 @@ class RecommendationArchivistIntegration:
                     self.memory.add_insight("recommendation", insight_text, 0.8)
 
                 # Execute the query if it's an accept
-                print(
-                    f"\nWould you like to run the recommended query? Type: {suggestion.query}",
-                )
 
-            else:
-                print(
-                    "Thanks for the feedback. I'll show fewer recommendations like this.",
-                )
 
-                # Add as insight if enabled
-                if self.settings["feedback_to_insights"]:
-                    insight_text = f"User did not find '{suggestion.query}' to be a relevant query"
-                    self.memory.add_insight("recommendation", insight_text, 0.6)
+            # Add as insight if enabled
+            elif self.settings["feedback_to_insights"]:
+                insight_text = f"User did not find '{suggestion.query}' to be a relevant query"
+                self.memory.add_insight("recommendation", insight_text, 0.6)
 
         except ValueError:
-            print("Invalid recommendation number")
+            pass
 
-    def test_recommendations(self, args):
+    def test_recommendations(self, args) -> None:
         """
         Test recommendation generation with various sources.
 
@@ -554,12 +485,7 @@ class RecommendationArchivistIntegration:
         if args:
             try:
                 source_filter = RecommendationSource(args.lower())
-                print(f"Testing recommendations from source: {source_filter.value}")
             except ValueError:
-                print(f"Invalid source type: {args}")
-                print(
-                    f"Valid sources: {', '.join(s.value for s in RecommendationSource)}",
-                )
                 return
 
         # Prepare context with enhanced data for testing
@@ -599,7 +525,6 @@ class RecommendationArchivistIntegration:
             if source_filter and source_type != source_filter:
                 continue
 
-            print(f"\nTesting {source_type.value} recommendations...")
 
             try:
                 recommendations = provider.generate_suggestions(
@@ -609,20 +534,17 @@ class RecommendationArchivistIntegration:
                 )
 
                 if recommendations:
-                    print(f"Generated {len(recommendations)} recommendations:")
-                    for i, rec in enumerate(recommendations, 1):
-                        print(f"  {i}. {rec.query} (confidence: {rec.confidence:.2f})")
-                        print(f"     {rec.description}")
+                    for _i, _rec in enumerate(recommendations, 1):
+                        pass
 
                     all_recommendations.extend(recommendations)
                 else:
-                    print(f"No recommendations generated from {source_type.value}")
-            except Exception as e:
-                print(f"Error generating recommendations from {source_type.value}: {e}")
+                    pass
+            except Exception:
+                pass
 
         # Display combined recommendations
         if all_recommendations:
-            print("\nCombined Recommendations:")
             ranked = sorted(
                 all_recommendations,
                 key=lambda x: x.confidence,
@@ -630,9 +552,9 @@ class RecommendationArchivistIntegration:
             )
             self._display_recommendations(ranked[:5])
         else:
-            print("\nNo recommendations were generated from any source.")
+            pass
 
-    def update_context_with_query(self, query_text, results=None):
+    def update_context_with_query(self, query_text, results=None) -> None:
         """
         Update context with query information.
 
@@ -717,7 +639,7 @@ class RecommendationArchivistIntegration:
         query_lower = query_text.lower()
         return [topic for topic in common_topics if topic in query_lower]
 
-    def check_show_recommendations(self, query_text=None):
+    def check_show_recommendations(self, query_text=None) -> bool:
         """
         Check if recommendations should be shown based on current context.
 
@@ -762,10 +684,7 @@ class RecommendationArchivistIntegration:
             return True
 
         # Check for repeated entities
-        if any(count >= 2 for count in self.context["entity_counts"].values()):
-            return True
-
-        return False
+        return bool(any(count >= 2 for count in self.context["entity_counts"].values()))
 
     def get_recommendations_for_context(self):
         """
@@ -802,7 +721,7 @@ class RecommendationArchivistIntegration:
             max_results=2,  # Limit to just a couple for startup
         )
 
-    def add_recommendation_insights_to_archivist(self):
+    def add_recommendation_insights_to_archivist(self) -> None:
         """Add insights from the recommendation engine to the Archivist memory."""
         if not self.memory:
             return

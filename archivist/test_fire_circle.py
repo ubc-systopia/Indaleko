@@ -28,6 +28,7 @@ import sys
 import time
 import uuid
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -82,24 +83,20 @@ class TestInterface:
 
     def display_info(self, message: str) -> None:
         """Display an informational message."""
-        print(f"\033[94m[INFO]\033[0m {message}")
 
     def display_success(self, message: str) -> None:
         """Display a success message."""
-        print(f"\033[92m[SUCCESS]\033[0m {message}")
 
     def display_warning(self, message: str) -> None:
         """Display a warning message."""
-        print(f"\033[93m[WARNING]\033[0m {message}")
 
     def display_error(self, message: str) -> None:
         """Display an error message."""
-        print(f"\033[91m[ERROR]\033[0m {message}")
 
     def display_debug(self, message: str) -> None:
         """Display a debug message if debug is enabled."""
         if self.debug:
-            print(f"\033[90m[DEBUG]\033[0m {message}")
+            pass
 
 
 def test_create_entity(ui: TestInterface) -> None:

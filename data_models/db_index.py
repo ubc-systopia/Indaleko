@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -51,9 +53,7 @@ class IndalekoCollectionIndexDataModel(IndalekoBaseModel):
     Deduplicate: bool | None = None
 
     class Config:
-        """
-        This class defines the configuration for the data model.
-        """
+        """This class defines the configuration for the data model."""
 
         json_schema_extra = {
             "example": {
@@ -67,7 +67,7 @@ class IndalekoCollectionIndexDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoCollectionIndexDataModel.test_model_main()
 

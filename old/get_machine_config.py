@@ -8,7 +8,7 @@ import subprocess
 
 class IndalekoWindowsMachine:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.max_execution_time = 60
         self.platform = platform.system()
         assert self.platform == "Windows", "Windows specific configuration requires execution on windows platform"
@@ -19,7 +19,6 @@ class IndalekoWindowsMachine:
         self.operations += self.capture_machine_operations()
         cpu_count = min(multiprocessing.cpu_count(), 48)
         self.pool = multiprocessing.Pool(cpu_count)
-        print("24 ", len(self.operations), type(self.operations))
         self.results = self.pool.map(
             IndalekoWindowsMachine.process_operation,
             self.operations,
@@ -33,7 +32,7 @@ class IndalekoWindowsMachine:
             self.data[dt] = (name, output, exec_time)
 
     @staticmethod
-    def process_operation(item: tuple) -> tuple():
+    def process_operation(item: tuple) -> ():
         data_class, data_name, command, max_execution_time = item
         start = datetime.datetime.now(datetime.UTC)
         try:
@@ -44,8 +43,7 @@ class IndalekoWindowsMachine:
         except subprocess.TimeoutExpired:
             operation_results = {}
         end = datetime.datetime.now(datetime.UTC)
-        result = (data_class, data_name, operation_results, str(end - start))
-        return result
+        return (data_class, data_name, operation_results, str(end - start))
 
     def capture_wmi_operations(self):
         operations = []
@@ -127,7 +125,7 @@ class IndalekoWindowsMachine:
 
 class IndalekoLinuxMachine:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.platform = platform.system()
         assert self.platform == "Linux", "Linux specific configuration requires execution on linux platform"
         self.data = {}
@@ -145,7 +143,7 @@ class IndalekoLinuxMachine:
                 continue
 
 
-def main():
+def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -156,20 +154,15 @@ def main():
         help="Name of output file for machine configuration data",
     )
     args = parser.parse_args()
-    data = {}
     if os.path.exists(args.output):
         with open(args.output) as fd:
-            data = json.load(fd)
+            json.load(fd)
     else:
-        start = datetime.datetime.now(datetime.UTC)
+        datetime.datetime.now(datetime.UTC)
         machineinfo = IndalekoWindowsMachine()
-        end = datetime.datetime.now(datetime.UTC)
+        datetime.datetime.now(datetime.UTC)
         with open(args.output, "w") as fd:
             json.dump(machineinfo.data, fd)
-        data = machineinfo.data
-    print(f"Data Captured: {len(data)}")
-    print(f" Elapsed Time: {end - start}")
-    print(json.dumps(data, indent=4))
 
 
 if __name__ == "__main__":

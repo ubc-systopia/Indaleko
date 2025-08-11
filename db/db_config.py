@@ -226,9 +226,7 @@ class IndalekoDBConfig(IndalekoSingleton):
 
     @staticmethod
     def generate_random_username(length=8) -> dict:
-        """
-        Generate a random user name string of letters and digits.
-        """
+        """Generate a random user name string of letters and digits."""
         alphabet = string.ascii_letters + string.digits
         return "".join(secrets.choice(alphabet) for i in range(length))
 
@@ -276,14 +274,14 @@ class IndalekoDBConfig(IndalekoSingleton):
             )
             raise ValueError("No database section found in config file")
 
-    def delete_config(self):
+    def delete_config(self) -> None:
         """Delete the config information in the object."""
         if self.config is not None:
             self.config = None
             logging.debug("Deleting config %s", self.config_file)
             os.remove(self.config_file)
 
-    def set_admin_password(self, passwd: str):
+    def set_admin_password(self, passwd: str) -> None:
         """Set the admin password in the config object."""
         assert self.config is not None, "No config found"
         assert passwd is not None, "No password provided"
@@ -306,7 +304,7 @@ class IndalekoDBConfig(IndalekoSingleton):
         self.db = self._arangodb
         return True
 
-    def setup_user(self, user_name: str, user_password: str, access: list):
+    def setup_user(self, user_name: str, user_password: str, access: list) -> None:
         """Set up a user in the database."""
         assert user_name is not None, "No username provided"
         assert len(user_name) > 0, "Username must be at least one character"
@@ -439,11 +437,10 @@ class IndalekoDBConfig(IndalekoSingleton):
             * None: If the file could not be read
         """
         config = configparser.ConfigParser()
-        if config_file:
-            if not os.path.exists(config_file):
-                alt_path = os.path.join(indaleko_default_config_dir, config_file)
-                if os.path.exists(alt_path):
-                    config_file = alt_path
+        if config_file and not os.path.exists(config_file):
+            alt_path = os.path.join(indaleko_default_config_dir, config_file)
+            if os.path.exists(alt_path):
+                config_file = alt_path
         if config_file is None:
             config_file = IndalekoDBConfig.default_db_config_file
         config.read(config_file, encoding="utf-8-sig")
@@ -531,40 +528,31 @@ def check_command(args: argparse.Namespace) -> None:
     """Check the database connection."""
     assert args is not None, "No args found"
     logging.debug("check_command invoked")
-    print("Checking database connection")
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical("Could not create IndalekoDBConfig object")
-        exit(1)
+        sys.exit(1)
     started = db_config.start(timeout=10)
     if not started:
         logging.critical("Could not start database connection")
-        print("Could not start DB connection.  Confirm the docker image is running.")
         return
-    print("Database connection successful.")
 
 
 def setup_command(args: argparse.Namespace) -> None:
     """Set up the database."""
     assert args is not None, "No args found"
     logging.info("Setting up new database configuration")
-    print("Setting up new database configuration")
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical("Could not create IndalekoDBConfig object")
-        exit(1)
+        sys.exit(1)
     if db_config.config["database"].get("container") and db_config.config["database"].get("volume"):
         logging.info("Initialize Docker ArangoDB")
-        print("Initialize Docker ArangoDB")
         indaleko_docker = IndalekoDocker()
         logging.info(
             "Create container %s with volume %s",
             db_config.config["database"]["container"],
             db_config.config["database"]["volume"],
-        )
-        print(
-            f"Create container {db_config.config['database']['container']} "
-            f"with volume {db_config.config['database']['volume']}",
         )
         indaleko_docker.create_container(
             db_config.config["database"]["container"],
@@ -572,23 +560,16 @@ def setup_command(args: argparse.Namespace) -> None:
             db_config.config["database"]["admin_passwd"],
         )
         logging.info("Created container %s", db_config.config["database"]["container"])
-        print(
-            f"Created container {db_config.config['database']['container']} "
-            f"with volume {db_config.config['database']['volume']}",
-        )
         logging.info("Start container %s", db_config.config["database"]["container"])
-        print(f"Start container {db_config.config['database']['container']}")
         indaleko_docker.start_container(db_config.config["database"]["container"])
     logging.info("Connect to database")
-    print("Connect to database")
     started = db_config.start()
     if not started:
         logging.critical("Could not start database connection")
-        print("Could not start DB connection.  Confirm the docker image is running.")
         return
     logging.info("Database connection successful")
 
-    def __setup_db():
+    def __setup_db() -> None:
         from i_collections import IndalekoCollections
 
         IndalekoCollections()
@@ -597,7 +578,7 @@ def setup_command(args: argparse.Namespace) -> None:
 
 
 def docker_reset() -> None:
-    """This resets the docker container and volume"""
+    """This resets the docker container and volume."""
     logging.info("Resetting database")
     indaleko_docker = IndalekoDocker()
     config = IndalekoDBConfig()
@@ -606,16 +587,13 @@ def docker_reset() -> None:
         "DB Reset: stopping container %s",
         config.config["database"]["container"],
     )
-    print("DB Reset: stopping container " f"{config.config['database']['container']}")
     indaleko_docker.stop_container(config.config["database"]["container"])
     logging.warning(
         "DB Reset: deleting container %s",
         config.config["database"]["container"],
     )
-    print("DB Reset: deleting container " f"{config.config['database']['container']}")
     indaleko_docker.delete_container(config.config["database"]["container"])
     logging.warning("DB Reset: deleting volume %s", config.config["database"]["volume"])
-    print("DB Reset: deleting volume " f"{config.config['database']['volume']}")
     indaleko_docker.delete_volume(config.config["database"]["volume"])
 
 
@@ -623,7 +601,6 @@ def reset_command(args: argparse.Namespace) -> None:
     """Reset the database."""
     if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical("No config file found, cannot reset")
-        print("No config file found, cannot reset")
         return
     logging.info("Resetting database")
     indaleko_docker = IndalekoDocker()
@@ -633,27 +610,20 @@ def reset_command(args: argparse.Namespace) -> None:
         "DB Reset: stopping container %s",
         config.config["database"]["container"],
     )
-    print("DB Reset: stopping container " f"{config.config['database']['container']}")
     indaleko_docker.stop_container(config.config["database"]["container"])
     logging.warning(
         "DB Reset: deleting container %s",
         config.config["database"]["container"],
     )
-    print("DB Reset: deleting container " f"{config.config['database']['container']}")
     indaleko_docker.delete_container(config.config["database"]["container"])
     logging.warning("DB Reset: deleting volume %s", config.config["database"]["volume"])
-    print("DB Reset: deleting volume " f"{config.config['database']['volume']}")
     indaleko_docker.delete_volume(config.config["database"]["volume"])
     if args.rebuild:
         logging.info("DB Reset: Rebuild requested")
-        print("DB Reset: Rebuild requested")
         logging.warning("DB Reset: deleting old config file")
         if os.path.exists(IndalekoDBConfig.default_db_config_file + ".bak"):
             os.remove(IndalekoDBConfig.default_db_config_file + ".bak")
         logging.warning("DB Reset: backing up old config file")
-        print(
-            "DB Reset: backing up old config file to " f"{IndalekoDBConfig.default_db_config_file}.bak",
-        )
         os.rename(
             IndalekoDBConfig.default_db_config_file,
             IndalekoDBConfig.default_db_config_file + ".bak",
@@ -668,27 +638,16 @@ def show_command(args: argparse.Namespace) -> None:
     logging.info("Show command starts")
     if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical("No config file found")
-        print("No config file found: nothing to display")
-        print("Config file should be at " f"{IndalekoDBConfig.default_db_config_file}")
-    print("Config file found: loading")
     config = IndalekoDBConfig()
-    print(f"Created at {config.config['database']['timestamp']}")
     if config.config["database"].get("container"):
-        print(f"Container name: {config.config['database']['container']}")
+        pass
     if config.config["database"].get("volume"):
-        print(f"Volume name: {config.config['database']['volume']}")
-    print(f"Host: {config.config['database']['host']}")
-    print(f"Port: {config.config['database']['port']}")
-    print(f"Admin user: {config.config['database']['admin_user']}")
-    print(f"Admin password: {config.config['database']['admin_passwd']}")
-    print(f"Database name: {config.config['database']['database']}")
-    print(f"User name: {config.config['database']['user_name']}")
-    print(f"User password: {config.config['database']['user_password']}")
+        pass
     logging.info("Show command complete")
 
 
 def update_command(args: argparse.Namespace) -> None:
-    """Update to most recent version of ArangoDB"""
+    """Update to most recent version of ArangoDB."""
     # Note: this is just a wrapper around the docker support for this.
     assert args is not None, "No args found"
     raise NotImplementedError("Not implemented yet")
@@ -705,11 +664,11 @@ def default_command_handler(args: argparse.Namespace) -> None:
         setup_command(args)
 
 
-def new_main():
+def new_main() -> None:
     ic(IndalekoDBConfig.load_config_data())
 
 
-def main():
+def main() -> None:
     """This is the main function for the IndalekoDBConfig module."""
     now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()
@@ -785,8 +744,7 @@ def main():
         log_dir=args.logdir,
     )
     if indaleko_logging is None:
-        print("Could not create logging object")
-        exit(1)
+        sys.exit(1)
     logging.info("Starting IndalekoDBConfig")
     logging.debug(args)
     args.func(args)

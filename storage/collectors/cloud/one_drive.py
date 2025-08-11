@@ -29,13 +29,16 @@ import socket
 import sys
 import threading
 import time
+
 from queue import Queue
 from uuid import UUID
 
 import msal
 import requests
+
 from icecream import ic
 from pyngrok import ngrok
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +53,7 @@ from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_config_dir
 from utils.misc.file_name_management import generate_file_name
+
 
 # pylint: enable=wrong-import-position
 
@@ -89,7 +93,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
     class MicrosoftGraphCredentials:
         """This encapsulates the credential management for the Microsoft Graph API."""
 
-        def __init__(self, config: str, cache_file: str):
+        def __init__(self, config: str, cache_file: str) -> None:
             self.__chosen_account__ = -1
             self.config = json.load(open(config, encoding="utf-8-sig"))
             self.cache_file = cache_file
@@ -98,9 +102,9 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             self.port = self.find_unused_tcp_port()
             try:
                 self.public_url = ngrok.connect(self.port)
-            except PermissionError as e:
+            except PermissionError:
                 ic(f"Access denied trying to use port {self.port}")
-                raise e
+                raise
             ic(f"Public URL: {self.public_url}")
             self.redirect_uri = f"{self.public_url}/auth"
             # Note: this will prompt for credentials, if needed
@@ -146,12 +150,9 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             if accounts:
                 choice = -1
                 while choice == -1:
-                    print("Pick the account to use:")
                     index = 1
-                    for a in accounts:
-                        print(f'{index} {a["username"]}')
+                    for _a in accounts:
                         index = index + 1
-                    print(f"{index} Use a different account (login)")
                     try:
                         choice = int(input())
                         if choice == index:  # Use a different account
@@ -172,7 +173,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                     self.__output_file_name__ = accounts[self.__get_chosen_account__()].get("username")
             return self.__output_file_name__
 
-        def get_output_file_name(self):
+        def get_output_file_name(self) -> None:
             # TODO: switch to using the standard naming paradigm.
             output_file_name = f"data/microsoft-onedrive-data-{self.get_account_name()}"
             output_file_name += "-{datetime.datetime.now(datetime.UTC)}-data.json"
@@ -201,13 +202,9 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                     raise ValueError(
                         f"Failed to create device flow. Err: {json.dumps(flow, indent=4)}",
                     )
-                print(flow["message"])
                 sys.stdout.flush()
                 result = self.app.acquire_token_by_device_flow(flow)
             if "access_token" not in result:
-                print(result.get("error"))
-                print(result.get("error_description"))
-                print(result.get("correlation_id"))
                 self.token = None
             else:
                 self.token = result["access_token"]
@@ -215,10 +212,9 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
         def __save_cache__(self):
             if hasattr(self, "cache") and self.cache is not None:
-                print(type(self.cache))
                 open(self.cache_file, "w").write(self.cache.serialize())
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, "cache") and self.cache is not None and self.cache.has_state_changed:
                 self.__save_cache__()
 
@@ -232,7 +228,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             self.token = None
             return self
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         for key, value in self.indaleko_onedrive_collector_service.items():
             if key not in kwargs:
                 kwargs[key] = value
@@ -277,13 +273,11 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         return generate_file_name(**kwargs)
 
     def build_stat_dict(self, entry: dict) -> dict:
-        """This builds the stat dict for the entry"""
+        """This builds the stat dict for the entry."""
         return entry
 
     def collect(self, recursive: bool = True) -> list:
-        """
-        This method indexes OneDrive Drive.
-        """
+        """This method indexes OneDrive Drive."""
         assert recursive == self.recurse, "Recursive flag mismatch"
         if self.debug:
             ic("Indexing OneDrive Drive")
@@ -305,18 +299,17 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             for drive in drives:
                 ic(drive)
             return drives
-        else:
-            logging.error(
-                "Error retrieving drives: %s - %s",
-                response.status_code,
-                response.text,
-            )
-            raise ValueError(
-                f"Error retrieving drives: {response.status_code} - {response.text}",
-            )
+        logging.error(
+            "Error retrieving drives: %s - %s",
+            response.status_code,
+            response.text,
+        )
+        raise ValueError(
+            f"Error retrieving drives: {response.status_code} - {response.text}",
+        )
 
     def get_email(self) -> str:
-        """This method returns the email address of the user"""
+        """This method returns the email address of the user."""
         return self.graphcreds.get_account_name()
 
     def get_headers(self) -> dict:
@@ -336,7 +329,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         retries = 5
         while retries > 0:
 
-            def FetchTimeoutException(Exception):
+            def FetchTimeoutException(Exception) -> None:
                 pass
 
             try:
@@ -347,10 +340,9 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                 def trace_function(frame, event, arg):
                     if time.time() - start > timeout:
                         raise FetchTimeoutException(f"{tid} Timeout")
-                    else:
-                        logging.debug(
-                            ic(f"{tid} trace_function: {frame} {event} {arg}"),
-                        )
+                    logging.debug(
+                        ic(f"{tid} trace_function: {frame} {event} {arg}"),
+                    )
                     return trace_function
 
                 sys.settrace(trace_function)
@@ -412,7 +404,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         ic(f"Request failed after multiple attempts: {url}")
         return None
 
-    def queue_directory(self, folder_id):
+    def queue_directory(self, folder_id) -> None:
         """This method queues the directory for processing."""
         if folder_id is None:
             url = "https://graph.microsoft.com/v1.0/me/drive/root/children"
@@ -420,7 +412,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
         self.queue.put(url, timeout=30)
 
-    def worker(self):
+    def worker(self) -> None:
         """Worker threads for retrieving the metadata of the OneDrive recursively."""
         tid = threading.get_ident()
         ic(f"worker {tid} started")
@@ -467,8 +459,8 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     @staticmethod
     def get_url_for_folder(
-        drive_id: str = None,
-        folder_id: str = None,
+        drive_id: str | None = None,
+        folder_id: str | None = None,
         return_children: bool = True,
     ) -> None:
         """This method returns the URL for the folder."""
@@ -542,8 +534,8 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     def get_onedrive_metadata(
         self,
-        drive_id: str = None,
-        folder_id: str = None,
+        drive_id: str | None = None,
+        folder_id: str | None = None,
     ) -> list:
         """This method retrieves the metadata of the OneDrive."""
         queue = []
@@ -587,7 +579,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                     queue.insert(0, url)
                     refresh_count = refresh_count + 1
                     continue
-                elif response.status_code == 200:
+                if response.status_code == 200:
                     # success code, but error status raise?
                     logging.exception(
                         "Error (for 200): for URL %s - %s - %s",
@@ -646,7 +638,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         """This function finds the files to ingest:
         search_dir: path to the search directory
         prefix: prefix of the file to ingest
-        suffix: suffix of the file to ingest (default is .json)
+        suffix: suffix of the file to ingest (default is .json).
         """
         prospects = BaseCloudStorageCollector.find_collector_files(
             search_dir,
@@ -676,7 +668,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
     cli_handler_mixin = onedrive_collector_mixin
 
 
-def main():
+def main() -> None:
     """This is the entry point for using the OneDrive collector."""
     BaseCloudStorageCollector.cloud_collector_runner(
         IndalekoOneDriveCloudStorageCollector,

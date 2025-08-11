@@ -1,4 +1,5 @@
 """Generate Activity Context Metadata."""
+
 import random
 
 from data_generator.scripts.metadata.metadata import Metadata
@@ -12,7 +13,6 @@ class ActivityMetadata(Metadata):
     """
 
     TIMESTAMPS = ["birthtime", "modified", "accessed", "changed"]  # noqa: RUF012
-
 
     # helper functions for activity timestamps:
     def _generate_ac_timestamp(
@@ -101,11 +101,12 @@ class ActivityMetadata(Metadata):
         attribute_lists: list[str],
     ) -> str:
         """Based on whether the file is a truth or filler file, returns the appropriate value."""
+
     def _choose_random_element(
-            self,
-            is_truth_file: bool,  # noqa: FBT001
-            truth_attribute: str,
-            attribute_lists: list[str],
+        self,
+        is_truth_file: bool,  # noqa: FBT001
+        truth_attribute: str,
+        attribute_lists: list[str],
     ) -> str:
         """Based on whether the file is a truth or filler file, returns the appropriate value."""
         if is_truth_file:

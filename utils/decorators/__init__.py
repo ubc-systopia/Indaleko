@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 # from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +34,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from .type_check import type_check
+from indaleko.utils.decorators.type_check import type_check
+
 
 # pylint: enable=wrong-import-position
 

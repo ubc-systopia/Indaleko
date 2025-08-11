@@ -22,7 +22,9 @@ import importlib
 import os
 import platform
 import sys
+
 from pathlib import Path
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()

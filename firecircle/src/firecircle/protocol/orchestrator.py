@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import enum
 import logging
 import random
+
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -69,7 +70,7 @@ class CircleOrchestrator:
         max_turns: int = 20,
         initial_phase: ConversationPhase = ConversationPhase.OPENING,
         logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         """
         Initialize the orchestrator.
 
@@ -106,36 +107,35 @@ class CircleOrchestrator:
         if self.turn_taking_policy == TurnTakingPolicy.ROUND_ROBIN:
             return self.entity_ids.copy()
 
-        elif self.turn_taking_policy == TurnTakingPolicy.RANDOM:
+        if self.turn_taking_policy == TurnTakingPolicy.RANDOM:
             # Will be regenerated each turn
             return []
 
-        elif self.turn_taking_policy == TurnTakingPolicy.ROUND_ROBIN_RANDOM:
+        if self.turn_taking_policy == TurnTakingPolicy.ROUND_ROBIN_RANDOM:
             # Randomize once and use that order
             shuffled = self.entity_ids.copy()
             random.shuffle(shuffled)
             return shuffled
 
-        elif self.turn_taking_policy == TurnTakingPolicy.CONSENSUS_BASED:
+        if self.turn_taking_policy == TurnTakingPolicy.CONSENSUS_BASED:
             # Start with random order, will be adjusted
             shuffled = self.entity_ids.copy()
             random.shuffle(shuffled)
             return shuffled
 
-        elif self.turn_taking_policy == TurnTakingPolicy.PRIORITY_BASED:
+        if self.turn_taking_policy == TurnTakingPolicy.PRIORITY_BASED:
             # Will be determined by priority signals
             return self.entity_ids.copy()
 
-        elif self.turn_taking_policy == TurnTakingPolicy.ADAPTIVE:
+        if self.turn_taking_policy == TurnTakingPolicy.ADAPTIVE:
             # Start with round robin
             return self.entity_ids.copy()
 
-        else:
-            # Default to round robin
-            self.logger.warning(
-                f"Unsupported turn taking policy: {self.turn_taking_policy}. " "Using round robin instead.",
-            )
-            return self.entity_ids.copy()
+        # Default to round robin
+        self.logger.warning(
+            f"Unsupported turn taking policy: {self.turn_taking_policy}. " "Using round robin instead.",
+        )
+        return self.entity_ids.copy()
 
     def get_next_turn(self) -> str:
         """
@@ -373,10 +373,9 @@ class CircleOrchestrator:
             self.add_message(message)
 
         # Create a response
-        response = CircleResponse(
+        return CircleResponse(
             request_id=request.request_id,
             messages=self.messages.copy(),  # In reality, this would be new messages
             metadata={"conversation_summary": self.get_conversation_summary()},
         )
 
-        return response

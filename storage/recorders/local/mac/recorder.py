@@ -26,8 +26,10 @@ import os
 import subprocess
 import sys
 import uuid
+
 from pathlib import Path
 from textwrap import dedent
+
 
 # from icecream import ic
 
@@ -40,6 +42,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from data_models import IndalekoRecordDataModel
 from db import IndalekoDBConfig, IndalekoServiceManager
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
@@ -50,13 +54,12 @@ from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
-    """
-    This class handles the processing of metadata from the Indaleko Mac local storage recorder service.
-    """
+    """This class handles the processing of metadata from the Indaleko Mac local storage recorder service."""
 
     mac_local_recorder_uuid = "07670255-1e82-4079-ad6f-f2bb39f44f8f"
     mac_local_recorder_service = {
@@ -99,8 +102,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             if kwargs["machine_id"] != self.machine_config.machine_id:
                 logging.warning(
                     "Warning: machine ID of collector file "
-                    + f'({kwargs["machine"]}) does not match machine ID of recorder '
-                    + f"({self.machine_config.machine_id}.)",
+                     f'({kwargs["machine"]}) does not match machine ID of recorder '
+                     f"({self.machine_config.machine_id}.)",
                 )
         if "timestamp" not in kwargs:
             kwargs["timestamp"] = datetime.datetime.now(
@@ -138,7 +141,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         """This function finds the files to process:
         search_dir: path to the search directory
         prefix: prefix of the file to process
-        suffix: suffix of the file to process (default is .json)
+        suffix: suffix of the file to process (default is .json).
         """
         if self.data_dir is None:
             raise ValueError("data_dir must be specified")
@@ -150,7 +153,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         ]
 
     class macos_recorder_mixin(BaseLocalStorageRecorder.local_recorder_mixin):
-        """MacOS Specific mixin - dealing with machine config files again"""
+        """MacOS Specific mixin - dealing with machine config files again."""
 
         @staticmethod
         def find_machine_config_files(config_dir, platform=None, machine_id=None):
@@ -174,17 +177,16 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             prefix: str,
             suffix: str,
         ) -> list[str] | None:
-            """This method is used to find data files"""
+            """This method is used to find data files."""
             # This is a hack, but the input files are labeled Darwin.  Need to track it down
             # and fix it, but for now this works.
             keys["plt"] = "Darwin"
-            candidates = BaseLocalStorageRecorder.local_recorder_mixin.find_data_files(
+            return BaseLocalStorageRecorder.local_recorder_mixin.find_data_files(
                 data_dir,
                 keys,
                 prefix,
                 suffix,
             )
-            return candidates
 
     local_recorder_mixin = macos_recorder_mixin
 
@@ -197,10 +199,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             raise ValueError("Data cannot be None")
         if not isinstance(data, dict):
             raise ValueError(f"Data must be a dictionary, not {type(data)}\n\t{data}")
-        if "ObjectIdentifier" in data:
-            oid = data["ObjectIdentifier"]
-        else:
-            oid = str(uuid.uuid4())
+        oid = data["ObjectIdentifier"] if "ObjectIdentifier" in data else str(uuid.uuid4())
         timestamps = []
         if "st_birthtime" in data:
             timestamps.append(
@@ -278,9 +277,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
 
         return IndalekoObject(**kwargs)
 
-    def arangoimport(self):
-        print("{:-^20}".format(""))
-        print("using arangoimport to import objects")
+    def arangoimport(self) -> None:
 
         # check if the docker is up
         self.__run_docker_cmd("docker ps")
@@ -325,15 +322,12 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 ),
             )
 
-    def __run_docker_cmd(self, cmd):
-        print("Running:", cmd)
-        try:
+    def __run_docker_cmd(self, cmd) -> None:
+        with contextlib.suppress(subprocess.CalledProcessError):
             subprocess.run(cmd, check=True, shell=True)
-        except subprocess.CalledProcessError as e:
-            print(f"failed to run the command, got: {e}")
 
 
-def main():
+def main() -> None:
     """This is the CLI handler for the MacOS local storage recorder."""
     BaseLocalStorageRecorder.local_recorder_runner(
         IndalekoMacLocalStorageCollector,

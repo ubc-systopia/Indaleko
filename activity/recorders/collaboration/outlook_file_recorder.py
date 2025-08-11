@@ -23,11 +23,13 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +38,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.collaboration.data_models.email_file_share import (
     EmailFileShareCollaborationDataModel as EmailFileShareData,
@@ -55,8 +59,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -94,7 +96,7 @@ class OutlookFileShareRecorder(RecorderBase):
         collector: OutlookFileShareCollector | None = None,
         data_dir: str = "./outlook_data",
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the Outlook file sharing recorder.
 
@@ -172,15 +174,15 @@ class OutlookFileShareRecorder(RecorderBase):
         self.processed_ids = set()
 
     def get_recorder_name(self) -> str:
-        """Get the name of the recorder"""
+        """Get the name of the recorder."""
         return "outlook_file_share_recorder"
 
     def get_recorder_id(self) -> uuid.UUID:
-        """Get the ID of the recorder"""
+        """Get the ID of the recorder."""
         return self.source_data["Identifier"]
 
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the recorder"""
+        """Get the characteristics of the recorder."""
         if self.collector:
             return self.collector.get_collector_characteristics()
         return [
@@ -190,14 +192,14 @@ class OutlookFileShareRecorder(RecorderBase):
         ]
 
     def get_collector_class_model(self) -> dict[str, type]:
-        """Get the class model for the collector"""
+        """Get the class model for the collector."""
         return {
             "EmailFileShareData": EmailFileShareData,
             "SharedFileData": SharedFileData,
         }
 
     def get_description(self) -> str:
-        """Get the description of the recorder"""
+        """Get the description of the recorder."""
         return self.source_data["Description"]
 
     def create_semantic_attributes(
@@ -338,7 +340,7 @@ class OutlookFileShareRecorder(RecorderBase):
 
             return doc
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Error storing file share {file_share.get('filename')}: {e}",
             )
             return None
@@ -390,7 +392,7 @@ class OutlookFileShareRecorder(RecorderBase):
 
             return results
         except Exception as e:
-            self.logger.error(f"Error processing email data: {e}")
+            self.logger.exception(f"Error processing email data: {e}")
             return []
 
     def process_data(self, data: Any) -> dict[str, Any]:
@@ -440,15 +442,14 @@ class OutlookFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "url": f"%{url}%"}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         if len(entries) == 0:
             return None
 
         # Decode the binary data
         doc = entries[0]
-        file_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
-        return file_data
+        return Indaleko.decode_binary_data(doc["Record"]["Data"])
 
     def lookup_file_by_filename(self, filename: str) -> list[dict]:
         """
@@ -475,7 +476,7 @@ class OutlookFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "filename": f"%{filename}%"}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         # Decode the binary data for each entry
         files = []
@@ -484,7 +485,7 @@ class OutlookFileShareRecorder(RecorderBase):
                 file_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
                 files.append(file_data)
             except Exception as e:
-                self.logger.error(f"Error decoding file data: {e}")
+                self.logger.exception(f"Error decoding file data: {e}")
 
         return files
 
@@ -513,7 +514,7 @@ class OutlookFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "sender": f"%{sender}%"}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         # Decode the binary data for each entry
         files = []
@@ -522,7 +523,7 @@ class OutlookFileShareRecorder(RecorderBase):
                 file_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
                 files.append(file_data)
             except Exception as e:
-                self.logger.error(f"Error decoding file data: {e}")
+                self.logger.exception(f"Error decoding file data: {e}")
 
         return files
 
@@ -550,7 +551,7 @@ class OutlookFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "limit": limit}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         # Decode the binary data for each entry
         file_shares = []
@@ -559,7 +560,7 @@ class OutlookFileShareRecorder(RecorderBase):
                 file_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
                 file_shares.append(file_data)
             except Exception as e:
-                self.logger.error(f"Error decoding file data: {e}")
+                self.logger.exception(f"Error decoding file data: {e}")
 
         return file_shares
 
@@ -574,7 +575,7 @@ class OutlookFileShareRecorder(RecorderBase):
             self.collector.collect_data()
             self.logger.info("Collector started successfully")
         except Exception as e:
-            self.logger.error(f"Error starting collector: {e}")
+            self.logger.exception(f"Error starting collector: {e}")
 
     def sync_from_collector(self) -> int:
         """
@@ -630,7 +631,7 @@ class OutlookFileShareRecorder(RecorderBase):
                 json_file.rename(processed_dir / json_file.name)
 
             except Exception as e:
-                self.logger.error(f"Error processing {json_file}: {e}")
+                self.logger.exception(f"Error processing {json_file}: {e}")
 
         self.logger.info(f"Imported {count} file shares from JSON files")
         return count
@@ -654,8 +655,8 @@ class OutlookFileShareRecorder(RecorderBase):
         return count
 
 
-def main():
-    """Main function for testing the recorder"""
+def main() -> None:
+    """Main function for testing the recorder."""
     # Set up logging
     logging.basicConfig(level=logging.INFO)
 
@@ -697,35 +698,25 @@ def main():
         with open(sample_file, "w", encoding="utf-8") as f:
             json.dump(sample_data, f, indent=2, default=str)
 
-        print(f"Created sample data file: {sample_file}")
 
         # Initialize recorder
         recorder = OutlookFileShareRecorder(data_dir=str(data_dir))
 
         # Process the data directory
-        count = recorder.scan_data_directory()
-        print(f"Imported {count} file shares")
+        recorder.scan_data_directory()
 
         # Retrieve file shares
         file_shares = recorder.get_all_file_shares()
-        print(f"\nRetrieved {len(file_shares)} file shares from database:")
 
-        for i, file_share in enumerate(file_shares):
-            print(f"\nFile Share {i+1}:")
-            print(f"  Filename: {file_share.get('filename')}")
-            print(f"  Type: {file_share.get('attachment_type')}")
-            print(f"  Sender: {file_share.get('sender')}")
-            print(f"  Recipients: {', '.join(file_share.get('recipients', []))}")
+        for _i, _file_share in enumerate(file_shares):
+            pass
 
         # Test lookup by filename
-        docx_files = recorder.lookup_file_by_filename("report.docx")
-        print(f"\nFound {len(docx_files)} files matching 'report.docx'")
+        recorder.lookup_file_by_filename("report.docx")
 
         # Test lookup by sender
-        sender_files = recorder.lookup_files_by_sender("sender@example.com")
-        print(f"Found {len(sender_files)} files from sender@example.com")
+        recorder.lookup_files_by_sender("sender@example.com")
 
-        print("\nOutlook file share recorder test completed successfully")
 
     except Exception as e:
         logging.exception(f"Error in main: {e}")

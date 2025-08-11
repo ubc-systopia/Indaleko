@@ -8,6 +8,7 @@ import uuid
 
 import jsonlines
 import msgpack
+
 from IndalekoCollections import *
 from IndalekoServices import IndalekoServices
 from windows_local_index import IndalekoWindowsMachineConfig
@@ -66,8 +67,7 @@ class WindowsLocalIngest:
 
     def lookup_service(self, name: str) -> dict:
         assert name is not None, "Service name cannot be None"
-        info = self.indaleko_services.lookup_service(name)
-        return info
+        return self.indaleko_services.lookup_service(name)
 
     def __init__(self, data_dir: str = "./data", reset: bool = False) -> None:
         # Register our services
@@ -102,7 +102,6 @@ class WindowsLocalIngest:
         )
         if len(entries) < 1:
             self.collections.get_collection(collection_name).insert(record)
-            print(f"Inserted {record} into {collection_name}")
 
     def __find_data_files__(self: "WindowsLocalIngest") -> None:
         self.data_files = [
@@ -227,7 +226,7 @@ def normalize_index_data(data: dict, cfg: IndalekoWindowsMachineConfig) -> dict:
     return object
 
 
-def main():
+def main() -> None:
     data_files = find_data_files()
     assert len(data_files) > 0, "At least one data file should exist"
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -312,7 +311,6 @@ def main():
     logging.debug(f"Start processing {args.input}")
     ingester.set_data_file(args.input)
     logging.debug(f"Finish processing {args.input}")
-    print(len(ingester.data))
     ## Now we have data that we can parse, isn't this exciting?
     dir_data_by_path = {}
     dir_data = []
@@ -321,7 +319,7 @@ def main():
         item = normalize_index_data(item, machine_config)
         if "S_IFDIR" in item["UnixFileAttributes"] or "FILE_ATTRIBUTE_DIRECTORY" in item["WindowsFileAttributes"]:
             if "Path" not in item:
-                print(item)
+                pass
             dir_data_by_path[os.path.join(item["Path"], item["Label"])] = item
             dir_data.append(item)
         else:
@@ -352,9 +350,6 @@ def main():
     source_edges = []
     for item in dir_data + file_data:
         if "Container" not in item:
-            print(
-                f"Skipping item {item['ObjectIdentifier']} because it has no container",
-            )
             continue
         for c in item["Container"]:
             edge = {
@@ -403,13 +398,6 @@ def main():
     # uploading into ArangoDB, which is the **entire point** of this extra
     # activity - after all, I had already done the work of capturing the data
     # and sticking it into Arango previously.  It was just quite slow.
-    print(f"Number of directories: {len(dir_data)}")
-    print(f"Number of files: {len(file_data)}")
-    print(f"Number of contained_by edges: {len(contained_by_edges)}")
-    print(f"Number of containing edges: {len(containing_edges)}")
-    print(f"Number of machine edges: {len(machine_edges)}")
-    print(f"Number of volume edges: {len(volume_edges)}")
-    print(f"Number of source edges: {len(source_edges)}")
 
     with jsonlines.open("./data/dir_data.jsonl", mode="w") as fd:
         for item in dir_data:

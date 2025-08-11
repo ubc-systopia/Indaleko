@@ -26,6 +26,7 @@ import os
 import sys
 import time
 
+
 # Add the project root to the Python path
 current_path = os.path.dirname(os.path.abspath(__file__))
 if current_path not in sys.path:
@@ -38,7 +39,6 @@ from query.analytics_integration import AnalyticsIntegration
 
 def test_cli_integration():
     """Test the analytics CLI integration by simulating CLI commands."""
-    print("\n===== Testing Indaleko Analytics CLI Integration =====\n")
 
     # Create a dummy CLI instance for testing
     class DummyCLI:
@@ -50,12 +50,10 @@ def test_cli_integration():
         def register_command(self, command, handler):
             """Register a command with the CLI."""
             self.commands[command] = handler
-            print(f"Registered command: {command}")
 
         def append_help_text(self, text):
             """Append help text to the CLI."""
             self.help_text.append(text)
-            print(f"Added help text: {text}")
 
     # Create a dummy CLI instance
     cli = DummyCLI()
@@ -74,22 +72,17 @@ def test_cli_integration():
     ]
 
     # Execute test commands
-    for i, command in enumerate(test_commands, 1):
-        print(f"\n==== Test {i}: {command} ====\n")
+    for _i, command in enumerate(test_commands, 1):
 
         # Skip the first part of the command (the "/analytics" part)
         args = command.split(maxsplit=1)[1] if len(command.split()) > 1 else ""
 
         # Execute the command
-        start_time = time.time()
-        result = analytics.handle_analytics_command(args)
-        end_time = time.time()
+        time.time()
+        analytics.handle_analytics_command(args)
+        time.time()
 
         # Display the result and timing
-        print(f"\n==== Result of {command} ====")
-        print(result)
-        print(f"Command execution time: {end_time - start_time:.2f} seconds")
-        print("=" * 50)
 
 
 def main():
@@ -104,7 +97,7 @@ def main():
         help="Run only quick tests",
     )
 
-    args = parser.parse_args()
+    parser.parse_args()
 
     # Create output directory if it doesn't exist
     os.makedirs("./analytics_test_output", exist_ok=True)
@@ -112,8 +105,6 @@ def main():
     # Run tests
     test_cli_integration()
 
-    print("\n===== Analytics CLI Integration Tests Completed =====")
-    print(f"Test output directory: {os.path.abspath('./analytics_test_output')}")
 
 
 if __name__ == "__main__":

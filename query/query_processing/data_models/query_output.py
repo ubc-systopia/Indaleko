@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from enum import Enum
 from textwrap import dedent
 
 from pydantic import BaseModel, ConfigDict, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -101,11 +103,6 @@ class LLMIntentQueryResponse(BaseModel):
         ),
     )
 
-    confidence: float = Field(
-        ...,
-        title="Confidence",
-        description="The confidence score of the intent classification, ranging from 0 to 1",
-    )
 
     suggestion: str | None = Field(
         None,

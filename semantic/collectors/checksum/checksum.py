@@ -1,5 +1,5 @@
 """
-This implements a semantic extractor for calculating multiple checksums for files
+This implements a semantic extractor for calculating multiple checksums for files.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -26,6 +26,7 @@ import os
 import sys
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 
 # third-party imports
@@ -33,6 +34,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +46,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Indaleko imports
 # pylint: disable=wrong-import-position
 import semantic.recorders.checksum.characteristics as ChecksumDataCharacteristics
+
 from data_models.i_object import IndalekoObjectDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
@@ -53,14 +56,15 @@ from semantic.characteristics import SemanticDataCharacteristics
 from semantic.collectors.checksum.data_model import SemanticChecksumDataModel
 from semantic.collectors.semantic_collector import SemanticCollector
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoSemanticChecksums(SemanticCollector):
     """This class defines the semantic file checksums collector for the Indaleko project."""
 
-    def __init__(self, **kwargs):
-        """Initialize the semantic file checksums collector"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the semantic file checksums collector."""
         self._name = "Semantic File Checksums"
         self._provider_id = uuid.UUID("de7ff1c7-2550-4cb3-9538-775f9464746e")
         self._checksums_cache = {}  # Cache of computed checksums by file_path
@@ -213,7 +217,7 @@ class IndalekoSemanticChecksums(SemanticCollector):
         return checksum_model.model_dump()
 
     def get_collector_characteristics(self) -> list[SemanticDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             SemanticDataCharacteristics.SEMANTIC_DATA_CHECKSUMS,
             ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_MD5,
@@ -224,11 +228,11 @@ class IndalekoSemanticChecksums(SemanticCollector):
         ]
 
     def get_collector_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_collector_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
@@ -249,7 +253,7 @@ class IndalekoSemanticChecksums(SemanticCollector):
         )
 
     def get_collector_description(self) -> str:
-        """Get the description of the collector"""
+        """Get the description of the collector."""
         return """This collector computes and provides multiple checksums for files:
         - MD5: Fast but collision-prone hash
         - SHA1: Widely used but no longer cryptographically secure
@@ -258,7 +262,7 @@ class IndalekoSemanticChecksums(SemanticCollector):
         - Dropbox Content Hash: Special hash used by Dropbox for content addressing"""
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the collector"""
+        """Get the JSON schema for the collector."""
         return {
             "type": "object",
             "properties": {
@@ -284,7 +288,7 @@ class IndalekoSemanticChecksums(SemanticCollector):
 # Define Dropbox checksum
 class DropboxChecksum:
     """
-    Implementation of Dropbox's content-hash algorithm
+    Implementation of Dropbox's content-hash algorithm.
 
     This is a special hash algorithm used by Dropbox for content addressing.
     The algorithm works as follows:
@@ -294,10 +298,10 @@ class DropboxChecksum:
     4. Compute a final SHA256 hash of the concatenated hashes
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.block_hashes = []
 
-    def update(self, data):
+    def update(self, data) -> None:
         # Compute SHA256 hash of each 4MB block
         sha256 = hashlib.sha256()
         sha256.update(data)
@@ -378,68 +382,53 @@ def compute_checksums(file_path):
 
 # Unit tests
 class TestChecksum(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         # Create test files
         with open("test_file_1.txt", "w", encoding="utf-8") as f:
             f.write("Hello World!")
         with open("test_file_2.txt", "wb") as f:
             f.write(b"A" * 4 * 1024 * 1024)  # 4MB of 'A'
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         # Clean up test files
         os.remove("test_file_1.txt")
         os.remove("test_file_2.txt")
 
-    def test_small_file_checksums(self):
-        """Test small file operations"""
+    def test_small_file_checksums(self) -> None:
+        """Test small file operations."""
         # Compute the checksums and verify they match the expected format
         checksums = compute_checksums("test_file_1.txt")
 
         # Verify the checksums are the correct length and format
-        self.assertEqual(len(checksums["MD5"]), 32)
-        self.assertEqual(len(checksums["SHA1"]), 40)
-        self.assertEqual(len(checksums["SHA256"]), 64)
-        self.assertEqual(len(checksums["SHA512"]), 128)
-        self.assertEqual(len(checksums["Dropbox"]), 64)
+        assert len(checksums["MD5"]) == 32
+        assert len(checksums["SHA1"]) == 40
+        assert len(checksums["SHA256"]) == 64
+        assert len(checksums["SHA512"]) == 128
+        assert len(checksums["Dropbox"]) == 64
 
         # Verify they're valid hex strings
         for algo, checksum in checksums.items():
-            self.assertTrue(
-                all(c in "0123456789abcdefABCDEF" for c in checksum),
-                f"Checksum for {algo} is not a valid hex string: {checksum}",
-            )
+            assert all(c in "0123456789abcdefABCDEF" for c in checksum), f"Checksum for {algo} is not a valid hex string: {checksum}"
 
-    def test_large_file_checksums(self):
-        """Test large file operations"""
+    def test_large_file_checksums(self) -> None:
+        """Test large file operations."""
         checksums = compute_checksums("test_file_2.txt")
-        self.assertEqual(
-            len(checksums["Dropbox"]),
-            64,
-        )  # SHA-256 hash length in hex is 64 characters
-        self.assertEqual(
-            len(checksums["SHA512"]),
-            128,
-        )  # SHA-512 hash length in hex is 128 characters
+        assert len(checksums["Dropbox"]) == 64  # SHA-256 hash length in hex is 64 characters
+        assert len(checksums["SHA512"]) == 128  # SHA-512 hash length in hex is 128 characters
 
-    def test_collector_initialization(self):
-        """Test collector initialization"""
+    def test_collector_initialization(self) -> None:
+        """Test collector initialization."""
         collector = IndalekoSemanticChecksums()
-        self.assertEqual(collector.get_collector_name(), "Semantic File Checksums")
-        self.assertEqual(
-            collector.get_collector_id(),
-            uuid.UUID("de7ff1c7-2550-4cb3-9538-775f9464746e"),
-        )
+        assert collector.get_collector_name() == "Semantic File Checksums"
+        assert collector.get_collector_id() == uuid.UUID("de7ff1c7-2550-4cb3-9538-775f9464746e")
 
         # Test with custom name and provider_id
         custom_collector = IndalekoSemanticChecksums(
             name="Custom Checksum Collector",
             provider_id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
         )
-        self.assertEqual(custom_collector._name, "Custom Checksum Collector")
-        self.assertEqual(
-            custom_collector._provider_id,
-            uuid.UUID("11111111-1111-1111-1111-111111111111"),
-        )
+        assert custom_collector._name == "Custom Checksum Collector"
+        assert custom_collector._provider_id == uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,9 @@ import json
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +54,7 @@ from archivist.knowledge_base.data_models.learning_event import (
 from archivist.knowledge_base.knowledge_manager import KnowledgeBaseManager
 from utils.cli.base import IndalekoBaseCLI
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -62,7 +65,7 @@ class FireCircleArchivistIntegration:
         self,
         kb_manager: KnowledgeBaseManager | None = None,
         orchestrator: Any | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle Archivist integration.
 
@@ -302,7 +305,7 @@ class FireCircleCliIntegration:
         self,
         cli_instance: IndalekoBaseCLI,
         fc_integration: FireCircleArchivistIntegration | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle CLI integration.
 

@@ -110,7 +110,7 @@ def test_change_triggers_new_insert(monkeypatch, wifi_recorder):
         calls["cnt"] += 1
 
     monkeypatch.setattr(wifi_recorder.provider, "collect_data", fake_collect)
-    first = wifi_recorder.update_data()
+    wifi_recorder.update_data()
     count1 = wifi_recorder.collection.collection.count()
     second = wifi_recorder.update_data()
     count2 = wifi_recorder.collection.collection.count()

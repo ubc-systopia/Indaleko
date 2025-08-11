@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import datetime
 from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +39,12 @@ from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class TaskStatus(str, Enum):
-    """Status of a task in a task manager"""
+    """Status of a task in a task manager."""
 
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
@@ -51,7 +54,7 @@ class TaskStatus(str, Enum):
 
 
 class TaskPriority(str, Enum):
-    """Priority of a task in a task manager"""
+    """Priority of a task in a task manager."""
 
     NONE = "none"
     LOW = "low"
@@ -128,14 +131,14 @@ class TaskData(IndalekoBaseModel):
     @field_validator("completed_time")
     @classmethod
     def validate_completed_time(cls, value: datetime | None, values):
-        """Ensure completed_time is only set when status is COMPLETED"""
+        """Ensure completed_time is only set when status is COMPLETED."""
         if value is not None and "status" in values.data and values.data["status"] != TaskStatus.COMPLETED:
             raise ValueError("Completed time can only be set when status is COMPLETED")
         return value
 
     @model_validator(mode="after")
     def validate_timestamps(self):
-        """Ensure timestamps are in logical order"""
+        """Ensure timestamps are in logical order."""
         if self.due_time is not None and self.due_time < self.created_time:
             raise ValueError("Due time cannot be before created time")
 
@@ -150,7 +153,7 @@ class TaskData(IndalekoBaseModel):
         return self
 
     class Config:
-        """Configuration and example data for the task data model"""
+        """Configuration and example data for the task data model."""
 
         json_schema_extra = {
             "example": {
@@ -217,7 +220,7 @@ class TaskActivityData(IndalekoBaseModel):
     )
 
     class Config:
-        """Configuration and example data for the task activity data model"""
+        """Configuration and example data for the task activity data model."""
 
         json_schema_extra = {
             "example": {
@@ -233,12 +236,10 @@ class TaskActivityData(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data models"""
-    print("\nTesting Task Data Model:")
+def main() -> None:
+    """This allows testing the data models."""
     TaskData.test_model_main()
 
-    print("\nTesting Task Activity Data Model:")
     TaskActivityData.test_model_main()
 
 

@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +62,7 @@ class TileLocationDataModel(BaseLocationDataModel):
         'ring_state', # current ring state
         'uuid', # unique identifier for the Tile device: note, this isn't a UUID.
         'visible', # boolean indicating if the Tile device is visible (in app?)
-        'voip_state' # state of the voip connection (only seen 'OFFLINE')
+        'voip_state' # state of the voip connection (only seen 'OFFLINE').
     """
 
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
@@ -90,7 +92,7 @@ class TileLocationDataModel(BaseLocationDataModel):
     email: str = Field(..., description="Email address associated with the Tile device")
 
     @field_validator("lost_timestamp", mode="before")
-    def ensure_timezone(cls, value: datetime):
+    def ensure_timezone(self, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
@@ -125,8 +127,8 @@ class TileLocationDataModel(BaseLocationDataModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     TileLocationDataModel.test_model_main()
 
 

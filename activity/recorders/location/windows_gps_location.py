@@ -218,8 +218,8 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         return self.provider.get_description()
 
     def store_data(
-            self,
-            data: WindowsGPSLocationDataModel | list[WindowsGPSLocationDataModel],
+        self,
+        data: WindowsGPSLocationDataModel | list[WindowsGPSLocationDataModel],
     ) -> None:
         """Store the processed data."""
         ksa = KnownSemanticAttributes
@@ -267,6 +267,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             semantic_attributes=semantic_attributes,
         )
         self.collection.insert(doc)
+        return None
 
 
 def main() -> None:

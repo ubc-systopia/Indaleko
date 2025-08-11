@@ -25,6 +25,7 @@ import tempfile
 import time
 import unittest
 
+
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +35,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import pytest
+
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 from semantic.performance_monitor import (
     SemanticExtractorPerformance,
     monitor_semantic_extraction,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -81,27 +85,27 @@ class TestPerformanceMonitor(unittest.TestCase):
 
     def test_monitor_init(self):
         """Test monitor initialization."""
-        self.assertTrue(self.monitor.is_enabled())
-        self.assertEqual(self.monitor._stats["total_files"], 0)
-        self.assertEqual(self.monitor._stats["total_bytes"], 0)
-        self.assertEqual(self.monitor._stats["total_processing_time"], 0.0)
+        assert self.monitor.is_enabled()
+        assert self.monitor._stats["total_files"] == 0
+        assert self.monitor._stats["total_bytes"] == 0
+        assert self.monitor._stats["total_processing_time"] == 0.0
 
     def test_monitor_disable(self):
         """Test disabling the monitor."""
         self.monitor.disable()
-        self.assertFalse(self.monitor.is_enabled())
+        assert not self.monitor.is_enabled()
 
         # Start monitoring
         context = self.monitor.start_monitoring("test", file_path=self.test_files[0])
-        self.assertFalse(context.get("enabled", True))
+        assert not context.get("enabled", True)
 
         # Stop monitoring
         metrics = self.monitor.stop_monitoring(context)
-        self.assertEqual(metrics, {})
+        assert metrics == {}
 
         # Re-enable
         self.monitor.enable()
-        self.assertTrue(self.monitor.is_enabled())
+        assert self.monitor.is_enabled()
 
     def test_manual_monitoring(self):
         """Test manually using the monitor."""
@@ -122,10 +126,10 @@ class TestPerformanceMonitor(unittest.TestCase):
         metrics = self.monitor.stop_monitoring(context, success=True)
 
         # Check metrics
-        self.assertGreater(metrics["elapsed_time"], 0.0)
-        self.assertEqual(metrics["file_path"], file_path)
-        self.assertEqual(metrics["file_size"], file_size)
-        self.assertTrue(metrics["success"])
+        assert metrics["elapsed_time"] > 0.0
+        assert metrics["file_path"] == file_path
+        assert metrics["file_size"] == file_size
+        assert metrics["success"]
 
     def test_decorator(self):
         """Test the monitoring decorator."""
@@ -140,13 +144,13 @@ class TestPerformanceMonitor(unittest.TestCase):
         result = test_function(self.test_files[0])
 
         # Check result
-        self.assertEqual(result["result"], "test")
+        assert result["result"] == "test"
 
         # Check stats
         stats = self.monitor.get_stats()
-        self.assertEqual(stats["total_files"], 1)
-        self.assertGreater(stats["total_processing_time"], 0.0)
-        self.assertIn("TestDecorator", stats["extractor_stats"])
+        assert stats["total_files"] == 1
+        assert stats["total_processing_time"] > 0.0
+        assert "TestDecorator" in stats["extractor_stats"]
 
     def test_mime_detector_integration(self):
         """Test integration with MIME detector."""
@@ -169,14 +173,14 @@ class TestPerformanceMonitor(unittest.TestCase):
         )
 
         # Check metrics
-        self.assertGreater(metrics["elapsed_time"], 0.0)
-        self.assertEqual(metrics["file_path"], self.test_files[0])
+        assert metrics["elapsed_time"] > 0.0
+        assert metrics["file_path"] == self.test_files[0]
 
         # Check stats
         stats = self.monitor.get_stats()
-        self.assertEqual(stats["total_files"], 1)
-        self.assertGreater(stats["total_processing_time"], 0.0)
-        self.assertIn("mime_detector", stats["extractor_stats"])
+        assert stats["total_files"] == 1
+        assert stats["total_processing_time"] > 0.0
+        assert "mime_detector" in stats["extractor_stats"]
 
     def test_multiple_files(self):
         """Test processing multiple files."""
@@ -200,13 +204,13 @@ class TestPerformanceMonitor(unittest.TestCase):
 
         # Check stats
         stats = self.monitor.get_stats()
-        self.assertEqual(stats["total_files"], len(self.test_files))
-        self.assertGreater(stats["total_processing_time"], 0.0)
-        self.assertGreater(stats["total_bytes"], 0)
+        assert stats["total_files"] == len(self.test_files)
+        assert stats["total_processing_time"] > 0.0
+        assert stats["total_bytes"] > 0
 
         # Check derived metrics
-        self.assertGreater(stats["files_per_second"], 0.0)
-        self.assertGreater(stats["bytes_per_second"], 0.0)
+        assert stats["files_per_second"] > 0.0
+        assert stats["bytes_per_second"] > 0.0
 
     def test_failure_handling(self):
         """Test handling of failures."""
@@ -220,16 +224,16 @@ class TestPerformanceMonitor(unittest.TestCase):
         metrics = self.monitor.stop_monitoring(context, success=False)
 
         # Check metrics
-        self.assertGreater(metrics["elapsed_time"], 0.0)
-        self.assertEqual(metrics["file_path"], "nonexistent_file.txt")
-        self.assertFalse(metrics["success"])
+        assert metrics["elapsed_time"] > 0.0
+        assert metrics["file_path"] == "nonexistent_file.txt"
+        assert not metrics["success"]
 
         # Check stats
         stats = self.monitor.get_stats()
-        self.assertEqual(stats["total_files"], 1)
-        self.assertIn("test_failure", stats["extractor_stats"])
-        self.assertEqual(stats["extractor_stats"]["test_failure"]["success_count"], 0)
-        self.assertEqual(stats["extractor_stats"]["test_failure"]["error_count"], 1)
+        assert stats["total_files"] == 1
+        assert "test_failure" in stats["extractor_stats"]
+        assert stats["extractor_stats"]["test_failure"]["success_count"] == 0
+        assert stats["extractor_stats"]["test_failure"]["error_count"] == 1
 
     def test_decorated_exception(self):
         """Test decorator with function that raises exception."""
@@ -241,15 +245,15 @@ class TestPerformanceMonitor(unittest.TestCase):
             raise ValueError("Test exception")
 
         # Call the function and expect exception
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             failing_function(self.test_files[0])
 
         # Check stats
         stats = self.monitor.get_stats()
-        self.assertEqual(stats["total_files"], 1)
-        self.assertIn("TestException", stats["extractor_stats"])
-        self.assertEqual(stats["extractor_stats"]["TestException"]["success_count"], 0)
-        self.assertEqual(stats["extractor_stats"]["TestException"]["error_count"], 1)
+        assert stats["total_files"] == 1
+        assert "TestException" in stats["extractor_stats"]
+        assert stats["extractor_stats"]["TestException"]["success_count"] == 0
+        assert stats["extractor_stats"]["TestException"]["error_count"] == 1
 
 
 def main():

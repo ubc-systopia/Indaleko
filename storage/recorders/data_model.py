@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import platform
 import sys
+
 from uuid import UUID, uuid4
 
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +39,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoStorageRecorderDataModel(BaseModel):
-    """Defines the base data model for the storage recorders"""
+    """Defines the base data model for the storage recorders."""
 
     PlatformName: str | None = Field(
         None,
@@ -86,7 +89,7 @@ class IndalekoStorageRecorderDataModel(BaseModel):
     )
 
     class Config:
-        """Configuration for the base CLI data model"""
+        """Configuration for the base CLI data model."""
 
         json_schema_extra = {
             "example": {
@@ -101,16 +104,14 @@ class IndalekoStorageRecorderDataModel(BaseModel):
         }
 
 
-def main():
-    """Test code for the base CLI data model"""
+def main() -> None:
+    """Test code for the base CLI data model."""
     ic("Testing Storage Recorder Data Model")
     storage_recorder_data = IndalekoStorageRecorderDataModel(
         **IndalekoStorageRecorderDataModel.Config.json_schema_extra["example"],
     )
     ic(storage_recorder_data)
     ic(platform.system())
-    print(storage_recorder_data.model_dump(exclude_unset=True))
-    print(storage_recorder_data.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

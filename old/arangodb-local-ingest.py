@@ -6,6 +6,7 @@ import stat
 import uuid
 
 import arango
+
 from arango import ArangoClient
 
 
@@ -18,7 +19,7 @@ class IndalekoDB:
         username="root",
         password=None,
         database="Indaleko",
-    ):
+    ) -> None:
         self.hostname = hostname
         self.port = port
         self.username = username
@@ -48,7 +49,7 @@ class IndalekoDB:
         self.database = database
         return self
 
-    def connect(self):
+    def connect(self) -> None:
         if self.client is None:
             url = f"http://{self.hostname}:{self.port}"
             self.client = ArangoClient(hosts=url)
@@ -64,7 +65,7 @@ class IndalekoDB:
 
 class IndaelkoSchema:
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
@@ -75,7 +76,7 @@ class IndalekoIndex:
         index_type: str,
         fields: list,
         unique=False,
-    ):
+    ) -> None:
         self.collection = collection
         self.fields = fields
         self.unique = unique
@@ -87,7 +88,7 @@ class IndalekoIndex:
         )
 
     def find_entries(self, **kwargs):
-        return [document for document in self.collection.find(kwargs)]
+        return list(self.collection.find(kwargs))
 
 
 class IndalekoCollection:
@@ -113,7 +114,7 @@ class IndalekoCollection:
         return self
 
     def find_entries(self, **kwargs):
-        return [document for document in self.collection.find(kwargs)]
+        return list(self.collection.find(kwargs))
 
     def insert(self, document: dict) -> "IndalekoCollection":
         return self.collection.insert(document)
@@ -126,7 +127,7 @@ class ContainerRelationship:
         "_to_field": {"type": "string", "rule": {"type", "uuid"}},
     }
 
-    def __init__(self, db, start, end, collection):
+    def __init__(self, db, start, end, collection) -> None:
         self._from = start
         self._to = end
         db[collection].insert(self._dict_)
@@ -136,7 +137,7 @@ class ContainerRelationship:
 
 
 class ContainedByRelationship:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
@@ -151,7 +152,7 @@ class FileSystemObject:
         # Define other fields in the schema
     }
 
-    def __init__(self, collection: IndalekoCollection, path: str, root=False):
+    def __init__(self, collection: IndalekoCollection, path: str, root=False) -> None:
         self.root = root
         self.uuid = str(uuid.uuid4())
         self.url = "file:///" + path
@@ -177,7 +178,7 @@ class FileSystemObject:
         #    self.dbinfo = collection.insert(self.to_dict())
         try:
             self.dbinfo = collection.insert(self.to_dict())
-        except arango.exceptions.DocumentInsertError as e:
+        except arango.exceptions.DocumentInsertError:
             documents = collection.find_entries(
                 dev=self.stat_info.st_dev,
                 inode=self.stat_info.st_ino,
@@ -185,12 +186,11 @@ class FileSystemObject:
             if len(documents) > 0:
                 self.dbinfo = documents[0]
             else:
-                print(f"Exception {e} on file {path}")
                 documents = collection.find_entries(url=self.url)
                 if len(documents) > 0:
                     self.dbinfo = documents[0]
                 else:
-                    raise e
+                    raise
         FileSystemObject.ObjectCount += 1
 
     def add_contain_relationship(
@@ -277,11 +277,11 @@ class FileSystemObject:
             data["Windows Attributes"] = self.windows_attributes_to_data()
         return json.dumps(data)
 
-    def cloud_file_detector():
+    def cloud_file_detector() -> None:
         """
-        import os
+        Import os
         import ctypes
-        from ctypes import windll, wintypes, byref, POINTER, Structure
+        from ctypes import windll, wintypes, byref, POINTER, Structure.
 
         # Define necessary constants and structures
         FILE_ATTRIBUTE_REPARSE_POINT = 0x400
@@ -392,7 +392,6 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
     for root, dirs, files in os.walk(path):
         count = FileSystemObject.ObjectCount
         if LastCount + 5000 < FileSystemObject.ObjectCount:
-            print("Object Count now ", FileSystemObject.ObjectCount)
             LastCount = FileSystemObject.ObjectCount
         for name in files:
             file_path = os.path.join(root, name)
@@ -401,11 +400,8 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
             except FileNotFoundError:
                 # transient file
                 continue
-            except Exception as e:
+            except Exception:
                 # not sure what triggers this.
-                print(
-                    f"Processing File {file_path}, exception {e}\n**Ignored**",
-                )
                 continue
             root_obj.add_contain_relationship(collections, file_obj)
         for name in dirs:
@@ -415,11 +411,8 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
             except FileNotFoundError:
                 # transient file
                 continue
-            except Exception as e:
+            except Exception:
                 # not sure what triggers this.
-                print(
-                    f"Processing File {file_path}, exception {e}\n**Ignored**",
-                )
                 continue
             root_obj.add_contain_relationship(collections, dir_obj)
     return count
@@ -448,7 +441,7 @@ def setup_collections(db, collection_names, reset=False) -> dict:
     return collections
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -493,15 +486,15 @@ def main():
     # load the config information from the config file
     with open(args.config) as fd:
         config = json.load(fd)
-    if args.host != None:
+    if args.host is not None:
         config["host"] = args.host
-    if args.port != None:
+    if args.port is not None:
         config["port"] = args.port
-    if args.user != None:
+    if args.user is not None:
         config["user"] = args.user
-    if args.password != None:
+    if args.password is not None:
         config["password"] = args.password
-    if args.database != None:
+    if args.database is not None:
         config["database"] = args.database
     assert config["port"] > 1023 and config["port"] < 65536, "Invalid port number"
 
@@ -528,11 +521,9 @@ def main():
     # Replace 'volume_path' with the path of the Windows volume you want to scan
     count = process_directory(collections, args.path)
     end = datetime.datetime.utcnow()
-    execution_time = end - start
+    end - start
     if count > 0:
-        print(
-            f"Added {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
-        )
+        pass
 
 
 if __name__ == "__main__":

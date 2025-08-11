@@ -27,6 +27,7 @@ import os
 import sys
 import time
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -45,10 +46,11 @@ from activity.recorders.storage.dropbox.dropbox_recorder import (
     DropboxStorageActivityRecorder,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
-def main():
+def main() -> None:
     """Main function for the Dropbox storage activity example."""
     parser = argparse.ArgumentParser(description="Dropbox Storage Activity Example")
     parser.add_argument(

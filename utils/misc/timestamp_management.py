@@ -22,6 +22,7 @@ import datetime
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -32,6 +33,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 import utils.data_validation
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -40,7 +42,7 @@ def validate_iso_timestamp(source: str) -> bool:
     return utils.data_validation.validate_iso_timestamp(source)
 
 
-def generate_iso_timestamp(ts: datetime = None) -> str:
+def generate_iso_timestamp(ts: datetime | None = None) -> str:
     """Given a timestamp, convert it to an ISO timestamp."""
     if ts is None:
         ts = datetime.datetime.now(datetime.UTC)
@@ -57,7 +59,7 @@ def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
     return ts
 
 
-def generate_iso_timestamp_for_file(ts: str = None) -> str:
+def generate_iso_timestamp_for_file(ts: str | None = None) -> str:
     """Create an ISO timestamp for the current time."""
     if ts is None:
         ts = datetime.datetime.now(datetime.UTC).isoformat()

@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from uuid import uuid4
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,18 +37,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.named_entity import IndalekoNamedEntityDataModel
 from db import IndalekoDBCollections, IndalekoDBConfig
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoNamedEntity:
-    """
-    This class handles the named entities for Indaleko.
-    """
+    """This class handles the named entities for Indaleko."""
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
-        """
-        Initialize the named entity handler.
-        """
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
+        """Initialize the named entity handler."""
         self.named_entities = {}
         self.db_config = db_config
         self.collection = self.db_config._arangodb.collection(
@@ -166,9 +165,7 @@ class IndalekoNamedEntity:
         return False
 
     def clear_named_entities(self) -> bool:
-        """
-        Clear all named entities from the handler.
-        """
+        """Clear all named entities from the handler."""
         # Truncate the collection in the database
         result = self.collection.truncate()
 
@@ -179,12 +176,9 @@ class IndalekoNamedEntity:
             self.named_entities.clear()
 
 
-def main():
-    """
-    Main function for the named entity module.
-    """
+def main() -> None:
+    """Main function for the named entity module."""
     named_entity = IndalekoNamedEntity()
-    print(named_entity)
     named_entities = named_entity.get_named_entities()
     ic(named_entities)
     if len(named_entities) > 0:

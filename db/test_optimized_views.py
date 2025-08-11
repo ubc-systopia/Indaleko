@@ -13,7 +13,9 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
+
 
 # Set up path
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -26,6 +28,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Import required components
 from db.db_collections import IndalekoDBCollections
 from db.i_collections import IndalekoCollections
+
 
 # Configure logging
 logging.basicConfig(
@@ -114,14 +117,12 @@ class OptimizedViewManager:
 
 def test_machine_config_performance():
     """Test machine config lookups with optimized views."""
-    print("\n=== Testing Machine Config Performance ===\n")
 
     # Test with original approach (skip_views=False)
-    print("Original approach (with views):")
-    start_time = time.time()
+    time.time()
 
     collections = IndalekoCollections(skip_views=False)
-    collection = collections.get_collection(
+    collections.get_collection(
         IndalekoDBCollections.Indaleko_MachineConfig_Collection,
     )
 
@@ -132,18 +133,15 @@ def test_machine_config_performance():
             "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection,
         },
     )
-    records = list(results)
+    list(results)
 
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
-    print(f"  - Found {len(records)} records")
+    time.time()
 
     # Test with optimized approach (skip_views=True)
-    print("\nOptimized approach (skip_views=True):")
-    start_time = time.time()
+    time.time()
 
     collections = IndalekoCollections(skip_views=True)
-    collection = collections.get_collection(
+    collections.get_collection(
         IndalekoDBCollections.Indaleko_MachineConfig_Collection,
         skip_views=True,
     )
@@ -155,49 +153,34 @@ def test_machine_config_performance():
             "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection,
         },
     )
-    records = list(results)
+    list(results)
 
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
-    print(f"  - Found {len(records)} records")
+    time.time()
 
 
 def test_optimized_view_manager():
     """Test the optimized view manager with caching."""
-    print("\n=== Testing Optimized View Manager ===\n")
 
     # Get views with cache
-    print("First call (cold cache):")
-    start_time = time.time()
-    views = OptimizedViewManager.get_views()
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
-    print(f"  - Views: {list(views.keys())}")
+    time.time()
+    OptimizedViewManager.get_views()
+    time.time()
 
     # Get views again with cache
-    print("\nSecond call (warm cache):")
-    start_time = time.time()
-    views = OptimizedViewManager.get_views()
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
+    time.time()
+    OptimizedViewManager.get_views()
+    time.time()
 
     # Check if view exists
-    print("\nCheck if view exists:")
-    start_time = time.time()
-    exists = OptimizedViewManager.view_exists("ObjectsTextView")
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
-    print(f"  - Exists: {exists}")
+    time.time()
+    OptimizedViewManager.view_exists("ObjectsTextView")
+    time.time()
 
     # Get a view
-    print("\nGet a view:")
-    start_time = time.time()
-    view = OptimizedViewManager.get_view("ObjectsTextView")
-    end_time = time.time()
-    print(f"  - Time: {end_time - start_time:.4f} seconds")
-    print(f"  - View: {view}")
+    time.time()
+    OptimizedViewManager.get_view("ObjectsTextView")
+    time.time()
 
-    print("\n=== Test Complete ===\n")
 
 
 if __name__ == "__main__":
@@ -210,4 +193,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         logger.exception(f"Error during testing: {e}")
-        print(f"Error during testing: {e}")

@@ -22,9 +22,11 @@ import os
 import random
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +45,7 @@ from activity.collectors.task_activity.data_models.task_data_model import (
     TaskStatus,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -54,8 +57,8 @@ class TaskActivityCollector(CollectorBase):
     In a real implementation, this would connect to a task management service's API.
     """
 
-    def __init__(self, **kwargs):
-        """Initialize the task activity collector"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the task activity collector."""
         self._name = kwargs.get("name", "Task Activity Collector")
         self._provider_id = kwargs.get(
             "provider_id",
@@ -78,8 +81,8 @@ class TaskActivityCollector(CollectorBase):
         if not kwargs.get("disable_test_data", False):
             self._create_test_data()
 
-    def _create_test_data(self):
-        """Create simulated test data"""
+    def _create_test_data(self) -> None:
+        """Create simulated test data."""
         # Generate a few tasks with different statuses
         task_templates = [
             {
@@ -437,18 +440,18 @@ class TaskActivityCollector(CollectorBase):
 
     # Collector interface methods
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_USER_ACTIVITY,
             ActivityDataCharacteristics.ACTIVITY_DATA_TASK_MANAGEMENT,
         ]
 
     def get_collectorr_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
@@ -545,8 +548,8 @@ class TaskActivityCollector(CollectorBase):
         return TaskActivityData.model_json_schema()
 
 
-def main():
-    """Main function for testing the collector"""
+def main() -> None:
+    """Main function for testing the collector."""
     collector = TaskActivityCollector()
 
     # Print collector info

@@ -22,7 +22,9 @@ import json
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +45,7 @@ from query.query_processing.data_models.translator_response import TranslatorOut
 from query.query_processing.query_translator.aql_translator import AQLTranslator
 from query.search_execution.data_models.query_execution_plan import QueryPerformanceHint
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -60,7 +63,7 @@ class EnhancedAQLTranslator(AQLTranslator):
     7. Improved bind variable handling
     """
 
-    def __init__(self, collections_metadata: IndalekoDBCollectionsMetadata):
+    def __init__(self, collections_metadata: IndalekoDBCollectionsMetadata) -> None:
         """
         Initialize the enhanced AQL translator.
 

@@ -26,6 +26,7 @@ import os
 import sys
 import uuid
 
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -44,7 +45,6 @@ from firecircle.entities.registry import EntityRegistry
 from firecircle.integration.indaleko import IndalekoIntegration
 from firecircle.memory.context import CircleContext
 from firecircle.memory.persistence import ConversationMemory, InsightMemory
-
 from firecircle.protocol.message import CircleRequest, Message, MessageType
 from firecircle.protocol.orchestrator import (
     CircleOrchestrator,
@@ -68,7 +68,7 @@ class SimpleEntity(Entity):
         response_templates: dict[str, list[str]],
         capabilities: set[EntityCapability] | None = None,
         entity_id: str | None = None,
-    ):
+    ) -> None:
         """
         Initialize the simple entity.
 
@@ -107,13 +107,13 @@ class SimpleEntity(Entity):
         if message.type == MessageType.QUESTION:
             return self._respond_to_question(message)
 
-        elif message.type == MessageType.STATEMENT:
+        if message.type == MessageType.STATEMENT:
             return self._respond_to_statement(message)
 
-        elif message.type == MessageType.PROPOSAL:
+        if message.type == MessageType.PROPOSAL:
             return self._respond_to_proposal(message)
 
-        elif message.type == MessageType.CHALLENGE:
+        if message.type == MessageType.CHALLENGE:
             return self._respond_to_challenge(message)
 
         # Default to empty response
@@ -587,7 +587,7 @@ def run_simple_circle():
     orchestrator.force_phase_transition(ConversationPhase.CLOSING)
 
     # Get conversation summary
-    summary = orchestrator.get_conversation_summary()
+    orchestrator.get_conversation_summary()
 
     # Create conversation memory
     conversation_memory = ConversationMemory(

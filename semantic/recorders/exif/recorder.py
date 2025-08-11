@@ -26,7 +26,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 # Third-party imports
 
@@ -65,7 +67,7 @@ class ExifRecorder:
     # Unique identifier for this recorder
     recorder_uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
-    def __init__(self, output_path: str | None = None):
+    def __init__(self, output_path: str | None = None) -> None:
         """
         Initialize the EXIF metadata recorder.
 
@@ -148,7 +150,6 @@ class ExifRecorder:
                 # Progress reporting
                 current_percent = int((i / total_files) * 100)
                 if current_percent > last_percent and current_percent % 5 == 0:
-                    print(f"Progress: {current_percent}% ({i}/{total_files})")
                     last_percent = current_percent
 
                 if "path" not in file_info or "object_id" not in file_info:
@@ -170,10 +171,6 @@ class ExifRecorder:
         logging.info(
             f"Batch processing complete. Processed: {processed_count}, Errors: {error_count}",
         )
-        print(
-            f"Processing complete. Processed: {processed_count}, Errors: {error_count}",
-        )
-        print(f"Output file: {self.output_file}")
 
     def process_directory(
         self,
@@ -189,7 +186,6 @@ class ExifRecorder:
             recursive: Whether to process subdirectories
             file_extensions: Optional list of file extensions to process. If None, processes all supported image formats.
         """
-        print(f"Processing directory: {directory_path}, recursive: {recursive}")
         logging.info(f"Processing directory: {directory_path}, recursive: {recursive}")
 
         # Default image extensions if not specified
@@ -212,9 +208,8 @@ class ExifRecorder:
 
         file_list = []
 
-        print("Discovering image files...")
         # First, discover all image files
-        for root, dirs, files in os.walk(directory_path):
+        for root, _dirs, files in os.walk(directory_path):
             for file in files:
                 file_path = os.path.join(root, file)
                 _, ext = os.path.splitext(file_path.lower())
@@ -237,7 +232,6 @@ class ExifRecorder:
             if not recursive:
                 break
 
-        print(f"Found {len(file_list)} image files. Beginning EXIF extraction...")
         self.batch_process_files(file_list)
 
     def upload_to_database(self, db_config: dict[str, Any] | None = None) -> None:
@@ -253,7 +247,7 @@ class ExifRecorder:
         logging.info(f"Data ready for upload at: {self.output_file}")
 
 
-def main():
+def main() -> None:
     """Main entry point for the EXIF recorder."""
     parser = argparse.ArgumentParser(description="Indaleko EXIF Metadata Recorder")
 
@@ -311,10 +305,8 @@ def main():
         if file_data:
             with open(recorder.output_file, "w", encoding="utf-8") as f:
                 f.write(json.dumps(file_data, cls=IndalekoJSONEncoder) + "\n")
-            print(f"File processed successfully: {args.path}")
-            print(f"Output saved to: {recorder.output_file}")
         else:
-            print(f"Error processing file: {args.path}")
+            pass
 
     elif args.command == "directory":
         recorder.process_directory(

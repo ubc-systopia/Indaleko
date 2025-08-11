@@ -2,6 +2,7 @@ import unittest
 
 import operators
 import pipeline
+
 from abstract import IReader
 
 
@@ -9,8 +10,7 @@ class MockInputGenerator(IReader):
     all_lines = [(0, "t1 a1 b1"), (0, "t2 a2 b2"), (0, "t3 a3 b3")]
 
     def run(self):
-        for line in self.all_lines:
-            yield line
+        yield from self.all_lines
 
     def get_len(self):
         return len(MockInputGenerator.all_lines)
@@ -24,7 +24,7 @@ class PipeLineTest(unittest.TestCase):
             return input_tuple
         return None
 
-    def test_mock_data(self):
+    def test_mock_data(self) -> None:
         test_cases = {
             "only_nil": {
                 "pos": 1,
@@ -70,8 +70,7 @@ class PipeLineTest(unittest.TestCase):
             },
         }
 
-        for title, tc in test_cases.items():
-            print(f"running {title}")
+        for tc in test_cases.values():
 
             pos, queries, remove_empty = tc["pos"], tc["queries"], tc["remove_empty"]
 
@@ -85,10 +84,6 @@ class PipeLineTest(unittest.TestCase):
                 ).add(operators.Show(self.mock_show))
 
                 # p.run returns a generator; use list to realize it
-                res = [rec for rec in p.run() if rec != None]
+                res = [rec for rec in p.run() if rec is not None]
 
-                self.assertEqual(
-                    len(res),
-                    tc["expect"][i],
-                    f"expect={tc['expect'][i]} got=({len(res)})",
-                )
+                assert len(res) == tc["expect"][i], f"expect={tc['expect'][i]} got=({len(res)})"

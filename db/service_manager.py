@@ -42,6 +42,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -67,13 +68,12 @@ from utils.misc.file_name_management import generate_file_name
 from utils.misc.service import IndalekoService
 from utils.singleton import IndalekoSingleton
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoServiceManager(IndalekoSingleton):
-    """
-    This class defines the service model for Indaleko.
-    """
+    """This class defines the service model for Indaleko."""
 
     Schema = IndalekoServiceDataModel.get_arangodb_schema()
 
@@ -126,9 +126,7 @@ class IndalekoServiceManager(IndalekoSingleton):
             self.create_indaleko_services_collection()
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
-        """
-        This method creates the IndalekoServices collection in the database.
-        """
+        """This method creates the IndalekoServices collection in the database."""
         assert not self.db_config._arangodb.has_collection(
             self.indaleko_services,
         ), f"{self.indaleko_services} collection already exists, cannot create it."
@@ -147,28 +145,22 @@ class IndalekoServiceManager(IndalekoSingleton):
         return self.service_collection
 
     def lookup_service_by_name(self, name: str) -> dict:
-        """
-        This method is used to lookup a service by name.
-        """
+        """This method is used to lookup a service by name."""
         entries = self.service_collection.find_entries(Name=name)
         assert len(entries) < 2, f"Multiple entries found for service {name}, not handled."
         if len(entries) == 0:
             return None
-        else:
-            return IndalekoService.deserialize(entries[0])
+        return IndalekoService.deserialize(entries[0])
 
     def lookup_service_by_identifier(self, service_identifier: str) -> dict:
-        """
-        This method is used to lookup a service by name.
-        """
+        """This method is used to lookup a service by name."""
         if not validate_uuid_string(service_identifier):
             raise ValueError(f"{service_identifier} is not a valid UUID.")
         entries = self.service_collection.find_entries(Identifier=service_identifier)
         assert len(entries) < 2, f"Multiple entries found for service {service_identifier}, not handled."
         if len(entries) == 0:
             return None
-        else:
-            return IndalekoService.deserialize(entries[0])
+        return IndalekoService.deserialize(entries[0])
 
     def register_service(
         self,
@@ -176,7 +168,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         service_description: str,
         service_version: str,
         service_type: str,
-        service_id: str = None,
+        service_id: str | None = None,
         debug: bool = False,
     ) -> dict:
         """
@@ -244,7 +236,7 @@ class IndalekoServiceManager(IndalekoSingleton):
 class IndalekoServiceManagerTest:
     """This class defines the test operations for the IndalekoServiceManager."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.service_manager = IndalekoServiceManager()
 
     @staticmethod
@@ -315,7 +307,7 @@ def delete_service(args: argparse.Namespace) -> None:
             ic(f"Service {args.identifier} not found.")
 
 
-def main():
+def main() -> None:
     """The interface for the service manager."""
     now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()
@@ -391,8 +383,7 @@ def main():
         log_dir=args.logdir,
     )
     if indaleko_logging is None:
-        print("Could not create logging object")
-        exit(1)
+        sys.exit(1)
     logging.info("Starting IndalekoServiceManager")
     logging.debug(args)
     args.func(args)

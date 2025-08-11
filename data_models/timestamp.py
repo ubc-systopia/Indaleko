@@ -22,9 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 # from icecream import ic
 
@@ -38,13 +40,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoTimestampDataModel(IndalekoBaseModel):
-    """
-    This class defines the UUID data model for Indaleko.
-    """
+    """This class defines the UUID data model for Indaleko."""
 
     Label: uuid.UUID = Field(
         ...,
@@ -77,7 +78,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
         }
 
     @field_validator("Value", mode="before")
-    def ensure_timezone(cls, value: datetime):
+    def ensure_timezone(self, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
@@ -85,8 +86,8 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
         return value
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoTimestampDataModel.test_model_main()
 
 

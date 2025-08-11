@@ -1,7 +1,8 @@
-"""initializtion logic for the activity context system"""
+"""initializtion logic for the activity context system."""
 
 import os
 import sys
+
 
 # from icecream import ic
 

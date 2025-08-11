@@ -12,7 +12,7 @@ class ArangoDBConfig:
     DefaultPassword = "pa$$w0rd"
     DefaultDatabase = "Indaleko"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = self.DefaultConfigFile
         self.host = self.DefaultHost
         self.port = self.DefaultPort
@@ -61,24 +61,24 @@ class ArangoDBConfig:
             json.dump(self.to_dict(), fd)
         return self
 
-    def verify_config_in_gitignore(self):
+    def verify_config_in_gitignore(self) -> None:
         if not os.path.exists(".gitignore"):
             with open(".gitignore", "w") as fd:
                 fd.write(f"{self.config}\n")
         else:
             found = False
             with open(".gitignore") as fd:
-                for line in fd.readlines():
+                for line in fd:
                     if line.strip() == self.config:
                         found = True
                     else:
-                        print(f"{line.strip()} != {self.config}")
+                        pass
             if not found:
-                with open(".gitignore", "at") as fd:
+                with open(".gitignore", "a") as fd:
                     fd.write(f"{self.config}\n")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",

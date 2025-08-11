@@ -25,8 +25,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.context.service import IndalekoActivityContextService
 from query.context.activity_provider import QueryActivityProvider
+
 
 # pylint: enable=wrong-import-position
 
@@ -53,7 +56,7 @@ class QueryNavigator:
     - Identifying exploration branches (divergent paths)
     """
 
-    def __init__(self, db_config=None, debug=False):
+    def __init__(self, db_config=None, debug=False) -> None:
         """
         Initialize the QueryNavigator.
 
@@ -73,7 +76,7 @@ class QueryNavigator:
             self._db_config = db_config
             self._logger.info("Initialized QueryNavigator")
         except Exception as e:
-            self._logger.error(f"Error initializing QueryNavigator: {e}")
+            self._logger.exception(f"Error initializing QueryNavigator: {e}")
             self._context_service = None
             self._activity_provider = None
 
@@ -92,7 +95,7 @@ class QueryNavigator:
                 self._db = db_config_instance._arangodb
             self._logger.debug("Connected to database")
         except Exception as e:
-            self._logger.error(f"Error connecting to database: {e}")
+            self._logger.exception(f"Error connecting to database: {e}")
             self._db = None
 
     def is_navigation_available(self) -> bool:
@@ -139,7 +142,7 @@ class QueryNavigator:
                 },
             )
 
-            results = [doc for doc in cursor]
+            results = list(cursor)
 
             if not results:
                 return None
@@ -147,7 +150,7 @@ class QueryNavigator:
             return results[0]
 
         except Exception as e:
-            self._logger.error(f"Error retrieving query: {e}")
+            self._logger.exception(f"Error retrieving query: {e}")
             return None
 
     def get_related_queries(
@@ -213,10 +216,10 @@ class QueryNavigator:
                 },
             )
 
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting related queries: {e}")
+            self._logger.exception(f"Error getting related queries: {e}")
             return []
 
     def get_query_path(
@@ -266,7 +269,7 @@ class QueryNavigator:
             return list(reversed(path))
 
         except Exception as e:
-            self._logger.error(f"Error getting query path: {e}")
+            self._logger.exception(f"Error getting query path: {e}")
             return []
 
     def get_exploration_branches(
@@ -345,7 +348,7 @@ class QueryNavigator:
             return branches
 
         except Exception as e:
-            self._logger.error(f"Error getting exploration branches: {e}")
+            self._logger.exception(f"Error getting exploration branches: {e}")
             return {}
 
     def _get_next_queries(
@@ -395,10 +398,10 @@ class QueryNavigator:
                 },
             )
 
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting next queries: {e}")
+            self._logger.exception(f"Error getting next queries: {e}")
             return []
 
     def get_recent_queries(
@@ -453,10 +456,10 @@ class QueryNavigator:
                 },
             )
 
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting recent queries: {e}")
+            self._logger.exception(f"Error getting recent queries: {e}")
             return []
 
     def get_query_history(self, limit: int = 20) -> list[dict[str, Any]]:
@@ -499,14 +502,14 @@ class QueryNavigator:
                 },
             )
 
-            return [doc for doc in cursor]
+            return list(cursor)
 
         except Exception as e:
-            self._logger.error(f"Error getting query history: {e}")
+            self._logger.exception(f"Error getting query history: {e}")
             return []
 
 
-def main():
+def main() -> None:
     """Test functionality of QueryNavigator."""
     logging.basicConfig(level=logging.DEBUG)
 
@@ -514,15 +517,12 @@ def main():
     navigator = QueryNavigator(debug=True)
 
     if not navigator.is_navigation_available():
-        print("Query navigation not available. Exiting.")
         return
 
     # Test query history retrieval
-    print("\nQuery History:")
     history = navigator.get_query_history(limit=5)
 
     if not history:
-        print("No query history found. Create some queries first.")
 
         # Create some test queries
         provider = QueryActivityProvider(debug=True)
@@ -533,52 +533,40 @@ def main():
         query3 = "Show me the authors of Indaleko documents"
 
         # Record queries
-        print("\nCreating test queries...")
         q1_id, _ = provider.record_query(query1)
-        print(f"Recorded query 1: {query1}")
 
         q2_id, _ = provider.record_query(query2, previous_query_id=q1_id)
-        print(f"Recorded query 2: {query2}")
 
         q3_id, _ = provider.record_query(query3, previous_query_id=q2_id)
-        print(f"Recorded query 3: {query3}")
 
         # Try again to get history
-        print("\nQuery History (after creating test queries):")
         history = navigator.get_query_history(limit=5)
 
-    for i, query in enumerate(history):
-        print(f"{i+1}. {query['query_text']} (ID: {query['query_id']})")
-        print(f"   Context: {query['context_handle']}")
-        print(f"   Previous: {query['previous_query_id']}")
-        print(f"   Relationship: {query['relationship_type']}")
+    for _i, _query in enumerate(history):
+        pass
 
     if history:
         # Use the most recent query for testing
         test_query_id = uuid.UUID(history[0]["query_id"])
 
         # Test get_query_path
-        print("\nQuery Path:")
         path = navigator.get_query_path(test_query_id)
 
-        for i, query in enumerate(path):
-            print(f"{i+1}. {query['query_text']} (ID: {query['query_id']})")
+        for _i, _query in enumerate(path):
+            pass
 
         # Test get_related_queries
-        print("\nRelated Queries:")
         related = navigator.get_related_queries(test_query_id)
 
-        for i, query in enumerate(related):
-            print(f"{i+1}. {query['query_text']} (ID: {query['query_id']})")
+        for _i, _query in enumerate(related):
+            pass
 
         # Test get_exploration_branches
-        print("\nExploration Branches:")
         branches = navigator.get_exploration_branches(test_query_id)
 
-        for branch_id, branch_path in branches.items():
-            print(f"Branch starting with {branch_id}:")
-            for i, query in enumerate(branch_path):
-                print(f"  {i+1}. {query['query_text']} (ID: {query['query_id']})")
+        for branch_path in branches.values():
+            for _i, _query in enumerate(branch_path):
+                pass
 
 
 if __name__ == "__main__":

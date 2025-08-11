@@ -23,4 +23,5 @@ from query.tools.recommendation.recommendation_tool import (
     RecommendationTool,
 )
 
-__all__ = ["RecommendationTool", "RecommendationAssistantIntegration"]
+
+__all__ = ["RecommendationAssistantIntegration", "RecommendationTool"]

@@ -9,11 +9,11 @@ import argparse
 import json
 import logging
 import os
+
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from utils.cli.handlermixin import IndalekoHandlermixin
-from perf.perf_mixin import PerfDataMixin
 
 
 class DataGeneratorHandlerMixin(IndalekoHandlermixin):
@@ -37,7 +37,7 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
         return parser
 
     @staticmethod
-    def setup_logging(args: argparse.Namespace, **kwargs: Dict[str, Any]) -> None:
+    def setup_logging(args: argparse.Namespace, **kwargs: dict[str, Any]) -> None:
         """Configure logging based on parsed args."""
         if args.verbose:
             logging.getLogger().setLevel(logging.DEBUG)
@@ -46,7 +46,7 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             logging.getLogger().setLevel(logging.INFO)
 
     @staticmethod
-    def load_configuration(kwargs: Dict[str, Any]) -> None:
+    def load_configuration(kwargs: dict[str, Any]) -> None:
         """Load tool-specific configuration from file or defaults."""
         args = kwargs.get("args")
         if not args:
@@ -62,18 +62,18 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             config_path = Path(os.getcwd()) / config_path
 
         try:
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 config = json.load(f)
                 kwargs["config"] = config
                 logging.info("Loaded configuration from %s", config_path)
         except FileNotFoundError:
-            logging.error("Configuration file not found: %s", config_path)
+            logging.exception("Configuration file not found: %s", config_path)
             if args.headless:
                 sys.exit(1)
             kwargs["config"] = {"metadata": {"total_records": 1000, "truth_records": 10}}
             logging.warning("Using minimal default configuration")
         except json.JSONDecodeError:
-            logging.error("Invalid JSON in configuration file: %s", config_path)
+            logging.exception("Invalid JSON in configuration file: %s", config_path)
             if args.headless:
                 sys.exit(1)
             kwargs["config"] = {"metadata": {"total_records": 1000, "truth_records": 10}}
@@ -102,7 +102,7 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             help="Scale factor for truth records (ratio of total records)",
             default=None,
         )
-        
+
         # Testing options
         testing_group = parser.add_argument_group("Testing Options")
         testing_group.add_argument(
@@ -123,7 +123,7 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             help="Format for test reports",
             default="json",
         )
-        
+
         # Advanced options
         advanced_group = parser.add_argument_group("Advanced Options")
         advanced_group.add_argument(
@@ -142,42 +142,41 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             action="store_true",
             help="Enable verbose logging",
         )
-        
+
         return parser
 
     @staticmethod
-    def performance_configuration(kwargs: Dict[str, Any]) -> bool:
+    def performance_configuration(kwargs: dict[str, Any]) -> bool:
         """Configure performance recording; return False to skip."""
         # Enable performance recording
         return True
 
     @staticmethod
-    def run(kwargs: Dict[str, Any]) -> None:
+    def run(kwargs: dict[str, Any]) -> None:
         """Main entry point for CLI execution."""
         args = kwargs.get("args")
         config = kwargs.get("config", {})
-        
+
         logging.info("Running %s with args %s", DataGeneratorHandlerMixin.__name__, args)
-        logging.info("Loaded configuration with %d total records and %d truth records", 
+        logging.info("Loaded configuration with %d total records and %d truth records",
                     config.get("metadata", {}).get("total_records", 0),
                     config.get("metadata", {}).get("truth_records", 0))
-        
+
         # This is a placeholder for the actual implementation
         # In future PRs, we'll implement:
         # 1. The metadata generators
         # 2. The query generation and testing system
         # 3. The reporting framework
-        
+
         logging.info("Enhanced Data Generator initialized successfully")
         logging.info("Implementation coming in subsequent PRs")
 
     @staticmethod
-    def performance_recording(kwargs: Dict[str, Any]) -> None:
+    def performance_recording(kwargs: dict[str, Any]) -> None:
         """Hook for recording performance after run()."""
         # Record total execution time and other metrics
-        pass
 
     @staticmethod
-    def cleanup(kwargs: Dict[str, Any]) -> None:
+    def cleanup(kwargs: dict[str, Any]) -> None:
         """Cleanup hook (e.g., close resources)."""
         logging.info("Data generator execution completed")

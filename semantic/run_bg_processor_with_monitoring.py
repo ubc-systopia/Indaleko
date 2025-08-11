@@ -34,6 +34,7 @@ import sys
 import threading
 import time
 
+
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +62,7 @@ from semantic.performance_monitor import (
     monitor_semantic_extraction,
 )
 
+
 try:
     import matplotlib.pyplot as plt
 
@@ -79,7 +81,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
     This class adds performance monitoring to all semantic extractors.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the monitored background processor."""
         super().__init__(**kwargs)
 
@@ -107,7 +109,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
 
         logger.info("Monitored background processor initialized")
 
-    def _apply_monitoring(self):
+    def _apply_monitoring(self) -> None:
         """Apply performance monitoring to all extractors."""
         # Patch MIME detector
         if hasattr(self, "_mime_detector") and self._mime_detector:
@@ -142,7 +144,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             self._exif_extractor.extract_exif = monitored_exif_extract
             logger.info("Applied monitoring to EXIF extractor")
 
-    def _run_stats_thread(self):
+    def _run_stats_thread(self) -> None:
         """Run the statistics reporting thread."""
         while not self.stopping:
             # Wait for the specified interval
@@ -152,7 +154,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             try:
                 self._generate_and_save_stats()
             except Exception as e:
-                logger.error(f"Error generating stats: {e}")
+                logger.exception(f"Error generating stats: {e}")
 
     def _generate_and_save_stats(self):
         """Generate and save performance statistics."""
@@ -194,11 +196,11 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
                     self._generate_plots(stats, os.path.dirname(self.stats_file))
 
             except Exception as e:
-                logger.error(f"Error saving stats to {self.stats_file}: {e}")
+                logger.exception(f"Error saving stats to {self.stats_file}: {e}")
 
         return summary
 
-    def _generate_plots(self, stats, output_dir):
+    def _generate_plots(self, stats, output_dir) -> None:
         """Generate performance visualization plots."""
         # Get extractor statistics
         extractor_stats = stats["extractor_stats"]
@@ -257,13 +259,13 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             plt.savefig(os.path.join(output_dir, "file_type_distribution.png"))
             plt.close()
 
-    def _format_elapsed_time(self, seconds):
+    def _format_elapsed_time(self, seconds) -> str:
         """Format elapsed time in a human-readable format."""
         hours, remainder = divmod(int(seconds), 3600)
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-    def start(self):
+    def start(self) -> None:
         """Start the monitored background processor."""
         # Start the stats thread if stats file is specified
         if self.stats_file:
@@ -274,7 +276,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
         # Start the processor
         super().start()
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the monitored background processor."""
         self.stopping = True
 
@@ -282,13 +284,13 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
         try:
             self._generate_and_save_stats()
         except Exception as e:
-            logger.error(f"Error generating final stats: {e}")
+            logger.exception(f"Error generating final stats: {e}")
 
         # Stop the processor
         super().stop()
 
 
-def main():
+def main() -> None:
     """Main function for the monitored background processor."""
     parser = argparse.ArgumentParser(
         description="Indaleko Background Processor with Performance Monitoring",
@@ -378,7 +380,7 @@ def main():
         logger.info("Monitored background processor stopped")
 
 
-def generate_performance_report(stats_file, perf_file):
+def generate_performance_report(stats_file, perf_file) -> None:
     """Generate a comprehensive performance report from existing data."""
     logger.info("Generating performance report...")
 
@@ -575,7 +577,7 @@ def generate_performance_report(stats_file, perf_file):
         logger.info(f"Report generated: {report_file}")
 
     except Exception as e:
-        logger.error(f"Error generating report: {e}")
+        logger.exception(f"Error generating report: {e}")
 
 
 if __name__ == "__main__":

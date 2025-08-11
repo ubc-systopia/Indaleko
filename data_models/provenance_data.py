@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from uuid import UUID
 
 from icecream import ic
 from pydantic import AwareDatetime, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,11 +40,12 @@ from data_models.base import IndalekoBaseModel
 from data_models.provenance_operations import ProvenanceOperations
 from data_models.record import IndalekoRecordDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class BaseProvenanceDataModel(IndalekoBaseModel):
-    """This is the base data model for provenance information"""
+    """This is the base data model for provenance information."""
 
     Record: IndalekoRecordDataModel = Field(
         ...,
@@ -75,11 +78,11 @@ class BaseProvenanceDataModel(IndalekoBaseModel):
     )
 
     class Config:
-        """Sample configuration for the data model"""
+        """Sample configuration for the data model."""
 
         @staticmethod
         def generate_example():
-            """Generate an example for the data model"""
+            """Generate an example for the data model."""
             example = IndalekoRecordDataModel.Config.json_schema_extra["example"]
             example.update(
                 {
@@ -97,8 +100,8 @@ class BaseProvenanceDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     ic(BaseProvenanceDataModel.Config.json_schema_extra)
     BaseProvenanceDataModel.test_model_main()
 

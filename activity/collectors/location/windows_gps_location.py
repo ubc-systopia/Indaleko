@@ -1,14 +1,17 @@
-"""This implements the Windows GPS Location Service"""
+"""This implements the Windows GPS Location Service."""
 
 import asyncio
 import datetime
 import os
 import sys
 import uuid
+
 from typing import Any
 
 import winsdk.windows.devices.geolocation as wdg
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -27,13 +30,14 @@ from data_models.location_data_model import LocationDataModel
 from data_models.record import IndalekoRecordDataModel
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
 class WindowsGPSLocation(LocationCollector):
-    """This is the Windows GPS Location Service"""
+    """This is the Windows GPS Location Service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._name = "GPS Location Service"
         self._location = "GPS Location"
         self._version = "1.0.0"
@@ -42,12 +46,12 @@ class WindowsGPSLocation(LocationCollector):
 
     @staticmethod
     async def get_coords_async() -> wdg.Geoposition:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         geolocator = wdg.Geolocator()
         return await geolocator.get_geoposition_async()
 
     def get_coords(self) -> WindowsGPSLocationDataModel:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         coords = asyncio.run(self.get_coords_async())
         data = coords.coordinate
         if isinstance(data.timestamp, str):
@@ -87,18 +91,18 @@ class WindowsGPSLocation(LocationCollector):
         return WindowsGPSLocationDataModel(**kwargs)
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the provider characteristics"""
+        """Get the provider characteristics."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
             ActivityDataCharacteristics.ACTIVITY_DATA_DEVICE_STATE,
         ]
 
     def get_collector_name(self) -> str:
-        """Get the provider name"""
+        """Get the provider name."""
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the provider ID"""
+        """Get the provider ID."""
         return self._collector_id
 
     def retrieve_data(self, data_type: str) -> str:
@@ -129,7 +133,7 @@ class WindowsGPSLocation(LocationCollector):
 
     @staticmethod
     def cache_duration() -> datetime.timedelta:
-        """Retrieve the maximum duration that data from this provider may be cached"""
+        """Retrieve the maximum duration that data from this provider may be cached."""
         return datetime.timedelta(minutes=10)
 
     @staticmethod
@@ -151,14 +155,14 @@ class WindowsGPSLocation(LocationCollector):
         ).model_json_schema()
 
     def get_location_name(self) -> str:
-        """Get the location"""
+        """Get the location."""
         location = self._location
         if location is None:
             location = ""
         return location
 
     def get_coordinates(self) -> dict[str, float]:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
@@ -166,7 +170,7 @@ class WindowsGPSLocation(LocationCollector):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
-        """Get the location history for the location"""
+        """Get the location history for the location."""
         raise NotImplementedError("This method is not implemented yet.")
         return []
 
@@ -175,11 +179,11 @@ class WindowsGPSLocation(LocationCollector):
         location1: dict[str, float],
         location2: dict[str, float],
     ) -> float:
-        """Get the distance between two locations"""
+        """Get the distance between two locations."""
         raise NotImplementedError("This method is not implemented yet.")
 
 
-def main():
+def main() -> None:
     """This is the interface for testing the module."""
 
 

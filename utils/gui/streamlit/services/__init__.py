@@ -18,20 +18,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .config import get_config_files
-from .database import (
+from indaleko.utils.gui.streamlit.services.config import get_config_files
+from indaleko.utils.gui.streamlit.services.database import (
     get_activity_timeline,
     get_db_stats,
     get_file_type_distribution,
     get_storage_summary,
 )
-from .query import execute_query
+from indaleko.utils.gui.streamlit.services.query import execute_query
+
 
 __all__ = [
-    "get_db_stats",
-    "get_storage_summary",
-    "get_file_type_distribution",
-    "get_activity_timeline",
     "execute_query",
+    "get_activity_timeline",
     "get_config_files",
+    "get_db_stats",
+    "get_file_type_distribution",
+    "get_storage_summary",
 ]

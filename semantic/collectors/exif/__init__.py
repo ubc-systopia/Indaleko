@@ -1,5 +1,5 @@
 """
-EXIF Metadata Collector package for Indaleko
+EXIF Metadata Collector package for Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason

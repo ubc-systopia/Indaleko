@@ -30,6 +30,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -41,6 +42,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from storage.known_attributes import KnownStorageAttributes
 from utils.singleton import IndalekoSingleton
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -50,7 +52,7 @@ class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
     providers.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the known semantic attributes for the activity data
         providers.
         """
@@ -66,7 +68,7 @@ class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
 
     @staticmethod
     def get_known_semantic_attributes():
-        """Get the known semantic attributes for the activity data providers"""
+        """Get the known semantic attributes for the activity data providers."""
         return {
             label: value
             for label, value in KnownStorageAttributes.__dict__.items()
@@ -75,17 +77,16 @@ class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
 
     @staticmethod
     def get_provider_label(identifier: uuid.UUID):
-        """Get the label for the provider"""
+        """Get the label for the provider."""
         return IndalekoStorageDataProvidersKnownStorageAttributes().uuid_to_label.get(
             identifier,
             None,
         )
 
 
-def main():
-    """Test code for the known semantic attributes"""
+def main() -> None:
+    """Test code for the known semantic attributes."""
     known_semantic_attributes = IndalekoStorageDataProvidersKnownStorageAttributes()
-    print(known_semantic_attributes.get_known_semantic_attributes())
     ic(known_semantic_attributes.__dict__)
     ic(KnownStorageAttributes.__dict__)
 

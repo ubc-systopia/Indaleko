@@ -22,12 +22,14 @@ import logging
 import os
 import platform
 import sys
+
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from icecream import ic
 from pydantic import AwareDatetime, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,11 +50,12 @@ from utils.misc.directory_management import (
 )
 from utils.misc.file_name_management import indaleko_file_name_prefix
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoBaseCliDataModel(IndalekoBaseModel):
-    """Defines the base data model for the CLI"""
+    """Defines the base data model for the CLI."""
 
     Timestamp: AwareDatetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -124,11 +127,6 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         description="The selected input file.",
     )
 
-    InputFileKeys: dict[str, str] | None = Field(
-        default_factory=dict,
-        title="InputFileKeys",
-        description="Keys for input files.",
-    )
 
     OutputFile: str | None = Field(
         None,
@@ -207,7 +205,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
     )
 
     class Config:
-        """Configuration for the base CLI data model"""
+        """Configuration for the base CLI data model."""
 
         json_schema_extra = {
             "example": {
@@ -232,8 +230,8 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """Test code for the base CLI data model"""
+def main() -> None:
+    """Test code for the base CLI data model."""
     ic("Testing Base CLI Data Model")
     cli_data = IndalekoBaseCliDataModel()
     ic(cli_data)

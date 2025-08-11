@@ -28,7 +28,7 @@ import subprocess
 import sys
 
 
-def main():
+def main() -> int | None:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
         description="USN Bridge - Run foo.py as a subprocess",
@@ -50,11 +50,10 @@ def main():
     foo_path = os.path.join(script_dir, "foo.py")
 
     if not os.path.exists(foo_path):
-        print(f"Error: foo.py not found at {foo_path}", file=sys.stderr)
         return 1
 
     if args.verbose:
-        print(f"Found foo.py at {foo_path}")
+        pass
 
     # Build the command to run foo.py
     cmd = [sys.executable, foo_path, "--volume", volume]
@@ -64,18 +63,12 @@ def main():
 
     if args.verbose:
         cmd.append("--verbose")
-        print(f"Running command: {' '.join(cmd)}")
 
     # Run foo.py and capture its output
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
         if result.returncode != 0:
-            print(
-                f"Error: foo.py exited with code {result.returncode}",
-                file=sys.stderr,
-            )
-            print(f"Error output: {result.stderr}", file=sys.stderr)
             return 1
 
         # Parse the output
@@ -99,17 +92,15 @@ def main():
                 outfile.write(current_record + "\n")
 
         if args.verbose:
-            print(f"Wrote records to {args.output}")
+            pass
 
         # Print stdout for debugging in verbose mode
         if args.verbose:
-            print("foo.py stdout:")
-            print(result.stdout)
+            pass
 
         return 0
 
-    except Exception as e:
-        print(f"Error running foo.py: {e}", file=sys.stderr)
+    except Exception:
         return 1
 
 

@@ -18,6 +18,7 @@ from storage.incremental_update.models import (
 )
 from utils.i_logging import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -31,7 +32,7 @@ class EntityResolutionQueue:
 
     COLLECTION_NAME = "EntityResolutionQueue"
 
-    def __init__(self, db_config: IndalekoDBConfiguration):
+    def __init__(self, db_config: IndalekoDBConfiguration) -> None:
         """
         Initialize the entity resolution queue.
 
@@ -43,10 +44,8 @@ class EntityResolutionQueue:
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:
-        """
-        Ensure the queue collection exists and has the necessary indices.
-        """
-        db = self._collections.get_db()
+        """Ensure the queue collection exists and has the necessary indices."""
+        self._collections.get_db()
 
         # Create collection if it doesn't exist
         if not self._collections.collection_exists(self.COLLECTION_NAME):
@@ -157,7 +156,7 @@ class EntityResolutionQueue:
         Returns:
             List of resolution requests that are now marked as processing
         """
-        db = self._collections.get_db()
+        self._collections.get_db()
 
         # First, try to get directories if preferred
         if prefer_directories:
@@ -293,7 +292,7 @@ class EntityResolutionQueue:
             collection.update(request_id, update_data)
             return True
         except Exception as e:
-            logger.error(f"Failed to update status for request {request_id}: {e}")
+            logger.exception(f"Failed to update status for request {request_id}: {e}")
             return False
 
     def get_queue_stats(self, machine_id: str | None = None) -> dict:

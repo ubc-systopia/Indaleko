@@ -54,6 +54,7 @@ from data_models import (
 from data_models.named_entity import IndalekoNamedEntityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 
+
 # Import the Archivist memory model if available
 try:
     from query.memory.archivist_memory import IndalekoArchivistMemoryModel
@@ -507,7 +508,7 @@ class IndalekoDBCollections:
     }
 
 
-def main():
+def main() -> None:
     """Main entry point for the script."""
     ic("Indaleko Database Collections")
     verbose = False
@@ -516,11 +517,9 @@ def main():
         if verbose:
             for key, value in IndalekoDBCollections.Collections[collection].items():
                 if key == "schema":
-                    schema = json.dumps(value, indent=4)
-                    print(f"Schema: {schema}")
+                    json.dumps(value, indent=4)
                 else:
                     ic(f"  {key}: {value}")
-        print("\n")
 
 
 if __name__ == "__main__":

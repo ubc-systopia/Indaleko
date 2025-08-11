@@ -8,6 +8,7 @@ enforcing the project standard of using uv instead.
 import argparse
 import re
 import sys
+
 from collections.abc import Sequence
 
 
@@ -53,7 +54,7 @@ def check_file(filename: str) -> list[str]:
     return errors
 
 
-def main(argv: Sequence[str] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Run the pre-commit hook.
 
     Args:
@@ -72,14 +73,8 @@ def main(argv: Sequence[str] = None) -> int:
             errors.extend(check_file(filename))
 
     if errors:
-        for error in errors:
-            print(error, file=sys.stderr)
-        print(
-            "\nPlease use 'uv' for package management instead of pip.\n"
-            "- To install dependencies: uv pip install -e .\n"
-            "- To add new packages: Edit pyproject.toml and run uv pip install -e .\n",
-            file=sys.stderr,
-        )
+        for _error in errors:
+            pass
         return 1
 
     return 0

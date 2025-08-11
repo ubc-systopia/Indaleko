@@ -22,6 +22,7 @@ import argparse
 import datetime
 import logging
 import os
+
 from typing import Any
 
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
@@ -32,6 +33,7 @@ from query.query_processing.data_models.translator_response import TranslatorOut
 from query.query_processing.nl_parser import NLParser
 from query.query_processing.query_history import QueryHistory
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
 
 logger = logging.getLogger(__name__)
 
@@ -137,8 +139,8 @@ class QueryHandlerMixin:
         analyzed_results: list[dict[str, Any]],
         query_history: QueryHistory,
         llm_connector: Any,
-        start_time: datetime.datetime = None,
-        end_time: datetime.datetime = None,
+        start_time: datetime.datetime | None = None,
+        end_time: datetime.datetime | None = None,
     ) -> None:
         """
         Record a query in the query history database.
@@ -194,5 +196,5 @@ class QueryHandlerMixin:
             logger.info(f"Query '{query}' recorded in query history")
             return True
         except Exception as e:
-            logger.error(f"Failed to record query in history: {e}")
+            logger.exception(f"Failed to record query in history: {e}")
             return False

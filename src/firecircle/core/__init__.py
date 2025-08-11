@@ -6,6 +6,7 @@ in the Fire Circle protocol.
 """
 
 import uuid
+
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from ..adapters.anthropic import AnthropicAdapter
@@ -40,10 +41,9 @@ class ModelAdapterFactory:
         """
         if provider.lower() == "openai":
             return OpenAIAdapter(model=model, **kwargs)
-        elif provider.lower() == "anthropic":
+        if provider.lower() == "anthropic":
             return AnthropicAdapter(model=model, **kwargs)
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
+        raise ValueError(f"Unsupported provider: {provider}")
 
 
 class FireCircleEntity(EntityInterface):
@@ -56,7 +56,7 @@ class FireCircleEntity(EntityInterface):
         provider: str | None = None,
         adapter: ModelAdapter | None = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle entity.
 
@@ -89,7 +89,7 @@ class FireCircleEntity(EntityInterface):
         """Get the profile for this entity."""
         return self.profile
 
-    def process_message(self, message: str, context: dict[str, Any] = None) -> str:
+    def process_message(self, message: str, context: dict[str, Any] | None = None) -> str:
         """
         Process a message from the perspective of this entity role.
 

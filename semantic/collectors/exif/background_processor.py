@@ -27,7 +27,9 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -40,10 +42,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 
 import semantic.recorders.exif.characteristics as ExifCharacteristics
+
 from semantic.collectors.exif.exif_collector import ExifCollector
 from semantic.recorders.exif.recorder import ExifRecorder
 from storage.i_object import IndalekoObject
 from utils.db.db_file_picker import IndalekoFilePicker
+
 
 # pylint: enable=wrong-import-position
 
@@ -114,7 +118,7 @@ def process_file_exif(
         return exif_data.model_dump()
 
     except Exception as e:
-        logger.error(f"Error processing EXIF metadata for {local_path}: {e}")
+        logger.exception(f"Error processing EXIF metadata for {local_path}: {e}")
         return None
 
 
@@ -163,7 +167,7 @@ def process_file_and_store(
         return exif_data
 
     except Exception as e:
-        logger.error(
+        logger.exception(
             f"Error processing and storing EXIF metadata for {local_path}: {e}",
         )
         return None
@@ -320,12 +324,12 @@ def schedule_exif_processing(
         return total_scheduled, total_processed
 
     except Exception as e:
-        logger.error(f"Error scheduling EXIF processing: {e}")
+        logger.exception(f"Error scheduling EXIF processing: {e}")
         return 0, 0
 
 
-def main():
-    """Main function for the EXIF metadata background processor"""
+def main() -> None:
+    """Main function for the EXIF metadata background processor."""
     parser = argparse.ArgumentParser(description="Background EXIF metadata processor")
     parser.add_argument(
         "--count",

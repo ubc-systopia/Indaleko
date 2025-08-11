@@ -26,8 +26,10 @@ import json
 import logging
 import os
 import sys
+
 from typing import Any
 from uuid import UUID
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,8 +39,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from archivist.kb_integration import ArchivistKnowledgeIntegration
 from utils.cli.base import IndalekoBaseCLI
+
 
 # pylint: enable=wrong-import-position
 
@@ -58,7 +63,7 @@ class KnowledgeBaseCliIntegration:
         self,
         cli_instance: IndalekoBaseCLI,
         kb_integration: ArchivistKnowledgeIntegration | None = None,
-    ):
+    ) -> None:
         """
         Initialize the CLI integration.
 
@@ -76,7 +81,7 @@ class KnowledgeBaseCliIntegration:
         # Add knowledge base commands to help text
         self._update_help_text()
 
-    def _register_commands(self):
+    def _register_commands(self) -> None:
         """Register knowledge base commands with the CLI."""
         self.cli.register_command("/kb", self.handle_kb_command)
         self.cli.register_command("/patterns", self.handle_patterns_command)
@@ -86,7 +91,7 @@ class KnowledgeBaseCliIntegration:
         self.cli.register_command("/schema", self.handle_schema_command)
         self.cli.register_command("/stats", self.handle_stats_command)
 
-    def _update_help_text(self):
+    def _update_help_text(self) -> None:
         """Update CLI help text with knowledge base commands."""
         kb_help_text = (
             "\nKnowledge Base Commands:\n"
@@ -114,7 +119,7 @@ class KnowledgeBaseCliIntegration:
         Returns:
             Command output
         """
-        kb_help = (
+        return (
             "Knowledge Base Commands:\n\n"
             "/kb - Show this help text\n"
             "/patterns - Show learned query patterns\n"
@@ -136,7 +141,6 @@ class KnowledgeBaseCliIntegration:
             "/stats - Show detailed knowledge base statistics\n"
         )
 
-        return kb_help
 
     def handle_patterns_command(self, args: str) -> str:
         """
@@ -227,39 +231,38 @@ class KnowledgeBaseCliIntegration:
                 output += "\n"
 
             return output
-        else:
-            # Show details for a specific pattern
-            try:
-                pattern_id = UUID(args.strip())
-                pattern = self.kb_integration.kb_manager.get_knowledge_pattern(
-                    pattern_id,
-                )
+        # Show details for a specific pattern
+        try:
+            pattern_id = UUID(args.strip())
+            pattern = self.kb_integration.kb_manager.get_knowledge_pattern(
+                pattern_id,
+            )
 
-                if not pattern:
-                    return f"Pattern with ID {pattern_id} not found."
+            if not pattern:
+                return f"Pattern with ID {pattern_id} not found."
 
-                output = f"Pattern Details: {pattern_id}\n\n"
-                output += f"Type: {pattern.pattern_type}\n"
-                output += f"Confidence: {pattern.confidence:.2f}\n"
-                output += f"Usage Count: {pattern.usage_count}\n"
-                output += f"Created: {pattern.created_at.isoformat()}\n"
-                output += f"Updated: {pattern.updated_at.isoformat()}\n\n"
+            output = f"Pattern Details: {pattern_id}\n\n"
+            output += f"Type: {pattern.pattern_type}\n"
+            output += f"Confidence: {pattern.confidence:.2f}\n"
+            output += f"Usage Count: {pattern.usage_count}\n"
+            output += f"Created: {pattern.created_at.isoformat()}\n"
+            output += f"Updated: {pattern.updated_at.isoformat()}\n\n"
 
-                output += "Pattern Data:\n"
-                for key, value in pattern.pattern_data.items():
-                    if isinstance(value, dict):
-                        output += f"- {key}: {json.dumps(value, indent=2)}\n"
-                    elif isinstance(value, list):
-                        if len(value) > 5:
-                            output += f"- {key}: {value[:5]} (and {len(value) - 5} more)\n"
-                        else:
-                            output += f"- {key}: {value}\n"
+            output += "Pattern Data:\n"
+            for key, value in pattern.pattern_data.items():
+                if isinstance(value, dict):
+                    output += f"- {key}: {json.dumps(value, indent=2)}\n"
+                elif isinstance(value, list):
+                    if len(value) > 5:
+                        output += f"- {key}: {value[:5]} (and {len(value) - 5} more)\n"
                     else:
                         output += f"- {key}: {value}\n"
+                else:
+                    output += f"- {key}: {value}\n"
 
-                return output
-            except ValueError:
-                return f"Invalid pattern ID: {args}. Please provide a valid UUID."
+            return output
+        except ValueError:
+            return f"Invalid pattern ID: {args}. Please provide a valid UUID."
 
     def handle_entities_command(self, args: str) -> str:
         """
@@ -295,48 +298,47 @@ class KnowledgeBaseCliIntegration:
                 output += "\n"
 
             return output
-        else:
-            # Search for entities by name
-            search_term = args.strip()
+        # Search for entities by name
+        search_term = args.strip()
 
-            # Get all nodes
-            all_nodes = list(
-                self.kb_integration.entity_equivalence._nodes_cache.values(),
+        # Get all nodes
+        all_nodes = list(
+            self.kb_integration.entity_equivalence._nodes_cache.values(),
+        )
+
+        # Filter by name
+        matching_nodes = [node for node in all_nodes if search_term.lower() in node.name.lower()]
+
+        if not matching_nodes:
+            return f"No entities found matching '{search_term}'."
+
+        output = f"Entities matching '{search_term}' ({len(matching_nodes)}):\n\n"
+
+        for node in matching_nodes:
+            # Get canonical reference
+            canonical = self.kb_integration.entity_equivalence.get_canonical_reference(
+                node.entity_id,
             )
 
-            # Filter by name
-            matching_nodes = [node for node in all_nodes if search_term.lower() in node.name.lower()]
+            output += f"Entity: {node.name} ({node.entity_type})\n"
+            output += f"- ID: {node.entity_id}\n"
+            output += f"- Canonical: {canonical.name if canonical else 'N/A'}\n"
+            output += f"- Source: {node.source if node.source else 'N/A'}\n"
+            output += f"- Context: {node.context if node.context else 'N/A'}\n"
 
-            if not matching_nodes:
-                return f"No entities found matching '{search_term}'."
+            # Get group members
+            all_refs = self.kb_integration.entity_equivalence.get_all_references(
+                node.entity_id,
+            )
+            if len(all_refs) > 1:
+                output += f"- Equivalent References ({len(all_refs)}):\n"
+                for ref in all_refs:
+                    if ref.entity_id != node.entity_id:
+                        output += f"  - {ref.name} ({ref.entity_id})\n"
 
-            output = f"Entities matching '{search_term}' ({len(matching_nodes)}):\n\n"
+            output += "\n"
 
-            for node in matching_nodes:
-                # Get canonical reference
-                canonical = self.kb_integration.entity_equivalence.get_canonical_reference(
-                    node.entity_id,
-                )
-
-                output += f"Entity: {node.name} ({node.entity_type})\n"
-                output += f"- ID: {node.entity_id}\n"
-                output += f"- Canonical: {canonical.name if canonical else 'N/A'}\n"
-                output += f"- Source: {node.source if node.source else 'N/A'}\n"
-                output += f"- Context: {node.context if node.context else 'N/A'}\n"
-
-                # Get group members
-                all_refs = self.kb_integration.entity_equivalence.get_all_references(
-                    node.entity_id,
-                )
-                if len(all_refs) > 1:
-                    output += f"- Equivalent References ({len(all_refs)}):\n"
-                    for ref in all_refs:
-                        if ref.entity_id != node.entity_id:
-                            output += f"  - {ref.name} ({ref.entity_id})\n"
-
-                output += "\n"
-
-            return output
+        return output
 
     def handle_feedback_command(self, args: str) -> str:
         """
@@ -382,10 +384,8 @@ class KnowledgeBaseCliIntegration:
 
                 # Special handling for strength
                 if key == "strength":
-                    try:
+                    with contextlib.suppress(ValueError):
                         strength = float(value)
-                    except ValueError:
-                        pass
                 else:
                     feedback_data[key] = value
 
@@ -628,7 +628,7 @@ class KnowledgeBaseCliIntegration:
 
             if top_patterns:
                 output += "Top Pattern Performance (min 5 uses):\n"
-                for i, (pattern_id, pattern_stats) in enumerate(top_patterns[:5]):
+                for _i, (pattern_id, pattern_stats) in enumerate(top_patterns[:5]):
                     success_rate = pattern_stats.get("success_rate", 0)
                     usage_count = pattern_stats.get("usage_count", 0)
                     pattern_type = pattern_stats.get("pattern_type", "unknown")
@@ -644,8 +644,8 @@ class KnowledgeBaseCliIntegration:
         self,
         query_text: str,
         intent: str = "",
-        extracted_entities: list[dict[str, Any]] = None,
-        context: dict[str, Any] = None,
+        extracted_entities: list[dict[str, Any]] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Enhance a query using the knowledge base.
@@ -663,23 +663,22 @@ class KnowledgeBaseCliIntegration:
         self.cli.last_query = query_text
 
         # Process query through knowledge integration
-        response = self.kb_integration.process_query(
+        return self.kb_integration.process_query(
             query_text=query_text,
             query_intent=intent,
             entities=extracted_entities or [],
             context=context,
         )
 
-        return response
 
     def record_query_results(
         self,
         query_text: str,
         result_info: dict[str, Any],
         query_intent: str = "",
-        entities: list[dict[str, Any]] = None,
-        context: dict[str, Any] = None,
-        refinements: list[dict[str, Any]] = None,
+        entities: list[dict[str, Any]] | None = None,
+        context: dict[str, Any] | None = None,
+        refinements: list[dict[str, Any]] | None = None,
     ) -> None:
         """
         Record query results for learning.
@@ -727,24 +726,24 @@ def register_kb_integration(
     return kb_integration
 
 
-def main():
+def main() -> None:
     """Main function for testing the CLI integration."""
 
     # Create a sample CLI for testing
     class TestCLI(IndalekoBaseCLI):
         """Test CLI implementation."""
 
-        def __init__(self):
+        def __init__(self) -> None:
             """Initialize the test CLI."""
             self.commands = {}
             self.help_text = "Test CLI Help\n"
             self.last_query = ""
 
-        def register_command(self, command, handler):
+        def register_command(self, command, handler) -> None:
             """Register a command."""
             self.commands[command] = handler
 
-        def append_help_text(self, text):
+        def append_help_text(self, text) -> None:
             """Append to help text."""
             self.help_text += text
 
@@ -758,7 +757,7 @@ def main():
     cli = TestCLI()
 
     # Register KB integration
-    kb_integration = register_kb_integration(cli)
+    register_kb_integration(cli)
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Test Knowledge Base CLI Integration")
@@ -768,8 +767,7 @@ def main():
     args = parser.parse_args()
 
     # Execute command
-    result = cli.execute_command(args.command, args.args)
-    print(result)
+    cli.execute_command(args.command, args.args)
 
 
 if __name__ == "__main__":

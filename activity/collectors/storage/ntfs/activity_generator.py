@@ -34,8 +34,10 @@ import os
 import signal
 import sys
 import time
+
 from datetime import datetime, timedelta
 from typing import Any
+
 
 # Configure environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -49,6 +51,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.storage.ntfs.usn_journal_collector import (
     NtfsUsnJournalCollector,
 )
+
 
 try:
     from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
@@ -66,7 +69,7 @@ class NtfsActivityGenerator:
     intervals and optionally record it to the hot tier database, or save to JSONL files.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the activity generator.
 
@@ -138,7 +141,7 @@ class NtfsActivityGenerator:
             f"Initialized NtfsActivityGenerator for volumes: {', '.join(self.volumes)}",
         )
 
-    def _signal_handler(self, sig, frame):
+    def _signal_handler(self, sig, frame) -> None:
         """Handle termination signals gracefully."""
         self.logger.info(f"Received signal {sig}, shutting down...")
         self.running = False
@@ -148,7 +151,7 @@ class NtfsActivityGenerator:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return os.path.join(self.output_dir, f"ntfs_activity_{timestamp}.jsonl")
 
-    def _rotate_output_file(self):
+    def _rotate_output_file(self) -> None:
         """Rotate the output file if it exceeds the maximum size."""
         if self.output_file and self.current_file_size >= self.max_file_size:
             self.logger.info(
@@ -164,7 +167,7 @@ class NtfsActivityGenerator:
             self.output_file = open(filename, "w", encoding="utf-8")
             self.current_file_size = 0
 
-    def _write_activities_to_file(self, activities: list[dict[str, Any]]):
+    def _write_activities_to_file(self, activities: list[dict[str, Any]]) -> None:
         """Write activities to the output file."""
         import json
 
@@ -190,10 +193,10 @@ class NtfsActivityGenerator:
             activity_ids = self.recorder.store_activities(activities)
             return len(activity_ids)
         except Exception as e:
-            self.logger.error(f"Error recording activities to hot tier: {e}")
+            self.logger.exception(f"Error recording activities to hot tier: {e}")
             return 0
 
-    def start(self):
+    def start(self) -> None:
         """Start the activity generator and run until duration expires or interrupted."""
         self.running = True
         self.start_time = datetime.now()
@@ -266,7 +269,7 @@ class NtfsActivityGenerator:
         # Cleanup
         self.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the activity generator and clean up resources."""
         self.logger.info("Stopping activity generator...")
 
@@ -296,7 +299,7 @@ class NtfsActivityGenerator:
         self.logger.info("Activity generator stopped")
 
 
-def main():
+def main() -> None:
     """Main entry point for the script."""
     # Parse arguments
     parser = argparse.ArgumentParser(description="NTFS Activity Generator")
@@ -355,8 +358,7 @@ def main():
         )
 
         generator.start()
-    except Exception as e:
-        print(f"Error running activity generator: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

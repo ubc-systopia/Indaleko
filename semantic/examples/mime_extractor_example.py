@@ -26,7 +26,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +42,7 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 from semantic.registration_service import IndalekoSemanticRegistrationService
+
 
 # pylint: enable=wrong-import-position
 
@@ -91,11 +94,10 @@ def collect_mime_data(file_path: str) -> dict[str, Any]:
         MIME type data
     """
     collector = IndalekoSemanticMimeType()
-    mime_data = collector.process_file(file_path)
-    return mime_data
+    return collector.process_file(file_path)
 
 
-def main():
+def main() -> None:
     """Example of using the semantic registration service."""
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("MimeExtractorExample")

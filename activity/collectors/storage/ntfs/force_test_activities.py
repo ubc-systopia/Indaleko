@@ -27,8 +27,10 @@ import json
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Check if we're on Windows
 IS_WINDOWS = sys.platform.startswith("win")
@@ -60,15 +62,14 @@ def generate_test_files(
 ) -> list[str]:
     """Generate test files on the volume."""
     if verbose:
-        print(f"Creating {num_files} test files on volume {volume}...")
+        pass
 
     # Create test files using our utility function
     created_files = create_test_files(volume, num_files, verbose)
 
     if verbose:
-        print(f"Created {len(created_files)} test files:")
-        for filepath in created_files:
-            print(f"  - {filepath}")
+        for _filepath in created_files:
+            pass
 
     return created_files
 
@@ -188,7 +189,7 @@ def generate_mock_activities(
 ) -> list[NtfsStorageActivityData]:
     """Generate mock activities without using the USN journal."""
     if verbose:
-        print(f"Generating {num_activities} mock activities...")
+        pass
 
     activities = []
 
@@ -246,7 +247,7 @@ def generate_mock_activities(
         activities.append(activity)
 
         if verbose:
-            print(f"  Generated mock activity: {activity_type} - {file_name}")
+            pass
 
     return activities
 
@@ -314,7 +315,6 @@ def main():
 
     # Check if we're on Windows
     if not IS_WINDOWS and not args.mock:
-        print("Not running on Windows. Switching to mock mode.")
         args.mock = True
 
     activities = []
@@ -325,7 +325,7 @@ def main():
             activities = generate_mock_activities(args.num_activities, args.verbose)
         else:
             # Create test files
-            generated_files = generate_test_files(
+            generate_test_files(
                 args.volume,
                 args.num_files,
                 args.verbose,
@@ -333,12 +333,12 @@ def main():
 
             # Give the filesystem a moment to process the changes
             if args.verbose:
-                print("Waiting for filesystem to process changes...")
+                pass
             time.sleep(1)
 
             # Query USN journal
             if args.verbose:
-                print(f"Querying USN journal on volume {args.volume}...")
+                pass
 
             journal_info, records = get_usn_journal_records(
                 args.volume,
@@ -347,11 +347,10 @@ def main():
             )
 
             if not journal_info or not records:
-                print("Failed to get USN journal records. Falling back to mock mode.")
                 activities = generate_mock_activities(args.num_activities, args.verbose)
             else:
                 if args.verbose:
-                    print(f"Got {len(records)} USN journal records.")
+                    pass
 
                 # Convert USN journal records to activities
                 activities = [map_usn_record_to_activity(record) for record in records]
@@ -359,28 +358,25 @@ def main():
                 # Limit the number of activities if needed
                 if len(activities) > 100:
                     if args.verbose:
-                        print(f"Limiting to 100 activities (out of {len(activities)})")
+                        pass
                     activities = activities[:100]
 
                 if args.verbose:
-                    print(f"Generated {len(activities)} activities from USN journal.")
+                    pass
 
         # Save activities to file
         if args.verbose:
-            print(f"Saving {len(activities)} activities to {args.output}...")
+            pass
 
         save_activities_to_file(activities, args.output)
-        print(f"Saved {len(activities)} activities to {args.output}")
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except Exception:
         if args.verbose:
             import traceback
 
             traceback.print_exc()
 
     # Display summary
-    print("\nActivity Summary:")
     if activities:
         # Count by type
         activity_counts = {}
@@ -392,15 +388,14 @@ def main():
                 activity_counts[activity_type] = 1
 
         # Print counts
-        for activity_type, count in activity_counts.items():
-            print(f"  {activity_type}: {count}")
+        for activity_type in activity_counts:
+            pass
 
         # Print a few sample activities
-        print("\nSample Activities:")
-        for i, activity in enumerate(activities[:5]):
-            print(f"  {i+1}. {activity.activity_type} - {activity.file_name}")
+        for _i, activity in enumerate(activities[:5]):
+            pass
     else:
-        print("  No activities generated.")
+        pass
 
 
 if __name__ == "__main__":

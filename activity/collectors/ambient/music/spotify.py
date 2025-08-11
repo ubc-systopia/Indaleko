@@ -70,10 +70,14 @@ class SpotifyMusicCollector(AmbientMusicData):
         client_id = ""
         client_secret = ""
         redirect_uri = ""
-        self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id = client_id,
-                                                            client_secret= client_secret,
-                                                            redirect_uri=  redirect_uri,
-                                                            scope="user-read-playback-state"))
+        self.sp = spotipy.Spotify(
+            auth_manager=SpotifyOAuth(
+                client_id=client_id,
+                client_secret=client_secret,
+                redirect_uri=redirect_uri,
+                scope="user-read-playback-state",
+            ),
+        )
         self.authenticate()
 
     def authenticate(self) -> None:
@@ -84,7 +88,6 @@ class SpotifyMusicCollector(AmbientMusicData):
     def get_ambient_condition_history(self, start_time: datetime, end_time: datetime) -> list:
         """Get the ambient condition history for a specific time range."""
         raise NotImplementedError("This method is not implemented yet.")
-
 
     def get_ambient_condition_name(self) -> Never:
         """
@@ -172,10 +175,10 @@ class SpotifyMusicCollector(AmbientMusicData):
         )
 
         data["Record"] = IndalekoRecordDataModel(
-                SourceIdentifier=source_identifier,
-                Timestamp = data["Timestamp"],
-                Data = Indaleko.encode_binary_data(data),
-            )
+            SourceIdentifier=source_identifier,
+            Timestamp=data["Timestamp"],
+            Data=Indaleko.encode_binary_data(data),
+        )
         data["SemanticAttributes"] = []
         data["source"] = "spotify"
 

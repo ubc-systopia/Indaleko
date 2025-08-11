@@ -24,7 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import logging
 import os
-from typing import Dict, List, Any, Optional
+
+from typing import Any
+
 
 # Default collection groupings, based on the tikz diagram
 DEFAULT_GROUPS = {
@@ -32,19 +34,19 @@ DEFAULT_GROUPS = {
         "Objects",
         "SemanticData",
         "NamedEntities",
-        "Relationships"
+        "Relationships",
     ],
     "Activity Context": [
         "ActivityContext",
         "TempActivityContext",
         "GeoActivityContext",
         "MusicActivityContext",
-        "ActivityProviderData_*"  # Wildcard to match all provider data collections
+        "ActivityProviderData_*",  # Wildcard to match all provider data collections
     ],
     "Entity Equivalence": [
         "EntityEquivalenceGroups",
         "EntityEquivalenceNodes",
-        "EntityEquivalenceRelations"
+        "EntityEquivalenceRelations",
     ],
     "System Management": [
         "QueryHistory",
@@ -53,19 +55,19 @@ DEFAULT_GROUPS = {
         "MachineConfig",
         "Users",
         "IdentityDomains",
-        "CollectionMetadata"
+        "CollectionMetadata",
     ],
     "Learning & Feedback": [
         "PerformanceData",
         "FeedbackRecords",
         "LearningEvents",
         "KnowledgePatterns",
-        "ArchivistMemory"
-    ]
+        "ArchivistMemory",
+    ],
 }
 
 
-def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+def load_config(config_path: str | None = None) -> dict[str, Any]:
     """
     Load configuration from a JSON file.
 
@@ -81,7 +83,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     try:
         logging.info(f"Loading configuration from {config_path}")
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config = json.load(f)
 
         # Ensure the configuration has the expected structure
@@ -92,12 +94,12 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         return config
 
     except Exception as e:
-        logging.error(f"Error loading configuration from {config_path}: {e}")
+        logging.exception(f"Error loading configuration from {config_path}: {e}")
         logging.info("Falling back to default configuration")
         return {"groups": DEFAULT_GROUPS}
 
 
-def save_config(config: Dict[str, Any], config_path: str) -> bool:
+def save_config(config: dict[str, Any], config_path: str) -> bool:
     """
     Save configuration to a JSON file.
 
@@ -114,11 +116,11 @@ def save_config(config: Dict[str, Any], config_path: str) -> bool:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(os.path.abspath(config_path)), exist_ok=True)
 
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
 
         return True
 
     except Exception as e:
-        logging.error(f"Error saving configuration to {config_path}: {e}")
+        logging.exception(f"Error saving configuration to {config_path}: {e}")
         return False

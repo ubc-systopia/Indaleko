@@ -4,6 +4,7 @@ import json
 import os
 
 import arango
+
 from arango import ArangoClient
 from dbconfig import DBConfig
 
@@ -21,7 +22,7 @@ class Validator:
 
     TIMEOUT_SEC = 4 * 60  # request timeout
 
-    def __init__(self, config_path: str, json_path: str):
+    def __init__(self, config_path: str, json_path: str) -> None:
         assert os.path.isfile(
             config_path,
         ), f"Err: no config path at this file: {config_path}"
@@ -54,8 +55,7 @@ class Validator:
 
             self.db = db
             self.db_client = client
-        except Exception as e:
-            print(f"error connecting to the databse, got={e}")
+        except Exception:
             return False
         return True
 
@@ -66,26 +66,23 @@ class Validator:
                     # Attempt to load each line as a JSON object
                     obj = json.loads(line)
                     yield obj
-                except json.JSONDecodeError as e:
-                    print("Err parsing the input json file; got=", e)
+                except json.JSONDecodeError:
                     yield None
 
-    def validate(self):
+    def validate(self) -> None:
         st_mode_dict = None
 
-        def __build_st_mode_dict():
+        def __build_st_mode_dict() -> None:
             nonlocal st_mode_dict
             try:
                 results = self.db.aql.execute(Validator.queries["group_by_count"])
                 st_mode_dict = {doc["st_mode"]: doc["count"] for doc in results}
-            except arango.AQLQueryExecuteError as e:
-                print(f"could not group the st_mode field; got={e}")
+            except arango.AQLQueryExecuteError:
                 return
-            print("Total st_mode=", len(st_mode_dict))
 
         total_misses = 0
         total = 0
-        for line_num, validation_obj in enumerate(
+        for _line_num, validation_obj in enumerate(
             self.generate_objects_from_json_file(),
         ):
             if not validation_obj:
@@ -102,14 +99,10 @@ class Validator:
                         # Compare the query result with the given count field
                         if count == validation_obj["count"]:
                             # Matching count equals expected count
-                            print(
-                                f"Matching count for field '{validation_obj['value']}' in '{self.db.db_name}', count={validation_obj['count']}",
-                            )
+                            pass
                         else:
                             # Count does not match expected
-                            print(
-                                f"Mismatching count for field '{validation_obj['value']}' in {self.db.db_name}: Expected {validation_obj['count']}, Got {count}",
-                            )
+                            pass
                     case "contains":
                         # escape the spaces
                         validation_obj["parent_uri"] = validation_obj["parent_uri"].replace(r"'", r"\'")
@@ -119,11 +112,8 @@ class Validator:
                             parent_uri=validation_obj["parent_uri"],
                         )
 
-                        parent_obj = [obj for obj in self.db.aql.execute(find_parent_query)]
-                        if not len(parent_obj):
-                            print(
-                                f"[CONTAINS] SKIPPED VALIATION: couldn't find the parent obj for {validation_obj['parent_uri']}",
-                            )
+                        parent_obj = list(self.db.aql.execute(find_parent_query))
+                        if not parent_obj:
                             continue
                         parent_obj = parent_obj.pop()
 
@@ -136,9 +126,6 @@ class Validator:
                         results = [document["URI"] for document in neighbors_cursor if document]
 
                         if len(results) != len(validation_obj["children_uri"]):
-                            print(
-                                f"CONTAINS[MISS]: skipped : {validation_obj['parent_uri']}",
-                            )
                             total_misses += 1
                     case "contained_by":
                         # escape the spaces
@@ -148,11 +135,8 @@ class Validator:
                             parent_uri=validation_obj["child_uri"],
                         )
 
-                        parent_obj = [obj for obj in self.db.aql.execute(find_parent_query)]
-                        if not len(parent_obj):
-                            print(
-                                f"[CONTAINED_BY] SKIPPED VALIDATION: couldn't find the parent obj for {validation_obj['child_uri']}",
-                            )
+                        parent_obj = list(self.db.aql.execute(find_parent_query))
+                        if not parent_obj:
                             continue
                         parent_obj = parent_obj.pop()
 
@@ -166,31 +150,20 @@ class Validator:
                         results = [document["URI"] for document in parents_cursor if document]
 
                         if len(results) != len(validation_obj["parent_uris"]):
-                            print(
-                                f"CONTAINED_BY[MISS]: skipped: {validation_obj['child_uri']}",
-                            )
                             total_misses += 1
 
-            except (arango.exceptions.AQLQueryExecuteError, StopIteration) as e:
-                print("{:-^10} Error at line {}".format("", line_num))
-                print(
-                    f"Error querying and comparing in {self.db.db_name} for {validation_obj['parent_uri']}: Exception Type: {type(e)}, Exception: {e}",
-                )
+            except (arango.exceptions.AQLQueryExecuteError, StopIteration):
                 find_parent_query and print(find_parent_query)
                 find_1hop_neighbors and print(find_1hop_neighbors)
                 find_1hop_contained_by and print(find_1hop_contained_by)
 
         if not total:
-            print(
-                "Total processed is 0. Either the input is empty or all entries are not valid",
-            )
+            pass
         if total_misses not in (0, 1, 2):
-            print("Total misses has to be among 0, 1 and 2.")
-        print("{:*^10} DONE".format(""))
+            pass
 
 
-def main():
-    print("{:-^10} Validating Ingestion".format(""))
+def main() -> None:
     parser = argparse.ArgumentParser("Ingester Validator")
     parser.add_argument("-f", "--file", dest="json_file_path", required=True)
     parser.add_argument("-c", "--config", dest="config_path", required=False)

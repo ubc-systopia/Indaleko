@@ -7,6 +7,7 @@ different specialized entities in the Fire Circle.
 
 import time
 import uuid
+
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -39,7 +40,7 @@ class CircleSession:
         session_id: str | None = None,
         entities: list[FireCircleEntity] | None = None,
         coordinator: FireCircleEntity | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle session.
 
@@ -105,7 +106,7 @@ class CircleSession:
 class FireCircleOrchestrator:
     """Orchestrates the interactions between Fire Circle entities."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a new Fire Circle orchestrator."""
         self.sessions: dict[str, CircleSession] = {}
 
@@ -224,7 +225,6 @@ class FireCircleOrchestrator:
             except Exception as e:
                 # Log error
                 error_message = f"Error processing message with {entity.role.value}: {e!s}"
-                print(error_message)
                 session.add_message(
                     "system",
                     error_message,
@@ -264,7 +264,6 @@ class FireCircleOrchestrator:
             except Exception as e:
                 # Log error
                 error_message = f"Error generating synthesis: {e!s}"
-                print(error_message)
                 session.add_message(
                     "system",
                     error_message,

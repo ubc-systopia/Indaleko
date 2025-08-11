@@ -17,7 +17,7 @@ class FireCircleMessage:
         role: str,
         content: str,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle message.
 
@@ -43,7 +43,7 @@ class FireCircleRequest:
         messages: list[FireCircleMessage],
         tools: list[dict[str, Any]] | None = None,
         model_parameters: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle request.
 
@@ -73,7 +73,7 @@ class FireCircleResponse:
         message: FireCircleMessage,
         usage: dict[str, Any] | None = None,
         tool_calls: list[dict[str, Any]] | None = None,
-    ):
+    ) -> None:
         """
         Initialize a new Fire Circle response.
 

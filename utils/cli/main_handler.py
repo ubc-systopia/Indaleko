@@ -25,6 +25,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -41,11 +42,12 @@ from utils.misc.file_name_management import (
     indaleko_file_name_prefix,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoMainHandler:
-    """Base class for handling main function logic in collectors and recorders"""
+    """Base class for handling main function logic in collectors and recorders."""
 
     def __init__(
         self,
@@ -53,7 +55,7 @@ class IndalekoMainHandler:
         debug: bool = False,
     ) -> None:
         """
-        Initialize the main handler with specific service and config classes
+        Initialize the main handler with specific service and config classes.
 
         Args:
             service_class: Type of the service (BaseStorageCollector or BaseStorageRecorder subclass)
@@ -71,9 +73,11 @@ class IndalekoMainHandler:
         config_dir: str,
         prefix: str = indaleko_file_name_prefix,
         suffix: str = "ini",
-        keywords: list[str] = [],
+        keywords: list[str] | None = None,
     ) -> list:
-        """Find machine configuration files"""
+        """Find machine configuration files."""
+        if keywords is None:
+            keywords = []
         candidates = [fname for fname, _ in find_candidate_files(keywords, config_dir)]
         if prefix:
             candidates = [fname for fname in candidates if fname.startswith(prefix)]
@@ -90,10 +94,10 @@ class IndalekoMainHandler:
     ) -> list:
         """Find data files with the relevant tags."""
         tag_list = [f"{key}={value}" for key, value in tags.items()]
-        candidates = [fname for fname, _ in find_candidate_files(tag_list, data_dir)]
+        [fname for fname, _ in find_candidate_files(tag_list, data_dir)]
 
     def setup_argument_parser(self) -> argparse.ArgumentParser:
-        """Create the base argument parser with common arguments"""
+        """Create the base argument parser with common arguments."""
         pre_parser = argparse.ArgumentParser(add_help=False)
         pre_parser.add_argument(
             "--configdir",
@@ -157,8 +161,8 @@ class IndalekoMainHandler:
 
         return pre_parser
 
-    def setup_logging(self, args):
-        """Configure logging based on arguments"""
+    def setup_logging(self, args) -> str:
+        """Configure logging based on arguments."""
         # log_file_name = service.generate_file_name(
         #    target_dir=args.logdir,
         #    suffix='.log'
@@ -173,7 +177,7 @@ class IndalekoMainHandler:
         return "foo.log"
 
     def load_machine_config(self, args):
-        """Load machine configuration"""
+        """Load machine configuration."""
         config_files = self.machine_config_class.find_config_files(args.configdir)
         if not config_files:
             raise ValueError(f"No config files found in {args.configdir}")
@@ -185,8 +189,8 @@ class IndalekoMainHandler:
         )
 
 
-def main():
-    """Test the main handler"""
+def main() -> None:
+    """Test the main handler."""
     handler = IndalekoMainHandler()
     pre_parser = handler.setup_argument_parser()
     pre_args, unknown = pre_parser.parse_known_args()

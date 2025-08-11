@@ -31,6 +31,7 @@ from arango import ArangoClient
 # third-party imports
 from icecream import ic
 
+
 #  Find Indaleko Root
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +82,7 @@ class UnstructuredLookup:
     #                     SORT doc.URI \
     #                     RETURN doc'
 
-    def __init__(self):
+    def __init__(self) -> None:
         unstructured_config_file = os.path.join(
             Indaleko.default_config_dir,
             self.unstructured_config_file_name,
@@ -97,7 +98,7 @@ class UnstructuredLookup:
 
     def windows_to_unix_path(self, windows_path):
         """Converts the given windows path of a file to a unix one. With
-        the root directory set to the host drive's Bind Mount in Docker
+        the root directory set to the host drive's Bind Mount in Docker.
         """
         normalized_path = os.path.normpath(windows_path)
         linux_path = normalized_path.replace("\\", "/")
@@ -108,7 +109,7 @@ class UnstructuredLookup:
 
     def connect_db(self):
         """Returns a StandardDatabase object after connecting to ArangoDB
-        using information specified in the DB configuration file
+        using information specified in the DB configuration file.
         """
         arango_config_file = os.path.join(
             Indaleko.default_config_dir,
@@ -146,7 +147,7 @@ class UnstructuredLookup:
         _, file_extension = os.path.splitext(object_uri)
         return file_extension in self.supported_formats
 
-    def generate_input(self):
+    def generate_input(self) -> None:
         """Creates a jsonl file in the Data directory with a set of inputs to be sent to Unstructured for processing. Each row contains a unique ObjectIdentifier and unix-base URI converted from the original Windows one.
 
         Additional feature to be added later: Checksums

@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+
 from typing import Any
 
 from pydantic import Field
+
 
 # from icecream import ic
 
@@ -39,13 +41,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.db_index import IndalekoCollectionIndexDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the Indaleko collection metadata.
-    """
+    """This class defines the data model for the Indaleko collection metadata."""
 
     key: str = Field(
         ...,
@@ -107,7 +108,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoCollectionMetadataDataModel.test_model_main()
 

@@ -23,10 +23,12 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import datetime, timedelta
 from typing import Any
 
 import requests
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +44,7 @@ from activity.collectors.collaboration.data_models.shared_file import SharedFile
 from activity.collectors.collaboration.discord.data_models.file_share_data_model import (
     DiscordDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -60,7 +63,7 @@ class DiscordFileShareCollector(CollaborationCollector):
         token_file: str | None = None,
         token: str | None = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the Discord file sharing collector.
 
@@ -114,7 +117,7 @@ class DiscordFileShareCollector(CollaborationCollector):
                     raise ValueError("No token found in the token file")
                 return data["token"]
         except Exception as e:
-            self.logger.error(f"Failed to load token from {file_path}: {e}")
+            self.logger.exception(f"Failed to load token from {file_path}: {e}")
             raise
 
     def _get_discord_api_headers(self) -> dict[str, str]:
@@ -146,7 +149,7 @@ class DiscordFileShareCollector(CollaborationCollector):
             self.dm_channels = response.json()
             return self.dm_channels
         except Exception as e:
-            self.logger.error(f"Failed to retrieve DM channels: {e}")
+            self.logger.exception(f"Failed to retrieve DM channels: {e}")
             return []
 
     def get_guilds(self) -> list[dict]:
@@ -164,7 +167,7 @@ class DiscordFileShareCollector(CollaborationCollector):
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.logger.error(f"Failed to retrieve guilds: {e}")
+            self.logger.exception(f"Failed to retrieve guilds: {e}")
             return []
 
     def get_guild_channels(self, guild_id: str) -> list[dict]:
@@ -191,7 +194,7 @@ class DiscordFileShareCollector(CollaborationCollector):
             self.guild_channels.extend(text_channels)
             return text_channels
         except Exception as e:
-            self.logger.error(f"Failed to retrieve channels for guild {guild_id}: {e}")
+            self.logger.exception(f"Failed to retrieve channels for guild {guild_id}: {e}")
             return []
 
     def get_channel_messages(self, channel_id: str, limit: int = 100) -> list[dict]:
@@ -214,7 +217,7 @@ class DiscordFileShareCollector(CollaborationCollector):
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to retrieve messages for channel {channel_id}: {e}",
             )
             return []
@@ -464,7 +467,7 @@ class DiscordFileShareCollector(CollaborationCollector):
         return [self.convert_attachment_to_model(attachment).model_dump() for attachment in self.file_attachments]
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_FILE_SHARE,
             ActivityDataCharacteristics.ACTIVITY_DATA_COLLABORATION,
@@ -472,11 +475,11 @@ class DiscordFileShareCollector(CollaborationCollector):
         ]
 
     def get_collectorr_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
@@ -556,8 +559,8 @@ class DiscordFileShareCollector(CollaborationCollector):
         return DiscordDataModel.model_json_schema()
 
 
-def main():
-    """Main function for testing the collector"""
+def main() -> None:
+    """Main function for testing the collector."""
     # Set up logging
     logging.basicConfig(level=logging.INFO)
 
@@ -570,21 +573,14 @@ def main():
         attachments = collector.collect_data()
 
         # Print summary
-        print(f"\nCollected {len(attachments)} file attachments from Discord")
 
         # Print the first few attachments
-        for i, attachment in enumerate(attachments[:5]):
-            print(f"\nAttachment {i+1}:")
-            print(f"  Filename: {attachment['filename']}")
-            print(f"  URL: {attachment['url']}")
-            print(f"  Size: {attachment.get('size_bytes', 'Unknown')} bytes")
-            print(f"  From: {attachment.get('sender', 'Unknown')}")
+        for _i, _attachment in enumerate(attachments[:5]):
+            pass
 
         # Process the data
         if attachments:
-            processed = collector.process_data(attachments[0])
-            print("\nExample processed data:")
-            print(json.dumps(processed, indent=2, default=str))
+            collector.process_data(attachments[0])
 
     except Exception as e:
         logging.exception(f"Error in main: {e}")

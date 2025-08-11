@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -37,6 +38,7 @@ from activity.collectors.ambient.smart_thermostat.nest import (
 )
 from activity.collectors.base import CollectorBase
 
+
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
@@ -47,9 +49,7 @@ __all__ = [
 
 
 def activity_providers() -> list[CollectorBase]:
-    """
-    This method retrieves the activity data providers in this module.
-    """
+    """This method retrieves the activity data providers in this module."""
     return [
         EcobeeSmartThermostatCollector,
         NestSmartThermostatCollector,

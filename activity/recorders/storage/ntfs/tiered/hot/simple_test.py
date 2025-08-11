@@ -28,9 +28,11 @@ import os
 import sys
 import time
 import uuid
+
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -51,8 +53,8 @@ def read_activities(file_path: str) -> list[dict[str, Any]]:
             try:
                 activity = json.loads(line)
                 activities.append(activity)
-            except json.JSONDecodeError as e:
-                print(f"Error parsing JSON: {e}")
+            except json.JSONDecodeError:
+                pass
     return activities
 
 
@@ -210,12 +212,10 @@ def test_ttl_processing(
 
 def simulate_recorder_processing(file_path: str) -> dict[str, Any]:
     """Simulate the processing done by the recorder without actually creating one."""
-    print(f"Processing {file_path}...")
     start_time = time.time()
 
     # Read activities
     activities = read_activities(file_path)
-    print(f"Read {len(activities)} activities")
 
     # Count activity types
     activity_types = Counter()
@@ -248,40 +248,17 @@ def simulate_recorder_processing(file_path: str) -> dict[str, Any]:
 
 def print_results(results: dict[str, Any]) -> None:
     """Print the simulation results."""
-    print("\n=== Hot Tier Recorder Simulation Results ===")
-    print(f"File: {results['file_path']}")
-    print(f"Activities: {results['activity_count']}")
-    print(f"Processing time: {results['processing_time']:.2f} seconds")
+    for _activity_type, _count in results["activity_types"].items():
+        pass
 
-    print("\nActivity Types:")
-    for activity_type, count in results["activity_types"].items():
-        print(f"  {activity_type}: {count}")
-
-    print("\nImportance Scores:")
-    print(f"  Average: {results['importance_results']['average']:.2f}")
-    print(f"  Min: {results['importance_results']['min']:.2f}")
-    print(f"  Max: {results['importance_results']['max']:.2f}")
-    print("  Distribution:")
-    for range_name, count in results["importance_results"]["ranges"].items():
-        print(f"    {range_name}: {count}")
-
-    print("\nEntity Mapping:")
-    print(f"  Unique entities: {results['entity_results']['entity_count']}")
-    print(f"  Unique FRNs: {results['entity_results']['frn_count']}")
-    print(
-        f"  Activities with entities: {results['entity_results']['activities_with_entities']}",
-    )
-
-    print("\nTTL Processing:")
-    print(f"  TTL days: {results['ttl_results']['ttl_days']}")
-    print(f"  Total activities: {results['ttl_results']['total']}")
-    print(f"  Active: {results['ttl_results']['active_count']}")
-    print(f"  Expired: {results['ttl_results']['expired_count']}")
-
-    print("\n=== END RESULTS ===\n")
+    for _range_name, _count in results["importance_results"]["ranges"].items():
+        pass
 
 
-def main():
+
+
+
+def main() -> None:
     """Main function."""
     # Set up logging
     logging.basicConfig(level=logging.INFO)
@@ -297,7 +274,6 @@ def main():
     )
 
     if not os.path.exists(file_path):
-        print(f"Error: File not found: {file_path}")
         return
 
     # Simulate recorder processing

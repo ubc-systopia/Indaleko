@@ -21,8 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import sys
+
 from abc import ABC, abstractmethod
 from pathlib import Path
+
 
 # from icecream import ic
 
@@ -37,45 +39,46 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from platforms.machine_config import IndalekoMachineConfig
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoHandlermixin(ABC):
-    """Class for providing callback processing for the main handler"""
+    """Class for providing callback processing for the main handler."""
 
     @abstractmethod
     def get_platform_name() -> str:
-        """This method is used to get the platform name"""
+        """This method is used to get the platform name."""
 
     @abstractmethod
     def get_pre_parser() -> argparse.Namespace | None:
-        """This method is used to get the pre-parser"""
+        """This method is used to get the pre-parser."""
 
     @abstractmethod
     def get_additional_parameters(
-        pre_parser: argparse.Namespace,
+        self: argparse.Namespace,
     ) -> argparse.Namespace | None:
         """This method is used to add additional parameters to the parser."""
 
     @abstractmethod
     def get_default_file(
-        data_directory: str | Path,
+        self: str | Path,
         candidates: list[str | Path],
     ) -> str | None:
-        """Pick the preferred/default file from a list of candidates (None if the list is empty)"""
+        """Pick the preferred/default file from a list of candidates (None if the list is empty)."""
 
     @abstractmethod
-    def find_db_config_files(config_dir: str | Path) -> list[str] | None:
-        """This method is used to find database configuration files"""
+    def find_db_config_files(self: str | Path) -> list[str] | None:
+        """This method is used to find database configuration files."""
 
     @abstractmethod
     def find_machine_config_files(
-        config_dir: str | Path,
-        platform: str = None,
-        machine_id: str = None,
+        self: str | Path,
+        platform: str | None = None,
+        machine_id: str | None = None,
     ) -> list[str] | None:
         """
-        This method is used to find machine configuration files
+        This method is used to find machine configuration files.
 
         Inputs:
             - config_dir: The directory where the configuration files are stored
@@ -92,37 +95,37 @@ class IndalekoHandlermixin(ABC):
 
     @abstractmethod
     def find_data_files(
-        data_dir: str | Path,
+        self: str | Path,
         keys: dict[str, str],
         prefix: str,
         suffix: str,
     ) -> list[str] | None:
-        """This method is used to find data files"""
+        """This method is used to find data files."""
 
     @abstractmethod
-    def generate_output_file_name(keys: dict[str, str]) -> str:
-        """This method is used to generate an output file name"""
+    def generate_output_file_name(self: dict[str, str]) -> str:
+        """This method is used to generate an output file name."""
 
     @abstractmethod
-    def generate_log_file_name(keys: dict[str, str]) -> str:
-        """This method is used to generate a log file name"""
+    def generate_log_file_name(self: dict[str, str]) -> str:
+        """This method is used to generate a log file name."""
 
     @abstractmethod
-    def generate_perf_file_name(keys: dict[str, str]) -> str:
-        """This method is used to generate a performance file name"""
+    def generate_perf_file_name(self: dict[str, str]) -> str:
+        """This method is used to generate a performance file name."""
 
     @abstractmethod
-    def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-        """This method is used to load a machine configuration"""
+    def load_machine_config(self: dict[str, str]) -> IndalekoMachineConfig:
+        """This method is used to load a machine configuration."""
 
     @abstractmethod
-    def extract_filename_metadata(file_name: str) -> dict:
+    def extract_filename_metadata(self: str) -> dict:
         """This method is used to parse the file name."""
 
     @abstractmethod
-    def get_storage_identifier(parser: argparse.Namespace) -> str | None:
-        """This method is used to get the storage identifier (if any) for a path"""
+    def get_storage_identifier(self: argparse.Namespace) -> str | None:
+        """This method is used to get the storage identifier (if any) for a path."""
 
     @abstractmethod
-    def get_user_identifier(parser: argparse.Namespace) -> str | None:
-        """This method is used to get the user identifier (if any)"""
+    def get_user_identifier(self: argparse.Namespace) -> str | None:
+        """This method is used to get the user identifier (if any)."""

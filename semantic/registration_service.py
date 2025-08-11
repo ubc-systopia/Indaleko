@@ -22,7 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.record import IndalekoRecordDataModel
 from db.collection import IndalekoCollection
 from utils.registration_service import IndalekoRegistrationService
+
 
 # pylint: enable=wrong-import-position
 
@@ -57,7 +60,7 @@ class IndalekoSemanticRegistrationService(IndalekoRegistrationService):
     service_version = "1.0.0"
     service_type = "semantic_data_registrar"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the semantic registration service."""
         super().__init__(
             service_uuid=self.service_uuid_str,
@@ -164,13 +167,9 @@ class IndalekoSemanticRegistrationService(IndalekoRegistrationService):
         return matching_extractors
 
 
-def main():
+def main() -> None:
     """Test the semantic registration service."""
-    service = IndalekoSemanticRegistrationService()
-    print(f"Initialized {service.__class__.__name__}")
-    print(f"Service UUID: {service.service_uuid_str}")
-    print(f"Collection name: {service.collection_name}")
-    print(f"Provider count: {len(service.get_provider_list())}")
+    IndalekoSemanticRegistrationService()
 
 
 if __name__ == "__main__":

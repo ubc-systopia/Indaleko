@@ -26,6 +26,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -79,8 +80,7 @@ def test_checksum_collector():
         ic("Checksum Record:")
 
         # Format and print the checksum record JSON
-        formatted_json = json.dumps(checksum_record, indent=2, default=str)
-        print(formatted_json)
+        json.dumps(checksum_record, indent=2, default=str)
 
         # Verify that checksums match
         assert checksums["MD5"] == checksum_record["md5_checksum"]

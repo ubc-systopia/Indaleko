@@ -25,9 +25,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,15 +49,14 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.misc.file_name_management import generate_file_name
 
+
 # pylint: enable=wrong-import-position
 
 
 class CollectionMetadataEditor:
-    """
-    Allows interactive editing of CollectionMetadata using a user's default text editor.
-    """
+    """Allows interactive editing of CollectionMetadata using a user's default text editor."""
 
-    def __init__(self, db: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         """Initialize the editor with database connection."""
         self.db_metadata = IndalekoDBCollectionsMetadata(db)
 
@@ -63,7 +64,7 @@ class CollectionMetadataEditor:
         """Fetch and return all collection metadata as a dictionary."""
         return {name: meta.serialize() for name, meta in self.db_metadata.collections_metadata.items()}
 
-    def edit_metadata(self, collection_name: str):
+    def edit_metadata(self, collection_name: str) -> None:
         """
         Opens the metadata for a collection in the system's default editor.
 
@@ -71,7 +72,6 @@ class CollectionMetadataEditor:
             collection_name (str): The collection to edit.
         """
         if collection_name not in self.db_metadata.collections_metadata:
-            print(f"Error: Collection '{collection_name}' not found.")
             return
 
         # Fetch metadata for editing
@@ -106,9 +106,6 @@ class CollectionMetadataEditor:
                 continue
 
         if not found:
-            print(
-                "Error: No text editor found. Please set the EDITOR environment variable.",
-            )
             return
 
         edit_ok = False
@@ -121,8 +118,7 @@ class CollectionMetadataEditor:
             try:
                 self.apply_changes(collection_name, edited_data)
                 edit_ok = True
-            except Exception as e:
-                print(f"Edited file raised an exception: {e}")
+            except Exception:
                 retry = input("Retry editing? (y/n): ").strip().lower()
                 if retry != "y":
                     break
@@ -130,7 +126,7 @@ class CollectionMetadataEditor:
         # Cleanup temp file
         os.remove(tmp_file_path)
 
-    def apply_changes(self, collection_name: str, edited_data: dict):
+    def apply_changes(self, collection_name: str, edited_data: dict) -> None:
         """
         Validates and updates collection metadata in the database.
 
@@ -150,12 +146,9 @@ class CollectionMetadataEditor:
             )
             db_collection.insert(updated_metadata.serialize(), overwrite=True)
 
-            print(f"Successfully updated metadata for '{collection_name}'.")
 
-        except Exception as e:
-            print(
-                f"Error: Failed to update collection {collection_name} metadata - {e}",
-            )
+        except Exception:
+            pass
 
 
 class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
@@ -164,7 +157,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
     service_name = "collector_metadata_util"
     platform_name = "metadata_editor"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Create an instance of the IndalekoCollectorMetadataCLI class."""
         cli_data = IndalekoBaseCliDataModel(
             RegistrationServiceName=IndalekoCollectorMetadataCLI.service_name,
@@ -190,18 +183,18 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         )
         self.db_config = IndalekoDBConfig(config_file=config_file_path, start=True)
 
-    def run(self):
+    def run(self) -> None:
         """Run the command-line interface."""
         args = self.get_args()
         if hasattr(self, args.func):
             getattr(self, args.func)()
 
-    def edit(self):
+    def edit(self) -> None:
         """Edit the metadata for the specified collection."""
         ic(f"Editing: {self.args.collection_name}")
         CollectionMetadataEditor().edit_metadata(self.args.collection_name)
 
-    def backup(self):
+    def backup(self) -> None:
         """Backup the metadata for the specified collection."""
         ic("backup called")
         backup_file = os.path.join(
@@ -226,7 +219,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         shutil.move(tmp_file_path, backup_file)
         ic(f"Backup complete: {backup_file}")
 
-    def restore(self):
+    def restore(self) -> None:
         """Restore the metadata for the specified collection."""
         ic("restore called")
         restore_file = os.path.join(
@@ -297,7 +290,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
     local_handler_mixin = CollectorMetadataCLIHandlerMixin
 
 
-def main():
+def main() -> None:
     """This is a CLI tool for managing the Indaleko collection metadata."""
     cli = IndalekoCollectorMetadataCLI()
     cli.run()

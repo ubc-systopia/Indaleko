@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any, Generic, TypeVar
 
@@ -192,7 +193,7 @@ class MemoryStore(Generic[T], abc.ABC):
         self,
         memory_class: type[T],
         logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         """
         Initialize the memory store.
 
@@ -292,7 +293,7 @@ class FileMemoryStore(MemoryStore[T]):
         memory_class: type[T],
         directory: str,
         logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         """
         Initialize the file memory store.
 
@@ -367,7 +368,7 @@ class FileMemoryStore(MemoryStore[T]):
             return memory
 
         except Exception as e:
-            self.logger.error(f"Error retrieving memory {memory_id}: {e}")
+            self.logger.exception(f"Error retrieving memory {memory_id}: {e}")
             return None
 
     def update(self, memory: T) -> bool:
@@ -398,7 +399,7 @@ class FileMemoryStore(MemoryStore[T]):
             return True
 
         except Exception as e:
-            self.logger.error(f"Error updating memory {memory.memory_id}: {e}")
+            self.logger.exception(f"Error updating memory {memory.memory_id}: {e}")
             return False
 
     def delete(self, memory_id: str) -> bool:
@@ -423,7 +424,7 @@ class FileMemoryStore(MemoryStore[T]):
             return True
 
         except Exception as e:
-            self.logger.error(f"Error deleting memory {memory_id}: {e}")
+            self.logger.exception(f"Error deleting memory {memory_id}: {e}")
             return False
 
     def search(self, query: dict[str, Any], limit: int = 10) -> list[T]:
@@ -462,26 +463,26 @@ class FileMemoryStore(MemoryStore[T]):
                         compare_value = value["value"]
 
                         if (
-                            op == "eq"
-                            and memory_value != compare_value
-                            or op == "ne"
-                            and memory_value == compare_value
+                            (op == "eq"
+                            and memory_value != compare_value)
+                            or (op == "ne"
+                            and memory_value == compare_value)
                             or (
-                                op == "gt"
-                                and memory_value <= compare_value
-                                or op == "lt"
-                                and memory_value >= compare_value
+                                (op == "gt"
+                                and memory_value <= compare_value)
+                                or (op == "lt"
+                                and memory_value >= compare_value)
                             )
                             or (
-                                op == "gte"
-                                and memory_value < compare_value
-                                or op == "lte"
-                                and memory_value > compare_value
+                                (op == "gte"
+                                and memory_value < compare_value)
+                                or (op == "lte"
+                                and memory_value > compare_value)
                                 or (
-                                    op == "in"
-                                    and memory_value not in compare_value
-                                    or op == "contains"
-                                    and compare_value not in memory_value
+                                    (op == "in"
+                                    and memory_value not in compare_value)
+                                    or (op == "contains"
+                                    and compare_value not in memory_value)
                                 )
                             )
                         ):

@@ -4,9 +4,7 @@ from arango import ArangoClient
 
 
 class UPIConnector:
-    """
-    Connector for the Unified Personal Index (UPI) data store using ArangoDB.
-    """
+    """Connector for the Unified Personal Index (UPI) data store using ArangoDB."""
 
     def __init__(
         self,
@@ -15,7 +13,7 @@ class UPIConnector:
         username: str,
         password: str,
         database: str,
-    ):
+    ) -> None:
         """
         Initialize the UPI connector.
 
@@ -32,7 +30,7 @@ class UPIConnector:
     def execute_aql(
         self,
         query: str,
-        bind_vars: dict[str, Any] = None,
+        bind_vars: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """
         Execute an AQL query on the UPI data store.
@@ -45,7 +43,7 @@ class UPIConnector:
             List[Dict[str, Any]]: The query results
         """
         cursor = self.db.aql.execute(query, bind_vars=bind_vars)
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def search_by_filename(self, filename: str) -> list[dict[str, Any]]:
         """
@@ -109,8 +107,6 @@ class UPIConnector:
         collection = self.db.collection("files")
         return collection.delete({"_key": file_id})
 
-    def close(self):
-        """
-        Close the connection to the UPI data store.
-        """
+    def close(self) -> None:
+        """Close the connection to the UPI data store."""
         self.client.close()

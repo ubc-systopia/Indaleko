@@ -21,12 +21,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +48,7 @@ from knowledge_base import (
 from db import IndalekoDBConfig
 from query.memory.archivist_memory import ArchivistMemory
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -59,7 +61,7 @@ class ArchivistKnowledgeIntegration:
     features in the Archivist, allowing them to work together seamlessly.
     """
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         """
         Initialize the integration component.
 
@@ -78,9 +80,9 @@ class ArchivistKnowledgeIntegration:
         self,
         query_text: str,
         query_intent: str = "",
-        entities: list[dict[str, Any]] = None,
-        result_info: dict[str, Any] = None,
-        context: dict[str, Any] = None,
+        entities: list[dict[str, Any]] | None = None,
+        result_info: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Process a query through the knowledge integration system.
@@ -169,7 +171,7 @@ class ArchivistKnowledgeIntegration:
             )
 
         # 5. Combine everything into a response
-        response = {
+        return {
             "original_query": query_text,
             "enhanced_query": enhanced_query.get("enhanced_query", query_text),
             "intent": enhanced_query.get("intent", query_intent),
@@ -183,7 +185,6 @@ class ArchivistKnowledgeIntegration:
             },
         }
 
-        return response
 
     def _process_entities(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -518,8 +519,6 @@ def test_kb_integration():
         ],
     )
 
-    print("\n--- Query Processing Response ---")
-    print(json.dumps(query_response, indent=2, default=str))
 
     # Test processing results
     result_response = kb_integration.process_query(
@@ -540,8 +539,6 @@ def test_kb_integration():
         },
     )
 
-    print("\n--- Query with Results Response ---")
-    print(json.dumps(result_response, indent=2, default=str))
 
     # Test feedback
     feedback_response = kb_integration.add_user_feedback(
@@ -555,14 +552,10 @@ def test_kb_integration():
         strength=0.9,
     )
 
-    print("\n--- Feedback Response ---")
-    print(json.dumps(feedback_response, indent=2, default=str))
 
     # Test insights
     insights = kb_integration.get_knowledge_insights()
 
-    print("\n--- Knowledge Insights ---")
-    print(json.dumps(insights, indent=2, default=str))
 
     return {
         "query_response": query_response,
@@ -572,7 +565,7 @@ def test_kb_integration():
     }
 
 
-def main():
+def main() -> None:
     """Main function for testing knowledge base integration."""
     test_kb_integration()
 

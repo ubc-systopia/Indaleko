@@ -5,9 +5,9 @@ This is a lightweight version that bypasses the performance issues
 in the circular dependency fix.
 """
 
-import json
 import os
 import sys
+
 
 # Set up path
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -21,7 +21,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db.db_config import IndalekoDBConfig
 
 
-def list_machine_configs():
+def list_machine_configs() -> None:
     """List all machine configurations directly using AQL."""
     # Create DB config and connect
     db_config = IndalekoDBConfig()
@@ -39,15 +39,12 @@ def list_machine_configs():
 
         # Process results
         configs = list(cursor)
-        print(f"Found {len(configs)} machine configurations:")
 
         # Print each config
-        for config in configs:
-            print(json.dumps(config, indent=4))
-            print("-" * 40)
+        for _config in configs:
+            pass
 
-    except Exception as e:
-        print(f"Error listing machine configurations: {e}")
+    except Exception:
         return
 
 

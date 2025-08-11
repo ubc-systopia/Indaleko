@@ -29,7 +29,9 @@ import sys
 import uuid
 
 import arango
+
 from icecream import ic
+
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -55,6 +57,7 @@ from platforms.machine_config import IndalekoMachineConfig  # noqa: E402
 from utils.data_validation import validate_uuid_string  # noqa: E402
 from utils.misc.data_management import encode_binary_data  # noqa: E402
 from utils.misc.file_name_management import extract_keys_from_file_name  # noqa: E402
+
 
 # pylint: enable=wrong-import-position
 
@@ -82,14 +85,14 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         "service_identifier": windows_machine_config_uuid_str,
     }
 
-    def __init__(self: "IndalekoWindowsMachineConfig", **kwargs):
+    def __init__(self: "IndalekoWindowsMachineConfig", **kwargs) -> None:
         self.debug = kwargs.get("debug", False)
         if self.debug:
             ic(kwargs)
         self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
             **IndalekoWindowsMachineConfig.windows_machine_config_service,
         )
-        self.db = kwargs.get("db", None)
+        self.db = kwargs.get("db")
         if "machine_id" not in kwargs:
             kwargs["machine_id"] = kwargs["MachineUUID"]
         super().__init__(**kwargs)
@@ -98,7 +101,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def find_config_files(
         directory: str,
-        prefix: str = None,
+        prefix: str | None = None,
         suffix: str = ".json",
     ) -> list:
         """This looks for configuration files in the given directory."""
@@ -115,8 +118,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def load_config_from_file(
-        config_dir: str = None,
-        config_file: str = None,
+        config_dir: str | None = None,
+        config_file: str | None = None,
         offline: bool = False,
         debug: bool = False,
     ) -> "IndalekoWindowsMachineConfig":
@@ -359,17 +362,15 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         try:
             self.collection.insert(volume_data.serialize(), overwrite=True)
             success = True
-        except arango.exceptions.DocumentInsertError as error:
-            print(f"Error inserting volume data: {error}")
-            print(volume_data.serialize())
+        except arango.exceptions.DocumentInsertError:
+            pass
         return success
 
     def write_config_to_db(self, overwrite: bool = True) -> None:
         """Write the machine configuration to the database."""
         super().write_config_to_db(overwrite=overwrite)
-        for _, vol_data in self.volume_data.items():
+        for vol_data in self.volume_data.values():
             if not self.write_volume_info_to_db(vol_data):
-                print("DB write failed, aborting")
                 break
 
 
@@ -382,22 +383,13 @@ def get_execution_policy():
             check=True,
         )
         return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Error checking ExecutionPolicy: {e}")
+    except subprocess.CalledProcessError:
         return None
 
 
-def ensure_execution_policy():
+def ensure_execution_policy() -> bool:
     policy = get_execution_policy()
-    if policy in {"Restricted", "AllSigned"}:
-        print(
-            f"Current ExecutionPolicy is '{policy}', which might block script execution.",
-        )
-        print("You can change it temporarily by running:")
-        print("  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass")
-        print("or use an administrator to set a less restrictive policy permanently.")
-        return False
-    return True
+    return policy not in {"Restricted", "AllSigned"}
 
 
 def collect_machine_configuration(
@@ -435,7 +427,7 @@ def collect_machine_configuration(
     return success
 
 
-def main():
+def main() -> None:
     """This is the main handler for the Indaleko Windows Machine Config
     service.
     """
@@ -489,14 +481,6 @@ def main():
                 IndalekoWindowsMachineConfig.default_config_dir,
             ),
         )
-        print("Starting data collection.  Note that:")
-        print(
-            "\t(1) this script will run as administrator so you will be asked for permission;",
-        )
-        print("\t(2) this takes 30-60 seconds, so be patient;")
-        print(
-            "\t(3) the file is not added to the database automatically. Use --add to do that.",
-        )
         if collect_machine_configuration():
             new_config_files = set(
                 IndalekoWindowsMachineConfig.find_config_files(
@@ -511,43 +495,32 @@ def main():
                 ic(existing_config_files)
                 ic(new_config_files)
         else:
-            print(
-                "Error collecting machine configuration (recommendation: run script as administrator directly.)",
-            )
-        print("data collection complete.")
+            pass
         return
     if args.list:
-        print("Listing machine configurations in the database.")
         configs = IndalekoWindowsMachineConfig.find_configs_in_db(None)
         for config in configs:
-            hostname = "unknown"
             if "hostname" in config:
-                hostname = config["hostname"]
+                config["hostname"]
             # print(json.dumps(config, indent=4))
-            print("Configuration for machine:", hostname)
             if "_key" in config:
-                print(f'\t    UUID: {config["_key"]}')
+                pass
             else:
-                print(f"\t    UUID: {config['Record']['Attributes']['MachineUUID']}")
-            print(f'\tCaptured: {config["Captured"]["Value"]}')
-            print(f'\tPlatform: {config["Software"]["OS"]}')
+                pass
             return
     if args.delete:
         assert args.uuid is not None, "UUID must be specified when deleting a machine configuration."
         assert validate_uuid_string(args.uuid), f"UUID {args.uuid} is not a valid UUID."
-        print(f"Deleting machine configuration with UUID {args.uuid}")
         IndalekoWindowsMachineConfig.delete_config_in_db(args.uuid)
         return
     if args.files:
-        print("Listing machine configuration files in the default directory.")
         files = IndalekoWindowsMachineConfig.find_config_files(
             IndalekoWindowsMachineConfig.default_config_dir,
         )
-        for file in files:
-            print(file)
+        for _file in files:
+            pass
         return
     if args.add:
-        print("Adding machine configuration to the database.")
         config = IndalekoWindowsMachineConfig.load_config_from_file()
         config.write_config_to_db()
 

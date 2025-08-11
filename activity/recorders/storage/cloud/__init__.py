@@ -1,3 +1,1 @@
-"""
-Cloud storage activity recorders initialization.
-"""
+"""Cloud storage activity recorders initialization."""

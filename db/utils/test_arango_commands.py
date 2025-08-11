@@ -18,11 +18,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import argparse
 import logging
 import os
 import sys
-import argparse
-from typing import List
+
 
 # Handle imports for when the module is run directly
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -34,12 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.utils.arango_commands import (
+    ArangoDumpGenerator,
     ArangoImportGenerator,
     ArangoRestoreGenerator,
-    ArangoDumpGenerator,
-    ArangoShellGenerator
+    ArangoShellGenerator,
 )
-from utils.misc.file_name_management import generate_file_name
+
+
 # pylint: enable=wrong-import-position
 
 
@@ -48,21 +49,18 @@ def test_import_command(args: argparse.Namespace) -> None:
     logging.info("Testing ArangoImportGenerator")
 
     import_gen = ArangoImportGenerator()
-    import_cmd = import_gen.with_file(args.file or "example.jsonl") \
+    import_gen.with_file(args.file or "example.jsonl") \
                           .with_collection(args.collection or "TestCollection") \
                           .build_command()
 
-    print("=== Import Command ===")
-    print(import_cmd)
 
     if args.execute:
         logging.info("Executing import command")
         result = import_gen.execute()
-        print(f"Exit code: {result.returncode}")
         if result.stdout:
-            print(f"Output: {result.stdout}")
+            pass
         if result.stderr:
-            print(f"Error: {result.stderr}")
+            pass
 
 
 def test_restore_command(args: argparse.Namespace) -> None:
@@ -80,19 +78,15 @@ def test_restore_command(args: argparse.Namespace) -> None:
         else:
             restore_cmd = restore_cmd.with_collections(args.collection)
 
-    cmd_string = restore_cmd.build_command()
-    print("=== Restore Command ===")
-    print(cmd_string)
+    restore_cmd.build_command()
 
     if args.execute:
         logging.info("Executing restore command")
-        print("This may take a long time for large databases...")
         result = restore_gen.execute()
-        print(f"Exit code: {result.returncode}")
         if result.stdout:
-            print(f"Output: {result.stdout}")
+            pass
         if result.stderr:
-            print(f"Error: {result.stderr}")
+            pass
 
 
 def test_dump_command(args: argparse.Namespace) -> None:
@@ -110,18 +104,15 @@ def test_dump_command(args: argparse.Namespace) -> None:
         else:
             dump_cmd = dump_cmd.with_collections(args.collection)
 
-    cmd_string = dump_cmd.build_command()
-    print("=== Dump Command ===")
-    print(cmd_string)
+    dump_cmd.build_command()
 
     if args.execute:
         logging.info("Executing dump command")
         result = dump_gen.execute()
-        print(f"Exit code: {result.returncode}")
         if result.stdout:
-            print(f"Output: {result.stdout}")
+            pass
         if result.stderr:
-            print(f"Error: {result.stderr}")
+            pass
 
 
 def test_shell_command(args: argparse.Namespace) -> None:
@@ -132,18 +123,15 @@ def test_shell_command(args: argparse.Namespace) -> None:
     shell_cmd = shell_gen.with_command(args.command or "db._collections()") \
                         .with_quiet(True)
 
-    cmd_string = shell_cmd.build_command()
-    print("=== Shell Command ===")
-    print(cmd_string)
+    shell_cmd.build_command()
 
     if args.execute:
         logging.info("Executing shell command")
         result = shell_gen.execute()
-        print(f"Exit code: {result.returncode}")
         if result.stdout:
-            print(f"Output: {result.stdout}")
+            pass
         if result.stderr:
-            print(f"Error: {result.stderr}")
+            pass
 
 
 def main() -> None:
@@ -151,7 +139,7 @@ def main() -> None:
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     # Parse command line arguments
@@ -159,7 +147,7 @@ def main() -> None:
     parser.add_argument(
         "--command",
         type=str,
-        help="Command type to test (import, restore, dump, shell)"
+        help="Command type to test (import, restore, dump, shell)",
     )
     parser.add_argument("--file", type=str, help="File path for import")
     parser.add_argument("--directory", type=str, help="Directory path for restore/dump")
@@ -171,19 +159,15 @@ def main() -> None:
 
     if not args.command or args.command == "import":
         test_import_command(args)
-        print()
 
     if not args.command or args.command == "restore":
         test_restore_command(args)
-        print()
 
     if not args.command or args.command == "dump":
         test_dump_command(args)
-        print()
 
     if not args.command or args.command == "shell":
         test_shell_command(args)
-        print()
 
     logging.info("Test completed")
 

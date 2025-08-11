@@ -22,9 +22,11 @@ import argparse
 import logging
 import os
 import sys
+
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,44 +41,37 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.base import CollectorBase
 from utils.i_logging import IndalekoLogging
 
+
 # pylint: enable=wrong-import-position
 
 
 class LocationCollector(CollectorBase):
-    """
-    Base class for location activity data providers.
-    """
+    """Base class for location activity data providers."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.config = kwargs.get("config", {})
         self.data = []
 
     def collect_data(self) -> None:
-        """
-        Collect location data. This method should be implemented by subclasses.
-        """
+        """Collect location data. This method should be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def process_data(self, data: Any) -> dict[str, Any]:
-        """
-        Process the collected data. This method should be implemented by subclasses.
-        """
+        """Process the collected data. This method should be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_data(self, data: dict[str, Any]) -> None:
-        """
-        Store the processed data. This method should be implemented by subclasses.
-        """
+        """Store the processed data. This method should be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement this method")
 
 
-def list_data_providers_command(args: argparse.Namespace):
-    """List the data providers available"""
+def list_data_providers_command(args: argparse.Namespace) -> None:
+    """List the data providers available."""
     ic(args)
     ic("This needs to be implemented")
 
 
-def main():
+def main() -> None:
     """This is a test interface for the location provider."""
     from Indaleko import Indaleko
 

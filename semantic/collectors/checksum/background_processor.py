@@ -28,6 +28,7 @@ import os
 import sys
 import time
 
+
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +44,7 @@ from semantic.recorders.checksum.recorder import ChecksumRecorder
 from storage.i_object import IndalekoObject
 from storage.known_attributes import StorageSemanticAttributes
 from utils.db.db_file_picker import IndalekoFilePicker
+
 
 # pylint: enable=wrong-import-position
 
@@ -95,7 +97,7 @@ def process_file_checksums(
         return checksums
 
     except Exception as e:
-        logger.error(f"Error processing checksums for {local_path}: {e}")
+        logger.exception(f"Error processing checksums for {local_path}: {e}")
         return None
 
 
@@ -147,7 +149,7 @@ def process_file_and_store(
         return checksums
 
     except Exception as e:
-        logger.error(f"Error processing and storing checksums for {local_path}: {e}")
+        logger.exception(f"Error processing and storing checksums for {local_path}: {e}")
         return None
 
 
@@ -297,12 +299,12 @@ def schedule_checksum_processing(
         return total_scheduled, total_processed
 
     except Exception as e:
-        logger.error(f"Error scheduling checksum processing: {e}")
+        logger.exception(f"Error scheduling checksum processing: {e}")
         return 0, 0
 
 
-def main():
-    """Main function for the checksum background processor"""
+def main() -> None:
+    """Main function for the checksum background processor."""
     parser = argparse.ArgumentParser(description="Background checksum processor")
     parser.add_argument(
         "--count",

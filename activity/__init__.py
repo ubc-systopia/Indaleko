@@ -1,7 +1,8 @@
-"""initializtion logic for the activity context system"""
+"""initializtion logic for the activity context system."""
 
 import os
 import sys
+
 
 # from icecream import ic
 
@@ -18,6 +19,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.characteristics import ActivityDataCharacteristics  # noqa: E402
 from activity.collectors.base import CollectorBase  # noqa: E402
 
+
 # pylint: enable=wrong-import-position
 
 collector_dir = os.path.join(init_path, "collectors")
@@ -32,4 +34,4 @@ recorders = [
 
 __version__ = "0.1.0"
 
-__all__ = ["CollectorBase", "ActivityDataCharacteristics"]
+__all__ = ["ActivityDataCharacteristics", "CollectorBase"]

@@ -3,6 +3,7 @@ import uuid
 
 from neo4j import GraphDatabase
 
+
 # Neo4j connection settings
 neo4j_uri = "bolt://127.0.0.1:7687"
 neo4j_username = "neo4j"
@@ -22,21 +23,16 @@ start_time = time.time()
 # Generate and insert UUIDs
 successful_create_count = 0
 with driver.session() as session:
-    for i in range(0, num_uuids, batch_size):
+    for _i in range(0, num_uuids, batch_size):
         batch_uuids = [str(uuid.uuid4()) for _ in range(batch_size)]
         query = "UNWIND $batch AS uuid CREATE (:DataObject {value: uuid})"
-        print(query, batch_uuids)
         result = session.run(query, batch=batch_uuids)
         # Check the result (optional)
         summary = result.consume()
         if summary.counters.nodes_created == 1:
             successful_create_count += 1
-        print(summary.notifications)
 
 
 end_time = time.time()
 elapsed_time = end_time - start_time
 
-print("UUIDs inserted:", num_uuids)
-print("Successful node creation count: ", successful_create_count)
-print("Elapsed time:", elapsed_time, "seconds")

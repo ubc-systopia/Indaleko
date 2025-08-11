@@ -26,7 +26,9 @@ import os
 import sys
 import tempfile
 import uuid
+
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from query.context.navigation import QueryNavigator
 from query.context.relationship import QueryRelationshipDetector, RelationshipType
+
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +64,7 @@ class QueryPathVisualizer:
         RelationshipType.UNRELATED: "red",
     }
 
-    def __init__(self, db_config=None, debug=False):
+    def __init__(self, db_config=None, debug=False) -> None:
         """
         Initialize the QueryPathVisualizer.
 
@@ -175,10 +178,10 @@ class QueryPathVisualizer:
             return self.graph
 
         except ImportError:
-            self._logger.error("NetworkX not installed. Cannot generate graph.")
+            self._logger.exception("NetworkX not installed. Cannot generate graph.")
             return None
         except Exception as e:
-            self._logger.error(f"Error generating path graph: {e}")
+            self._logger.exception(f"Error generating path graph: {e}")
             return None
 
     def _add_path_to_graph(self, path: list[dict[str, Any]]) -> None:
@@ -234,7 +237,7 @@ class QueryPathVisualizer:
             max_queries_per_branch=max_depth,
         )
 
-        for branch_id, branch_path in branches.items():
+        for branch_path in branches.values():
             # Add nodes and edges for this branch
             for query in branch_path:
                 query_id = uuid.UUID(query["query_id"])
@@ -289,9 +292,9 @@ class QueryPathVisualizer:
                 self.pos = nx.spring_layout(self.graph, seed=42)
 
         except ImportError:
-            self._logger.error("NetworkX not installed. Cannot calculate layout.")
+            self._logger.exception("NetworkX not installed. Cannot calculate layout.")
         except Exception as e:
-            self._logger.error(f"Error calculating layout: {e}")
+            self._logger.exception(f"Error calculating layout: {e}")
 
     def _truncate_text(self, text: str, max_length: int = 30) -> str:
         """
@@ -363,7 +366,7 @@ class QueryPathVisualizer:
             edge_colors = []
             edge_widths = []
 
-            for u, v, data in self.graph.edges(data=True):
+            for _u, _v, data in self.graph.edges(data=True):
                 edge_colors.append(data.get("color", "gray"))
 
                 # Main path edges are thicker
@@ -407,10 +410,10 @@ class QueryPathVisualizer:
             return file_path
 
         except ImportError:
-            self._logger.error("Required libraries not installed. Cannot export graph.")
+            self._logger.exception("Required libraries not installed. Cannot export graph.")
             return None
         except Exception as e:
-            self._logger.error(f"Error exporting graph: {e}")
+            self._logger.exception(f"Error exporting graph: {e}")
             return None
 
     def generate_report(self, query_id: uuid.UUID) -> dict[str, Any]:
@@ -481,7 +484,7 @@ class QueryPathVisualizer:
             }
 
         except Exception as e:
-            self._logger.error(f"Error generating report: {e}")
+            self._logger.exception(f"Error generating report: {e}")
             return {
                 "path_length": 0,
                 "query_text": "Error",
@@ -489,7 +492,7 @@ class QueryPathVisualizer:
             }
 
 
-def main():
+def main() -> None:
     """Test functionality of QueryPathVisualizer."""
     logging.basicConfig(level=logging.DEBUG)
 
@@ -503,47 +506,36 @@ def main():
     history = navigator.get_query_history(limit=5)
 
     if not history:
-        print("No query history found. Please run some test queries first.")
         return
 
     # Use the most recent query for testing
     test_query_id = uuid.UUID(history[0]["query_id"])
-    print(f"Generating visualization for query: {history[0]['query_text']}")
 
     # Generate the graph
     graph = visualizer.generate_path_graph(test_query_id, include_branches=True)
 
     if not graph:
-        print("Failed to generate graph.")
         return
 
     # Display node and edge information
-    print(f"\nGraph has {len(graph.nodes)} nodes and {len(graph.edges)} edges")
 
-    print("\nNodes:")
-    for i, (node, attrs) in enumerate(graph.nodes(data=True)):
-        print(f"  {i+1}. {node}: {attrs.get('label', 'Unlabeled')}")
+    for _i, (_node, _attrs) in enumerate(graph.nodes(data=True)):
+        pass
 
-    print("\nEdges:")
-    for i, (u, v, attrs) in enumerate(graph.edges(data=True)):
-        print(f"  {i+1}. {u} → {v}: {attrs.get('relationship', 'Unknown')}")
+    for _i, (_u, _v, _attrs) in enumerate(graph.edges(data=True)):
+        pass
 
     # Export the graph
     output_path = visualizer.export_graph(show=False)
 
     if output_path:
-        print(f"\nGraph exported to: {output_path}")
+        pass
 
     # Generate report
     report = visualizer.generate_report(test_query_id)
 
-    print("\nQuery Exploration Report:")
-    print(f"  Path Length: {report['path_length']}")
-    print(f"  Query: {report['query_text']}")
-    print(f"  Exploration Pattern: {report['exploration_pattern']}")
-    print(f"  Summary: {report['exploration_summary']}")
     if "visualization_path" in report:
-        print(f"  Visualization: {report['visualization_path']}")
+        pass
 
 
 if __name__ == "__main__":

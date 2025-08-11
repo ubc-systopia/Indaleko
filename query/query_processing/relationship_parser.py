@@ -24,8 +24,10 @@ import os
 import re
 import sys
 import uuid
+
 from textwrap import dedent
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +49,7 @@ from query.query_processing.data_models.relationship_query_model import (
 from query.query_processing.enhanced_nl_parser import EnhancedNLParser
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -63,7 +66,7 @@ class RelationshipParser:
         llm_connector: OpenAIConnector,
         collections_metadata: IndalekoDBCollectionsMetadata,
         enhanced_parser: EnhancedNLParser | None = None,
-    ):
+    ) -> None:
         """
         Initialize the relationship parser.
 
@@ -83,7 +86,7 @@ class RelationshipParser:
         # Initialize common relationship patterns for rules-based matching
         self._initialize_patterns()
 
-    def _initialize_patterns(self):
+    def _initialize_patterns(self) -> None:
         """Initialize regex patterns for common relationship queries."""
         self.user_file_patterns = {
             RelationshipType.CREATED: [
@@ -365,7 +368,7 @@ class RelationshipParser:
                     }
 
         # Build the complete relationship query
-        relationship_query = RelationshipQuery(
+        return RelationshipQuery(
             relationship_type=relationship_type,
             direction=direction,
             source_entity=source_entity,
@@ -376,7 +379,6 @@ class RelationshipParser:
             confidence=0.8,  # Pattern-based matching has good confidence
         )
 
-        return relationship_query
 
     def _extract_relationship_query_llm(
         self,
@@ -439,7 +441,7 @@ class RelationshipParser:
             def _json_serializable(obj):
                 if isinstance(obj, uuid.UUID):
                     return str(obj)
-                elif hasattr(obj, "model_dump"):
+                if hasattr(obj, "model_dump"):
                     return obj.model_dump()
                 return str(obj)
 
@@ -495,8 +497,7 @@ class RelationshipParser:
         # Parse the response
         try:
             response_data = json.loads(response.choices[0].message.content)
-            relationship_query = RelationshipQuery(**response_data)
-            return relationship_query
+            return RelationshipQuery(**response_data)
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logging.exception(f"Error parsing LLM response: {e}")
             # Fall back to a default relationship query

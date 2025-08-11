@@ -153,7 +153,7 @@ Semantic contexts apply only to text-based files: `"pdf", "doc", "docx", "txt", 
 - **playback_position_ms**: playback position of the song
 - **track_duration_ms**: length of the song
 - **is_playing**: whether the song is playing at the time of activity
-- **album_name**: name of album track belongs to 
+- **album_name**: name of album track belongs to
 - **source**: one of “spotify”, “apple music”, “youtube music”
 - **device_type**: (only when source is spotify) type of device; one of “Computer”, “Smartphone”, ”Speaker”, ”TV”, ”Game_Console”, ”Automobile”, ”Unknown”
 - **Timestamp**: One of `"birthtime"`, `"modified"`, `"changed"`, `"accessed"`.

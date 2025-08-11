@@ -36,6 +36,7 @@ import os
 import sys
 import uuid
 
+
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,13 +51,11 @@ try:
         NtfsArchivalMemoryRecorder,
     )
 except ImportError:
-    print("Error: NtfsArchivalMemoryRecorder not found")
     sys.exit(1)
 
 
 def test_ontology_enhancement():
     """Test the ontology enhancement capabilities."""
-    print("\n=== Testing Ontology Enhancement ===")
 
     # Create recorder in no_db mode for testing
     recorder = NtfsArchivalMemoryRecorder(no_db=True, debug=True)
@@ -75,33 +74,25 @@ def test_ontology_enhancement():
     ontology = recorder._enhance_ontology(w5h_concepts)
 
     # Print results
-    print("\nEnhanced Ontology:")
-    print(f"  Total concepts: {len(ontology['concepts'])}")
 
-    print("\nCategories:")
-    for category, concepts in ontology["categories"].items():
-        print(f"  {category}: {', '.join(concepts)}")
+    for _category, _concepts in ontology["categories"].items():
+        pass
 
-    print("\nInferences:")
-    for inference in ontology["inferences"]:
-        print(f"  {inference}")
+    for _inference in ontology["inferences"]:
+        pass
 
-    print("\nRelationships:")
-    for relationship in ontology["relationships"]:
-        print(
-            f"  {relationship['source']} {relationship['relation']} {relationship['target']}",
-        )
+    for _relationship in ontology["relationships"]:
+        pass
 
     # Verify ontology structure
     if "concepts" in ontology and "relationships" in ontology and "categories" in ontology:
-        print("\n✅ Ontology enhancement test passed")
+        pass
     else:
-        print("\n❌ Ontology enhancement test failed")
+        pass
 
 
 def test_consolidation(db_config_path=None):
     """Test the consolidation from long-term memory to archival memory."""
-    print("\n=== Testing Consolidation from Long-Term Memory ===")
 
     try:
         # Create recorder with db connection for testing
@@ -109,11 +100,9 @@ def test_consolidation(db_config_path=None):
 
         # Check if connected to database
         if not hasattr(recorder, "_db") or recorder._db is None:
-            print("❌ Not connected to database")
             return False
 
         # Get eligible entities count
-        print("\nChecking for entities eligible for archival memory:")
         from activity.recorders.storage.ntfs.memory.long_term.recorder import (
             NtfsLongTermMemoryRecorder,
         )
@@ -131,11 +120,9 @@ def test_consolidation(db_config_path=None):
             limit=5,
         )
 
-        print(f"Found {len(eligible_entities)} entities eligible for archival memory")
 
         # If no eligible entities, create a test entity
         if not eligible_entities:
-            print("No eligible entities found, creating a test entity")
             return False
 
         # Test consolidation with a single entity
@@ -143,7 +130,6 @@ def test_consolidation(db_config_path=None):
             entity = eligible_entities[0]
             entity_id = entity.get("_key")
 
-            print(f"\nTesting consolidation for entity {entity_id}:")
 
             # Prepare entity data
             entity_data = {
@@ -165,16 +151,15 @@ def test_consolidation(db_config_path=None):
             has_historical_context = "historical_context" in document["Record"]["Data"]
 
             if has_ontology and has_memory_lineage and has_historical_context:
-                print("\n✅ Document building test passed")
+                pass
             else:
-                print("\n❌ Document building test failed")
+                pass
 
             return True
 
         return False
 
-    except Exception as e:
-        print(f"❌ Consolidation test failed: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
@@ -183,7 +168,6 @@ def test_consolidation(db_config_path=None):
 
 def test_knowledge_graph(db_config_path=None):
     """Test the knowledge graph construction."""
-    print("\n=== Testing Knowledge Graph Construction ===")
 
     try:
         # Create recorder with db connection for testing
@@ -191,7 +175,6 @@ def test_knowledge_graph(db_config_path=None):
 
         # Check if connected to database
         if not hasattr(recorder, "_db") or recorder._db is None:
-            print("❌ Not connected to database")
             return False
 
         # Get an entity from archival memory
@@ -209,13 +192,11 @@ def test_knowledge_graph(db_config_path=None):
         entities = list(cursor)
 
         if not entities:
-            print("No entities found in archival memory")
             return False
 
         entity = entities[0]
         entity_id = entity.get("_key")
 
-        print(f"\nTesting knowledge graph for entity {entity_id}:")
 
         # Build knowledge graph relationships
         relationships = recorder._build_knowledge_graph_relationships(
@@ -223,7 +204,6 @@ def test_knowledge_graph(db_config_path=None):
             entity,
         )
 
-        print(f"Created {len(relationships)} knowledge graph relationships")
 
         # Verify relationship structure
         if relationships:
@@ -233,16 +213,15 @@ def test_knowledge_graph(db_config_path=None):
             has_strength = "strength" in rel
 
             if has_type and has_semantic_type and has_strength:
-                print("\n✅ Knowledge graph test passed")
+                pass
             else:
-                print("\n❌ Knowledge graph test failed")
+                pass
 
             return True
 
         return False
 
-    except Exception as e:
-        print(f"❌ Knowledge graph test failed: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
@@ -251,7 +230,6 @@ def test_knowledge_graph(db_config_path=None):
 
 def test_search(db_config_path=None):
     """Test the search capabilities."""
-    print("\n=== Testing Search Capabilities ===")
 
     try:
         # Create recorder with db connection for testing
@@ -259,11 +237,9 @@ def test_search(db_config_path=None):
 
         # Check if connected to database
         if not hasattr(recorder, "_db") or recorder._db is None:
-            print("❌ Not connected to database")
             return False
 
         # Test basic search
-        print("\nTesting basic search:")
 
         # Use a general search term that should find something
         results = recorder.search_archival_memory(
@@ -272,10 +248,8 @@ def test_search(db_config_path=None):
             limit=5,
         )
 
-        print(f"Found {len(results)} results")
 
         # Test W5H filter search
-        print("\nTesting W5H filter search:")
 
         # Create a W5H filter
         w5h_filter = {"what": ["document", "file"], "how": ["frequently_accessed"]}
@@ -287,10 +261,8 @@ def test_search(db_config_path=None):
             limit=5,
         )
 
-        print(f"Found {len(w5h_results)} results with W5H filter")
 
         # Test knowledge graph inclusion
-        print("\nTesting search with knowledge graph inclusion:")
 
         kg_results = recorder.search_archival_memory(
             query="test",
@@ -299,17 +271,16 @@ def test_search(db_config_path=None):
             limit=5,
         )
 
-        has_kg = all("knowledge_graph_relationships" in result for result in kg_results)
+        all("knowledge_graph_relationships" in result for result in kg_results)
 
         if results or w5h_results or kg_results:
-            print("\n✅ Search test passed")
+            pass
         else:
-            print("\n❌ Search test failed")
+            pass
 
         return True
 
-    except Exception as e:
-        print(f"❌ Search test failed: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
@@ -381,8 +352,7 @@ def main():
         if args.test_search or args.test_all:
             test_search(args.db_config)
 
-    except Exception as e:
-        print(f"Unhandled error: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

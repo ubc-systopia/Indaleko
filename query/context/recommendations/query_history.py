@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import re
+
 from typing import Any
 
 from query.context.activity_provider import QueryActivityProvider
@@ -47,7 +48,7 @@ class QueryHistoryRecommender(RecommendationProvider):
         query_navigator: QueryNavigator | None = None,
         relationship_detector: QueryRelationshipDetector | None = None,
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the query history recommender.
 
@@ -340,9 +341,8 @@ class QueryHistoryRecommender(RecommendationProvider):
                 if constraint not in query.lower():
                     return f"{query} {constraint} files"
 
-            elif constraint_type == "location":
-                if constraint not in query.lower():
-                    return f"{query} in {constraint}"
+            elif constraint_type == "location" and constraint not in query.lower():
+                return f"{query} in {constraint}"
 
         elif action == "remove_term" and len(parts) == 2:
             term = parts[1]
@@ -684,18 +684,17 @@ class QueryHistoryRecommender(RecommendationProvider):
             term = parts[1]
             return f"Add '{term}' to narrow your search results"
 
-        elif action == "add_constraint" and len(parts) == 3:
+        if action == "add_constraint" and len(parts) == 3:
             constraint_type = parts[1]
             constraint = parts[2]
 
             if constraint_type == "time":
                 return f"Add time constraint '{constraint}' to focus on specific timeframe"
-            elif constraint_type == "file_type":
+            if constraint_type == "file_type":
                 return f"Specify '{constraint}' file type to filter results"
-            elif constraint_type == "location":
+            if constraint_type == "location":
                 return f"Narrow search to '{constraint}' location"
-            else:
-                return f"Add '{constraint}' constraint to refine results"
+            return f"Add '{constraint}' constraint to refine results"
 
         return "Refine your search based on common patterns"
 
@@ -719,18 +718,17 @@ class QueryHistoryRecommender(RecommendationProvider):
             term = parts[1]
             return f"Remove '{term}' to find more general results"
 
-        elif action == "remove_constraint" and len(parts) == 3:
+        if action == "remove_constraint" and len(parts) == 3:
             constraint_type = parts[1]
             constraint = parts[2]
 
             if constraint_type == "time":
                 return f"Remove time constraint '{constraint}' to see results from all time periods"
-            elif constraint_type == "file_type":
+            if constraint_type == "file_type":
                 return f"Remove '{constraint}' file type filter to see all file types"
-            elif constraint_type == "location":
+            if constraint_type == "location":
                 return f"Search beyond '{constraint}' location to find more results"
-            else:
-                return f"Remove '{constraint}' constraint to broaden results"
+            return f"Remove '{constraint}' constraint to broaden results"
 
         return "Broaden your search to find more results"
 

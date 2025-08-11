@@ -25,7 +25,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import List, Optional, Union
+
 
 # Handle imports for when the module is imported from outside the project
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,6 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
+
+
 # pylint: enable=wrong-import-position
 
 
@@ -48,7 +50,7 @@ class BaseArangoCommandGenerator:
     proper authentication, connection, and configuration parameters.
     """
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """
         Initialize the command generator with database configuration.
 
@@ -68,7 +70,7 @@ class BaseArangoCommandGenerator:
         protocol = "ssl" if self.db_config.get_ssl_state() else "tcp"
         return f"{protocol}://{self.db_config.get_hostname()}:{self.db_config.get_port()}"
 
-    def _get_auth_parameters(self) -> List[str]:
+    def _get_auth_parameters(self) -> list[str]:
         """
         Get properly formatted authentication parameters for ArangoDB commands.
 
@@ -78,7 +80,7 @@ class BaseArangoCommandGenerator:
         return [
             f"--server.database {self.db_config.get_database_name()}",
             f"--server.username {self.db_config.get_user_name()}",
-            f"--server.password {self.db_config.get_user_password()}"
+            f"--server.password {self.db_config.get_user_password()}",
         ]
 
     def build_command(self) -> str:
@@ -90,7 +92,7 @@ class BaseArangoCommandGenerator:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def execute(self, command_string: Optional[str] = None, timeout: Optional[int] = None) -> subprocess.CompletedProcess:
+    def execute(self, command_string: str | None = None, timeout: int | None = None) -> subprocess.CompletedProcess:
         """
         Execute the generated command.
 
@@ -108,19 +110,19 @@ class BaseArangoCommandGenerator:
         try:
             result = subprocess.run(
                 cmd,
-                shell=True,
+                check=False, shell=True,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
             )
             if result.returncode != 0:
                 logging.error(f"Command failed with exit code {result.returncode}")
                 logging.error(f"Error output: {result.stderr}")
             else:
-                logging.info(f"Command completed successfully")
+                logging.info("Command completed successfully")
             return result
         except subprocess.TimeoutExpired:
-            logging.error(f"Command timed out after {timeout} seconds")
+            logging.exception(f"Command timed out after {timeout} seconds")
             raise
 
 
@@ -131,7 +133,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
     Refactored from the existing build_load_string method in IndalekoDBUploader.
     """
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """Initialize the arangoimport command generator."""
         super().__init__(db_config)
         self._command_name = "arangoimport"
@@ -140,7 +142,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
         self.type = "jsonl"
         self.overwrite = False
 
-    def with_file(self, file_path: str) -> 'ArangoImportGenerator':
+    def with_file(self, file_path: str) -> "ArangoImportGenerator":
         """
         Set the input file path.
 
@@ -153,7 +155,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
         self.file_path = file_path
         return self
 
-    def with_collection(self, collection: str) -> 'ArangoImportGenerator':
+    def with_collection(self, collection: str) -> "ArangoImportGenerator":
         """
         Set the target collection.
 
@@ -166,7 +168,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
         self.collection = collection
         return self
 
-    def with_type(self, file_type: str) -> 'ArangoImportGenerator':
+    def with_type(self, file_type: str) -> "ArangoImportGenerator":
         """
         Set the file type.
 
@@ -179,7 +181,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
         self.type = file_type
         return self
 
-    def with_overwrite(self, overwrite: bool = True) -> 'ArangoImportGenerator':
+    def with_overwrite(self, overwrite: bool = True) -> "ArangoImportGenerator":
         """
         Set the overwrite flag.
 
@@ -236,7 +238,7 @@ class ArangoImportGenerator(BaseArangoCommandGenerator):
 class ArangoRestoreGenerator(BaseArangoCommandGenerator):
     """Generator for arangorestore commands."""
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """Initialize the arangorestore command generator."""
         super().__init__(db_config)
         self._command_name = "arangorestore"
@@ -247,7 +249,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
         # Default timeout very high for large databases (5 hours in seconds)
         self.timeout_hours = 5
 
-    def with_input_directory(self, directory_path: str) -> 'ArangoRestoreGenerator':
+    def with_input_directory(self, directory_path: str) -> "ArangoRestoreGenerator":
         """
         Set the input directory containing the backup files.
 
@@ -260,7 +262,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
         self.input_directory = directory_path
         return self
 
-    def with_collections(self, collections: Union[str, List[str], None] = None) -> 'ArangoRestoreGenerator':
+    def with_collections(self, collections: str | list[str] | None = None) -> "ArangoRestoreGenerator":
         """
         Set the collections to restore. None means all collections.
 
@@ -273,7 +275,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
         self.collections = collections
         return self
 
-    def with_create(self, create: bool = True) -> 'ArangoRestoreGenerator':
+    def with_create(self, create: bool = True) -> "ArangoRestoreGenerator":
         """
         Set whether to create missing collections.
 
@@ -286,7 +288,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
         self.create = create
         return self
 
-    def with_overwrite(self, overwrite: bool = True) -> 'ArangoRestoreGenerator':
+    def with_overwrite(self, overwrite: bool = True) -> "ArangoRestoreGenerator":
         """
         Set whether to overwrite existing data.
 
@@ -299,7 +301,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
         self.overwrite = overwrite
         return self
 
-    def with_timeout_hours(self, hours: float) -> 'ArangoRestoreGenerator':
+    def with_timeout_hours(self, hours: float) -> "ArangoRestoreGenerator":
         """
         Set the timeout in hours for the restore operation.
 
@@ -351,7 +353,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
 
         return " ".join(cmd_parts)
 
-    def execute(self, command_string: Optional[str] = None) -> subprocess.CompletedProcess:
+    def execute(self, command_string: str | None = None) -> subprocess.CompletedProcess:
         """
         Execute the arangorestore command with an appropriate timeout.
 
@@ -369,7 +371,7 @@ class ArangoRestoreGenerator(BaseArangoCommandGenerator):
 class ArangoDumpGenerator(BaseArangoCommandGenerator):
     """Generator for arangodump commands."""
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """Initialize the arangodump command generator."""
         super().__init__(db_config)
         self._command_name = "arangodump"
@@ -378,7 +380,7 @@ class ArangoDumpGenerator(BaseArangoCommandGenerator):
         self.include_system = False
         self.compress = True
 
-    def with_output_directory(self, directory_path: str) -> 'ArangoDumpGenerator':
+    def with_output_directory(self, directory_path: str) -> "ArangoDumpGenerator":
         """
         Set the output directory for the dump files.
 
@@ -391,7 +393,7 @@ class ArangoDumpGenerator(BaseArangoCommandGenerator):
         self.output_directory = directory_path
         return self
 
-    def with_collections(self, collections: Union[str, List[str], None] = None) -> 'ArangoDumpGenerator':
+    def with_collections(self, collections: str | list[str] | None = None) -> "ArangoDumpGenerator":
         """
         Set the collections to dump. None means all collections.
 
@@ -404,7 +406,7 @@ class ArangoDumpGenerator(BaseArangoCommandGenerator):
         self.collections = collections
         return self
 
-    def with_include_system(self, include: bool = True) -> 'ArangoDumpGenerator':
+    def with_include_system(self, include: bool = True) -> "ArangoDumpGenerator":
         """
         Set whether to include system collections.
 
@@ -417,7 +419,7 @@ class ArangoDumpGenerator(BaseArangoCommandGenerator):
         self.include_system = include
         return self
 
-    def with_compress(self, compress: bool = True) -> 'ArangoDumpGenerator':
+    def with_compress(self, compress: bool = True) -> "ArangoDumpGenerator":
         """
         Set whether to compress the output.
 
@@ -476,7 +478,7 @@ class ArangoDumpGenerator(BaseArangoCommandGenerator):
 class ArangoShellGenerator(BaseArangoCommandGenerator):
     """Generator for arangosh commands."""
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """Initialize the arangosh command generator."""
         super().__init__(db_config)
         self._command_name = "arangosh"
@@ -484,7 +486,7 @@ class ArangoShellGenerator(BaseArangoCommandGenerator):
         self.file = None
         self.quiet = True
 
-    def with_command(self, command: str) -> 'ArangoShellGenerator':
+    def with_command(self, command: str) -> "ArangoShellGenerator":
         """
         Set the JavaScript command to execute.
 
@@ -497,7 +499,7 @@ class ArangoShellGenerator(BaseArangoCommandGenerator):
         self.command = command
         return self
 
-    def with_file(self, file_path: str) -> 'ArangoShellGenerator':
+    def with_file(self, file_path: str) -> "ArangoShellGenerator":
         """
         Set the JavaScript file to execute.
 
@@ -510,7 +512,7 @@ class ArangoShellGenerator(BaseArangoCommandGenerator):
         self.file = file_path
         return self
 
-    def with_quiet(self, quiet: bool = True) -> 'ArangoShellGenerator':
+    def with_quiet(self, quiet: bool = True) -> "ArangoShellGenerator":
         """
         Set whether to run in quiet mode.
 
@@ -551,43 +553,39 @@ class ArangoShellGenerator(BaseArangoCommandGenerator):
 
         # Add command or file
         if self.command:
-            cmd_parts.append(f"--javascript.execute-string \"{self.command}\"")
+            cmd_parts.append(f'--javascript.execute-string "{self.command}"')
         elif self.file:
             cmd_parts.append(f"--javascript.execute {self.file}")
 
         return " ".join(cmd_parts)
 
 
-def main():
+def main() -> None:
     """Test the command generators."""
     logging.basicConfig(level=logging.DEBUG)
 
     # Test ArangoImport
     import_gen = ArangoImportGenerator()
-    import_cmd = import_gen.with_file("test.jsonl") \
+    import_gen.with_file("test.jsonl") \
                           .with_collection("TestCollection") \
                           .build_command()
-    print(f"Import command: {import_cmd}")
 
     # Test ArangoRestore
     restore_gen = ArangoRestoreGenerator()
-    restore_cmd = restore_gen.with_input_directory("/backup/dir") \
+    restore_gen.with_input_directory("/backup/dir") \
                             .with_collections(["Collection1", "Collection2"]) \
                             .build_command()
-    print(f"Restore command: {restore_cmd}")
 
     # Test ArangoDump
     dump_gen = ArangoDumpGenerator()
-    dump_cmd = dump_gen.with_output_directory("/backup/dir") \
+    dump_gen.with_output_directory("/backup/dir") \
                       .with_collections("TestCollection") \
                       .build_command()
-    print(f"Dump command: {dump_cmd}")
 
     # Test ArangoShell
     shell_gen = ArangoShellGenerator()
-    shell_cmd = shell_gen.with_command("db._collections()") \
+    shell_gen.with_command("db._collections()") \
                         .build_command()
-    print(f"Shell command: {shell_cmd}")
 
 
 if __name__ == "__main__":

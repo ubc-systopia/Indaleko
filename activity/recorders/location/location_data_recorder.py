@@ -23,11 +23,13 @@ import math
 import os
 import sys
 import uuid
+
 from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import dedent
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -52,6 +54,7 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection
 from db.utils.query_performance import timed_aql_execute
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 

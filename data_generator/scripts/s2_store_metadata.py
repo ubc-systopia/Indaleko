@@ -15,11 +15,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = str(current_path)
     sys.path.insert(0, str(current_path))
 
-# ruff: noqa: S311,FBT001,FBT002
+# ruff: noqa: FBT001, FBT002
 
 # pylint: disable=wrong-import-position
 
-from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
+from activity.recorders.registration_service import (
+    IndalekoActivityDataRegistrationService,
+)
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db.collection import IndalekoCollection
@@ -36,11 +38,10 @@ class MetadataStorer:
         """Initialize the metadata storer service."""
         self.activity_data_registrar = IndalekoActivityDataRegistrationService()
 
-
     def delete_records_from_collection(
-            self,
-            collections: IndalekoCollections,
-            collection_name: str,
+        self,
+        collections: IndalekoCollections,
+        collection_name: str,
     ) -> None:
         """
         Deletes the records from the specified collection in IndalekoCollections.
@@ -52,11 +53,12 @@ class MetadataStorer:
         collections.get_collection(collection_name).delete_collection(collection_name)
 
     def add_records_to_collection(
-            self,
-            collections: IndalekoCollections,
-            collection_name: str,
-            records: list,
-            key_required: bool = False) -> None:
+        self,
+        collections: IndalekoCollections,
+        collection_name: str,
+        records: list,
+        key_required: bool = False,
+    ) -> None:
         """
         Adds each metadata into the specified collection.
 
@@ -69,24 +71,25 @@ class MetadataStorer:
         for record in records:
             # Convert record to dictionary if it's not already
             if not isinstance(record, dict):
-                if hasattr(record, 'dict'):
+                if hasattr(record, "dict"):
                     record = record.dict()
-                elif hasattr(record, 'model_dump'):
+                elif hasattr(record, "model_dump"):
                     record = record.model_dump()
                 else:
                     # Try to convert to dict using Metadata helper
                     from data_generator.scripts.metadata.metadata import Metadata
+
                     record = Metadata.return_JSON(record)
-                    
+
             # Ensure record is a dictionary before adding _key
             if isinstance(record, dict) and key_required:
                 record["_key"] = str(uuid.uuid4())
             collections.get_collection(collection_name).insert(record)
 
     def register_activity_provider(
-            self,
-            collector_type: str,
-            version:str = "1.0.0",
+        self,
+        collector_type: str,
+        version: str = "1.0.0",
     ) -> IndalekoCollection:
         """
         Initializes a activity provider registerer for the specifitied collector.
@@ -103,25 +106,24 @@ class MetadataStorer:
         )
 
         record_kwargs = {
-            "Identifier" : str(identifier),
-            "Version" : version,
-            "Description" : collector_type,
-            "Record" : IndalekoRecordDataModel(
+            "Identifier": str(identifier),
+            "Version": version,
+            "Description": collector_type,
+            "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(UTC),
                 Attributes={},
                 Data="",
             ),
         }
-        activity_registration_service, collection = self.activity_data_registrar.\
-            register_provider(**record_kwargs)
+        activity_registration_service, collection = self.activity_data_registrar.register_provider(**record_kwargs)
 
         return activity_registration_service, collection
 
     def add_records_with_activity_provider(
-            self,
-            collection: IndalekoCollection,
-            activity_contexts: dict,
+        self,
+        collection: IndalekoCollection,
+        activity_contexts: dict,
     ) -> None:
         """
         Initializes a activity provider registerer for the specifitied collector.

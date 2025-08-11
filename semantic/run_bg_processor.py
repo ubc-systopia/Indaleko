@@ -32,6 +32,7 @@ import signal
 import subprocess
 import sys
 
+
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,10 +55,10 @@ logger = logging.getLogger("IndalekoBgService")
 
 
 class BackgroundProcessorService:
-    """Service wrapper for the background processor"""
+    """Service wrapper for the background processor."""
 
-    def __init__(self, config_path=None, python_exe=None):
-        """Initialize the service"""
+    def __init__(self, config_path=None, python_exe=None) -> None:
+        """Initialize the service."""
         self.config_path = config_path
         self.python_exe = python_exe or sys.executable
         self.process = None
@@ -68,13 +69,13 @@ class BackgroundProcessorService:
         signal.signal(signal.SIGTERM, self._handle_signal)
         signal.signal(signal.SIGINT, self._handle_signal)
 
-    def _handle_signal(self, signum, frame):
-        """Handle termination signals"""
+    def _handle_signal(self, signum, frame) -> None:
+        """Handle termination signals."""
         logger.info(f"Received signal {signum}, stopping service...")
         self.stop()
 
-    def start(self):
-        """Start the background processor"""
+    def start(self) -> None:
+        """Start the background processor."""
         logger.info("Starting Indaleko background processor service")
 
         try:
@@ -117,8 +118,8 @@ class BackgroundProcessorService:
         except Exception as e:
             logger.error(f"Error starting background processor: {e}", exc_info=True)
 
-    def stop(self):
-        """Stop the background processor"""
+    def stop(self) -> None:
+        """Stop the background processor."""
         self.stopping = True
 
         if self.process and self.process.poll() is None:
@@ -136,17 +137,17 @@ class BackgroundProcessorService:
                     self.process.kill()
 
             except Exception as e:
-                logger.error(f"Error stopping background processor: {e}")
+                logger.exception(f"Error stopping background processor: {e}")
 
         logger.info("Background processor service stopped")
 
-    def cleanup(self):
-        """Cleanup resources on exit"""
+    def cleanup(self) -> None:
+        """Cleanup resources on exit."""
         self.stop()
 
 
-def main():
-    """Main function for the service wrapper"""
+def main() -> None:
+    """Main function for the service wrapper."""
     parser = argparse.ArgumentParser(
         description="Indaleko Background Processor Service",
     )
@@ -222,8 +223,8 @@ def main():
     service.start()
 
 
-def install_windows_service(service_name, config_path, python_exe):
-    """Install as a Windows service using NSSM"""
+def install_windows_service(service_name, config_path, python_exe) -> None:
+    """Install as a Windows service using NSSM."""
     try:
         import shutil
 
@@ -284,11 +285,11 @@ def install_windows_service(service_name, config_path, python_exe):
         logger.info("To start the service, run: nssm start " + service_name)
 
     except Exception as e:
-        logger.error(f"Error installing service: {e}")
+        logger.exception(f"Error installing service: {e}")
 
 
-def uninstall_windows_service(service_name):
-    """Uninstall a Windows service using NSSM"""
+def uninstall_windows_service(service_name) -> None:
+    """Uninstall a Windows service using NSSM."""
     try:
         import shutil
 
@@ -310,11 +311,11 @@ def uninstall_windows_service(service_name):
         logger.info(f"Service '{service_name}' uninstalled successfully")
 
     except Exception as e:
-        logger.error(f"Error uninstalling service: {e}")
+        logger.exception(f"Error uninstalling service: {e}")
 
 
-def install_scheduled_task(task_name, config_path, python_exe):
-    """Install as a Windows scheduled task"""
+def install_scheduled_task(task_name, config_path, python_exe) -> None:
+    """Install as a Windows scheduled task."""
     try:
         # Get absolute paths
         script_path = os.path.abspath(__file__)
@@ -322,7 +323,6 @@ def install_scheduled_task(task_name, config_path, python_exe):
         python_exe = python_exe or sys.executable
 
         # Build the task command
-        task_cmd = f'"{python_exe}" "{script_path}" --config "{config_path}"'
 
         # Create XML for the task
         xml_content = f"""<?xml version="1.0" encoding="UTF-16"?>
@@ -395,11 +395,11 @@ def install_scheduled_task(task_name, config_path, python_exe):
             os.unlink(temp_path)
 
     except Exception as e:
-        logger.error(f"Error installing scheduled task: {e}")
+        logger.exception(f"Error installing scheduled task: {e}")
 
 
-def uninstall_scheduled_task(task_name):
-    """Uninstall a Windows scheduled task"""
+def uninstall_scheduled_task(task_name) -> None:
+    """Uninstall a Windows scheduled task."""
     try:
         # Remove the task
         cmd = ["schtasks", "/delete", "/tn", task_name, "/f"]
@@ -409,7 +409,7 @@ def uninstall_scheduled_task(task_name):
         logger.info(f"Scheduled task '{task_name}' uninstalled successfully")
 
     except Exception as e:
-        logger.error(f"Error uninstalling scheduled task: {e}")
+        logger.exception(f"Error uninstalling scheduled task: {e}")
 
 
 if __name__ == "__main__":

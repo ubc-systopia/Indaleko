@@ -24,9 +24,7 @@ import logging
 # Import analyzer manager functionality but not the CLI class
 from db.analyzer_manager import (
     IndalekoAnalyzerManager,
-    create_custom_analyzers_script,
     execute_analyzer_creation,
-    get_arangosh_command,
 )
 
 # Import the CLI base class
@@ -37,99 +35,79 @@ class IndalekoAnalyzerManagerCLI(IndalekoBaseCLI):
     """CLI for managing ArangoDB analyzers."""
 
     @staticmethod
-    def list_analyzers_command(args):
+    def list_analyzers_command(args) -> None:
         """List all analyzers in the database."""
         manager = IndalekoAnalyzerManager()
         analyzers = manager.list_analyzers()
 
-        print(f"Found {len(analyzers)} analyzers:")
         for analyzer in analyzers:
-            print(f"  - {analyzer.get('name')} (type: {analyzer.get('type')})")
 
             # Show properties if requested
             if args.verbose:
                 try:
                     import json
 
-                    properties = json.loads(analyzer.get("properties", "{}"))
-                    print(f"    Properties: {json.dumps(properties, indent=4)}")
+                    json.loads(analyzer.get("properties", "{}"))
                 except:
                     pass
 
     @staticmethod
-    def create_analyzers_command(args):
+    def create_analyzers_command(args) -> None:
         """Create custom analyzers."""
         manager = IndalekoAnalyzerManager()
 
         if args.analyzer:
             # Create specific analyzer
             if args.analyzer == "camel_case":
-                success = manager.create_camel_case_analyzer()
-                print(f"CamelCase analyzer created: {success}")
+                manager.create_camel_case_analyzer()
             elif args.analyzer == "snake_case":
-                success = manager.create_snake_case_analyzer()
-                print(f"snake_case analyzer created: {success}")
+                manager.create_snake_case_analyzer()
             elif args.analyzer == "filename":
-                success = manager.create_filename_analyzer()
-                print(f"filename analyzer created: {success}")
+                manager.create_filename_analyzer()
             else:
-                print(f"Unknown analyzer: {args.analyzer}")
+                pass
         elif args.direct:
             # Use direct execution via arangosh
-            print("Executing analyzer creation directly using arangosh...")
             if execute_analyzer_creation():
-                print("✅ Custom analyzers created successfully")
+                pass
             else:
-                print("❌ Failed to create custom analyzers")
                 # Show alternative method if direct execution fails
-                print("\nAlternative commands:")
-                print(f"1. Direct arangosh command: {get_arangosh_command()}")
-                print(
-                    "2. Manual execution: Create a file with the following content and run with arangosh:",
-                )
-                print(f"   ```\n{create_custom_analyzers_script()}\n   ```")
+                pass
         else:
             # Create using Python API
             results = manager.create_all_analyzers()
-            print("Analyzer creation results:")
-            for analyzer, success in results.items():
-                print(f"  - {analyzer}: {'✅ Success' if success else '❌ Failed'}")
+            for _success in results.values():
+                pass
 
     @staticmethod
-    def delete_analyzer_command(args):
+    def delete_analyzer_command(args) -> None:
         """Delete an analyzer."""
         if not args.analyzer:
-            print("Error: Must specify an analyzer to delete")
             return
 
         manager = IndalekoAnalyzerManager()
-        success = manager.delete_analyzer(args.analyzer)
-        print(f"Analyzer {args.analyzer} deleted: {success}")
+        manager.delete_analyzer(args.analyzer)
 
     @staticmethod
-    def test_analyzer_command(args):
+    def test_analyzer_command(args) -> None:
         """Test an analyzer on a string."""
         if not args.analyzer or not args.text:
-            print("Error: Must specify both analyzer and text")
             return
 
         manager = IndalekoAnalyzerManager()
         success, tokens = manager.test_analyzer(args.analyzer, args.text)
 
         if success:
-            print(f"Testing analyzer '{args.analyzer}' on text: '{args.text}'")
-            print(f"Tokenized result: {tokens}")
+            pass
         else:
-            print(f"Failed to test analyzer '{args.analyzer}'")
+            pass
 
     @staticmethod
-    def command_command(args):
+    def command_command(args) -> None:
         """Show arangosh command for analyzer creation."""
-        print("Command to create analyzers using arangosh:")
-        print(get_arangosh_command())
 
     @staticmethod
-    def setup_parsers(subparsers):
+    def setup_parsers(subparsers) -> None:
         """Set up command-line parsers for the analyzer manager."""
         # List analyzers command
         list_parser = subparsers.add_parser("list", help="List all analyzers")
@@ -178,7 +156,7 @@ class IndalekoAnalyzerManagerCLI(IndalekoBaseCLI):
         command_parser.set_defaults(func=IndalekoAnalyzerManagerCLI.command_command)
 
 
-def main():
+def main() -> None:
     """Main entry point for the analyzer manager CLI."""
     from db.analyzer_manager import execute_analyzer_creation
 
@@ -221,11 +199,10 @@ def main():
 
     # Handle direct execution request
     if args.direct:
-        print("Executing analyzer creation directly using arangosh...")
         if execute_analyzer_creation():
-            print("✅ Custom analyzers created successfully")
+            pass
         else:
-            print("❌ Failed to create custom analyzers")
+            pass
         return
 
     # Execute the appropriate command

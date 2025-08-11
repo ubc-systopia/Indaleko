@@ -40,7 +40,9 @@ import sys
 import threading
 import time
 import traceback
+
 from datetime import datetime
+
 
 # Ensure we can import from the main Indaleko package
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -72,7 +74,7 @@ def generate_file_activity(volume, stop_event, interval=5):
             os.makedirs(test_dir, exist_ok=True)
             logger.info(f"Created test directory {test_dir}")
         except Exception as e:
-            logger.error(f"Failed to create test directory: {e}")
+            logger.exception(f"Failed to create test directory: {e}")
             return
 
     # File operations to perform in a cycle
@@ -117,7 +119,7 @@ def generate_file_activity(volume, stop_event, interval=5):
             operation_count += 1
             time.sleep(interval)
         except Exception as e:
-            logger.error(f"Error generating file activity: {e}")
+            logger.exception(f"Error generating file activity: {e}")
             time.sleep(interval)
 
 
@@ -291,8 +293,6 @@ def main():
                 logger.info("Monitoring until Ctrl+C is pressed...")
 
                 # Print initial header
-                print("\nNTFS Activity Monitor - Press Ctrl+C to stop")
-                print("=" * 80)
 
                 activity_interval = max(
                     1,
@@ -310,9 +310,6 @@ def main():
 
                         # Print activity summary if there are new activities
                         if new_count > 0 or args.verbose:
-                            print(
-                                f"\nTotal activities: {len(activities)} (new: {new_count})",
-                            )
 
                             # Calculate counts by type
                             activity_counts = {}
@@ -325,13 +322,11 @@ def main():
 
                             # Print counts by type
                             if activity_counts:
-                                print("Activities by type:")
-                                for activity_type, count in activity_counts.items():
-                                    print(f"  {activity_type}: {count}")
+                                for activity_type in activity_counts:
+                                    pass
 
                             # Print the most recent activities (up to 5)
                             if activities:
-                                print("\nMost recent activities:")
                                 for i, activity in enumerate(
                                     activities[-min(5, len(activities)) :],
                                 ):
@@ -345,9 +340,6 @@ def main():
                                         activity.activity_type if hasattr(activity, "activity_type") else "Unknown"
                                     )
 
-                                    print(
-                                        f"  {i+1}. [{timestamp}] [{activity_type}] {filename}",
-                                    )
 
                             # Update last count
                             last_count = len(activities)
@@ -355,17 +347,16 @@ def main():
                         # Sleep before next update
                         time.sleep(activity_interval)
                     except KeyboardInterrupt:
-                        print("\nMonitoring stopped by user")
                         break
                     except Exception as e:
-                        logger.error(f"Error in monitoring loop: {e}")
+                        logger.exception(f"Error in monitoring loop: {e}")
                         time.sleep(activity_interval)
 
         except KeyboardInterrupt:
             logger.info("Monitoring stopped by user")
 
     except Exception as e:
-        logger.error(f"Error setting up NTFS monitoring: {e}")
+        logger.exception(f"Error setting up NTFS monitoring: {e}")
         import traceback
 
         traceback.print_exc()
@@ -386,7 +377,7 @@ def main():
                 collector.stop_monitoring()
                 logger.info("NTFS monitoring stopped")
         except Exception as e:
-            logger.error(f"Error stopping collector: {e}")
+            logger.exception(f"Error stopping collector: {e}")
 
     logger.info("Test completed")
 
@@ -395,8 +386,7 @@ if __name__ == "__main__":
     try:
         # Check if we're running on Windows
         if not sys.platform.startswith("win"):
-            print("WARNING: This script is designed for Windows systems with NTFS.")
-            print("         It may not work correctly on other platforms.")
+            pass
 
         # Check for required dependencies
         try:
@@ -405,13 +395,9 @@ if __name__ == "__main__":
             import win32con
             import win32file
         except ImportError:
-            print("ERROR: This test module requires the pywin32 package.")
-            print("       Please install it using: pip install pywin32")
             sys.exit(1)
 
         main()
-    except Exception as e:
-        print(f"ERROR: {e}")
-        print("An unexpected error occurred:")
+    except Exception:
         traceback.print_exc()
         sys.exit(1)

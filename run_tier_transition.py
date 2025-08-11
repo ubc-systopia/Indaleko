@@ -34,6 +34,7 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 
 # Import tier management components
@@ -42,7 +43,7 @@ from activity.recorders.storage.ntfs.tiered.tier_transition import TierTransitio
 from activity.recorders.storage.ntfs.tiered.warm.recorder import NtfsWarmTierRecorder
 
 
-def configure_logging(level=logging.INFO):
+def configure_logging(level=logging.INFO) -> None:
     """Configure logging for the application."""
     logging.basicConfig(
         level=level,
@@ -60,19 +61,18 @@ def configure_logging(level=logging.INFO):
     )
 
 
-def format_byte_size(size_bytes):
+def format_byte_size(size_bytes) -> str:
     """Format byte size to human-readable string."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
+    if size_bytes < 1024 * 1024:
         return f"{size_bytes/1024:.2f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
+    if size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes/(1024*1024):.2f} MB"
-    else:
-        return f"{size_bytes/(1024*1024*1024):.2f} GB"
+    return f"{size_bytes/(1024*1024*1024):.2f} GB"
 
 
-def print_storage_efficiency(hot_tier_stats, warm_tier_stats):
+def print_storage_efficiency(hot_tier_stats, warm_tier_stats) -> None:
     """Print storage efficiency metrics."""
     # Calculate storage metrics (estimation based on record counts and sizes)
     hot_count = hot_tier_stats.get("total_count", 0)
@@ -90,37 +90,26 @@ def print_storage_efficiency(hot_tier_stats, warm_tier_stats):
         original_activities = agg_stats.get("count_sum", 0)
 
     # Calculate estimated storage sizes
-    hot_storage = hot_count * avg_hot_record_size
+    hot_count * avg_hot_record_size
     warm_storage = warm_count * avg_warm_record_size
     equivalent_hot_storage = (warm_count + original_activities) * avg_hot_record_size
 
     # Calculate efficiency metrics
     if equivalent_hot_storage > 0:
-        compression_ratio = equivalent_hot_storage / warm_storage
+        equivalent_hot_storage / warm_storage
         space_saved = equivalent_hot_storage - warm_storage
-        percent_saved = (space_saved / equivalent_hot_storage) * 100
+        (space_saved / equivalent_hot_storage) * 100
     else:
-        compression_ratio = 1.0
         space_saved = 0
-        percent_saved = 0
 
     # Print formatted metrics
-    print("\nStorage Efficiency:")
-    print(f"  Hot tier storage: {format_byte_size(hot_storage)}")
-    print(f"  Warm tier storage: {format_byte_size(warm_storage)}")
-    print(f"  Equivalent hot tier storage: {format_byte_size(equivalent_hot_storage)}")
-    print(f"  Compression ratio: {compression_ratio:.2f}x")
-    print(f"  Space saved: {format_byte_size(space_saved)} ({percent_saved:.1f}%)")
 
     # Print aggregation metrics
     if aggregated_count > 0 and original_activities > 0:
-        aggregation_ratio = original_activities / aggregated_count
-        print(f"  Aggregation ratio: {aggregation_ratio:.2f} activities per record")
-        print(f"  Original activities represented: {original_activities:,}")
-        print(f"  Aggregated records: {aggregated_count:,}")
+        original_activities / aggregated_count
 
 
-def run_single_transition(args):
+def run_single_transition(args) -> int | None:
     """Run a single tier transition operation."""
     logger = logging.getLogger("run_tier_transition")
 
@@ -146,58 +135,36 @@ def run_single_transition(args):
 
         # Show initial stats if requested
         if args.stats or args.verbose:
-            print("\nInitial State:")
             stats = manager.get_transition_stats()
 
             # Print hot tier stats
             if "hot_tier" in stats:
                 hot = stats["hot_tier"]
-                print("\nHot Tier:")
-                print(f"  Total activities: {hot.get('total_activities', 0):,}")
-                print(f"  Ready for transition: {hot.get('transition_ready', 0):,}")
-                print(f"  Already transitioned: {hot.get('already_transitioned', 0):,}")
-                print(f"  Remaining hot: {hot.get('remaining_hot', 0):,}")
 
             # Print warm tier stats
             if "warm_tier" in stats:
-                warm = stats["warm_tier"]
-                print("\nWarm Tier:")
-                print(f"  Total activities: {warm.get('total_activities', 0):,}")
-                print(f"  Aggregated activities: {warm.get('aggregated_activities', 0):,}")
-                print(f"  Individual activities: {warm.get('individual_activities', 0):,}")
+                stats["warm_tier"]
 
         # Run transition if requested
         if args.run:
-            print("\nRunning tier transition...")
-            start_time = time.time()
+            time.time()
 
             results = manager.run_transition(max_batches=args.max_batches, pause_seconds=args.pause_seconds)
 
-            end_time = time.time()
+            time.time()
 
             # Print results
-            print(f"\nTransition completed in {end_time - start_time:.2f} seconds")
-            print(f"Status: {results.get('status', 'unknown')}")
 
             if results.get("status") == "error":
-                print(f"Error: {results.get('error', 'unknown error')}")
                 return 1
-            else:
-                print(f"Total activities found: {results.get('total_activities_found', 0):,}")
-                print(f"Total activities transitioned: {results.get('total_activities_transitioned', 0):,}")
 
-                # Print batch results if verbose
-                if args.verbose and "batches" in results:
-                    print("\nBatch results:")
-                    for i, batch in enumerate(results["batches"]):
-                        print(f"  Batch {i+1}:")
-                        print(f"    Activities found: {batch.get('activities_found', 0):,}")
-                        print(f"    Activities transitioned: {batch.get('activities_transitioned', 0):,}")
-                        print(f"    Duration: {batch.get('duration_seconds', 0):.2f} seconds")
+            # Print batch results if verbose
+            if args.verbose and "batches" in results:
+                for _i, _batch in enumerate(results["batches"]):
+                    pass
 
         # Show final stats if requested
         if args.stats or args.verbose:
-            print("\nFinal State:")
             stats = manager.get_transition_stats()
 
             # Get hot tier stats
@@ -205,21 +172,10 @@ def run_single_transition(args):
             if "hot_tier" in stats:
                 hot = stats["hot_tier"]
                 hot_tier_stats = hot
-                print("\nHot Tier:")
-                print(f"  Total activities: {hot.get('total_activities', 0):,}")
-                print(f"  Ready for transition: {hot.get('transition_ready', 0):,}")
-                print(f"  Already transitioned: {hot.get('already_transitioned', 0):,}")
-                print(f"  Remaining hot: {hot.get('remaining_hot', 0):,}")
 
             # Get warm tier stats
-            warm_tier_stats = {}
             if "warm_tier" in stats:
-                warm = stats["warm_tier"]
-                warm_tier_stats = warm
-                print("\nWarm Tier:")
-                print(f"  Total activities: {warm.get('total_activities', 0):,}")
-                print(f"  Aggregated activities: {warm.get('aggregated_activities', 0):,}")
-                print(f"  Individual activities: {warm.get('individual_activities', 0):,}")
+                stats["warm_tier"]
 
             # Get detailed warm tier stats
             if args.verbose and hasattr(manager._warm_tier, "get_warm_tier_statistics"):
@@ -227,30 +183,22 @@ def run_single_transition(args):
 
                 # Print importance distribution
                 if "by_importance" in warm_tier_detailed:
-                    print("\nImportance Distribution:")
-                    for importance, count in warm_tier_detailed["by_importance"].items():
-                        print(f"  Score {importance}: {count:,}")
+                    for _importance, _count in warm_tier_detailed["by_importance"].items():
+                        pass
 
                 # Print activity type distribution
                 if "by_type" in warm_tier_detailed:
-                    print("\nActivity Type Distribution:")
-                    for activity_type, count in warm_tier_detailed["by_type"].items():
-                        print(f"  {activity_type}: {count:,}")
+                    for _activity_type, _count in warm_tier_detailed["by_type"].items():
+                        pass
 
                 # Print time distribution
                 if "by_time" in warm_tier_detailed:
-                    print("\nTime Distribution:")
-                    for time_range, count in warm_tier_detailed["by_time"].items():
-                        print(f"  {time_range}: {count:,}")
+                    for _time_range, _count in warm_tier_detailed["by_time"].items():
+                        pass
 
                 # Print aggregation statistics
                 if "aggregation_stats" in warm_tier_detailed:
-                    agg_stats = warm_tier_detailed["aggregation_stats"]
-                    print("\nAggregation Statistics:")
-                    print(f"  Total original activities: {agg_stats.get('count_sum', 0):,}")
-                    print(f"  Average aggregation size: {agg_stats.get('count_avg', 0):.1f}")
-                    print(f"  Max aggregation size: {agg_stats.get('count_max', 0):,}")
-                    print(f"  Min aggregation size: {agg_stats.get('count_min', 0):,}")
+                    warm_tier_detailed["aggregation_stats"]
 
                 # Print storage efficiency metrics
                 print_storage_efficiency(hot_tier_stats, warm_tier_detailed)
@@ -258,7 +206,7 @@ def run_single_transition(args):
         return 0
 
     except Exception as e:
-        logger.error(f"Error running tier transition: {e}", exc_info=args.debug)
+        logger.exception(f"Error running tier transition: {e}", exc_info=args.debug)
         if args.debug:
             import traceback
 
@@ -266,14 +214,12 @@ def run_single_transition(args):
         return 1
 
 
-def run_scheduled_transitions(args):
+def run_scheduled_transitions(args) -> int | None:
     """Run scheduled tier transitions at regular intervals."""
     logger = logging.getLogger("run_tier_transition")
     logger.info(f"Starting scheduled transitions every {args.interval} minutes")
 
     # Print schedule information
-    print(f"Running scheduled transitions every {args.interval} minutes")
-    print("Press Ctrl+C to stop")
 
     # Set up loop variables
     run_count = 0
@@ -283,14 +229,13 @@ def run_scheduled_transitions(args):
         while True:
             # Run a transition
             run_count += 1
-            print(f"\n=== Run {run_count} at {datetime.now(UTC).isoformat()} ===")
 
             # Create a modified args object for this run
             run_args = argparse.Namespace(**vars(args))
             run_args.verbose = False  # Reduce output for scheduled runs
 
             # Run the transition
-            status = run_single_transition(run_args)
+            run_single_transition(run_args)
 
             # Calculate elapsed time and next run time
             elapsed = time.time() - start_time
@@ -303,17 +248,15 @@ def run_scheduled_transitions(args):
                 continue
 
             # Print next run info
-            next_run_time = datetime.now(UTC) + timedelta(minutes=next_run)
-            print(f"\nNext run in {next_run:.1f} minutes (at {next_run_time.isoformat()})")
+            datetime.now(UTC) + timedelta(minutes=next_run)
 
             # Sleep until next run
             time.sleep(next_run * 60)
 
     except KeyboardInterrupt:
-        print("\nScheduled transitions stopped by user")
         return 0
     except Exception as e:
-        logger.error(f"Error in scheduled transitions: {e}", exc_info=args.debug)
+        logger.exception(f"Error in scheduled transitions: {e}", exc_info=args.debug)
         if args.debug:
             import traceback
 
@@ -359,14 +302,11 @@ def main():
     os.makedirs(logs_dir, exist_ok=True)
 
     # Print banner
-    print("\n=== Indaleko NTFS Tier Transition ===")
-    print(f"Time: {datetime.now(UTC).isoformat()}")
 
     # Run appropriate mode
     if args.schedule:
         return run_scheduled_transitions(args)
-    else:
-        return run_single_transition(args)
+    return run_single_transition(args)
 
 
 if __name__ == "__main__":

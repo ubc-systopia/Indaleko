@@ -1,5 +1,5 @@
 """
-Analytics component for Indaleko Streamlit GUI
+Analytics component for Indaleko Streamlit GUI.
 
 This module provides data visualization and analytics capabilities.
 
@@ -33,9 +33,9 @@ from utils.gui.streamlit.services.database import (
 )
 
 
-def render_analytics():
+def render_analytics() -> None:
     """
-    Render the analytics page with charts and visualizations
+    Render the analytics page with charts and visualizations.
 
     Includes:
     - Storage analysis
@@ -209,7 +209,7 @@ def render_analytics():
 
 
 def create_pattern_network_graph(patterns):
-    """Create a network graph visualization of patterns between data sources"""
+    """Create a network graph visualization of patterns between data sources."""
     # Create nodes for source types
     source_type_map = {
         "ntfs": {"id": "ntfs", "label": "File Activity", "group": 1},
@@ -271,7 +271,7 @@ def create_pattern_network_graph(patterns):
     edge_trace = go.Scatter(
         x=edge_x,
         y=edge_y,
-        line=dict(width=1.5, color="#888"),
+        line={"width": 1.5, "color": "#888"},
         hoverinfo="text",
         text=edge_hover,
         mode="lines",
@@ -295,33 +295,32 @@ def create_pattern_network_graph(patterns):
         mode="markers",
         hoverinfo="text",
         text=node_hover,
-        marker=dict(
-            showscale=True,
-            colorscale="YlGnBu",
-            size=15,
-            color=node_colors,
-            line_width=2,
-        ),
+        marker={
+            "showscale": True,
+            "colorscale": "YlGnBu",
+            "size": 15,
+            "color": node_colors,
+            "line_width": 2,
+        },
     )
 
-    fig = go.Figure(
+    return go.Figure(
         data=[edge_trace, node_trace],
         layout=go.Layout(
             title="Cross-Source Pattern Network",
             titlefont_size=16,
             showlegend=False,
             hovermode="closest",
-            margin=dict(b=20, l=5, r=5, t=40),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            margin={"b": 20, "l": 5, "r": 5, "t": 40},
+            xaxis={"showgrid": False, "zeroline": False, "showticklabels": False},
+            yaxis={"showgrid": False, "zeroline": False, "showticklabels": False},
         ),
     )
 
-    return fig
 
 
 def create_correlation_timeline(correlations):
-    """Create a timeline visualization of correlations"""
+    """Create a timeline visualization of correlations."""
     # Process correlations for timeline
     timeline_data = []
 
@@ -340,7 +339,7 @@ def create_correlation_timeline(correlations):
     timeline_data.sort(key=lambda x: x["date"])
 
     # Create timeline using plotly
-    fig = px.scatter(
+    return px.scatter(
         timeline_data,
         x="date",
         y="correlation",
@@ -351,11 +350,10 @@ def create_correlation_timeline(correlations):
         title="Cross-Source Correlations Timeline",
     )
 
-    return fig
 
 
-def display_suggestions(suggestions):
-    """Display proactive suggestions in an interactive format"""
+def display_suggestions(suggestions) -> None:
+    """Display proactive suggestions in an interactive format."""
     # Sort suggestions by priority
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     sorted_suggestions = sorted(

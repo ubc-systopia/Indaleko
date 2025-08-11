@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import os
 import sys
 import uuid
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,13 +45,12 @@ from data_models import IndalekoObjectDataModel
 from storage.recorders.tokenization import tokenize_filename
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoObject:
-    """
-    An IndalekoObject represents a single object (file/directory) in the Indaleko system.
-    """
+    """An IndalekoObject represents a single object (file/directory) in the Indaleko system."""
 
     Schema = IndalekoObjectDataModel.get_arangodb_schema()
 
@@ -60,7 +60,7 @@ class IndalekoObject:
     ACCESS_TIMESTAMP = "581b5332-4d37-49c7-892a-854824f5d66f"
     CHANGE_TIMESTAMP = "3bdc4130-774f-4e99-914e-0bec9ee47aab"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the object."""
         self.args = kwargs
         assert "ObjectIdentifier" in kwargs, "ObjectIdentifier is missing."
@@ -104,12 +104,12 @@ class IndalekoObject:
         """Get an item from the object."""
         return getattr(self.indaleko_object, key)
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         """Check if an item is in the object."""
         return hasattr(self.indaleko_object, key)
 
 
-def main():
+def main() -> None:
     """Test code for the IndalekoObject class."""
     random_raw_data = encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())
@@ -208,8 +208,7 @@ def main():
         "LocalPath": "d:\\dist",
         "LocalIdentifier": 1125899910119832,
     }
-    indaleko_object = IndalekoObject.deserialize(data_object)
-    print(json.dumps(indaleko_object.serialize(), indent=2))
+    IndalekoObject.deserialize(data_object)
 
 
 if __name__ == "__main__":

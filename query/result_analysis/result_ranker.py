@@ -1,5 +1,6 @@
 from typing import Any
 
+
 """
 Future Ranking Enhancements for Indaleko
 ========================================
@@ -52,9 +53,7 @@ to an overall ranking score, allowing users to customize which factors matter mo
 
 
 class ResultRanker:
-    """
-    Ranks the analyzed search results based on relevance and other factors.
-    """
+    """Ranks the analyzed search results based on relevance and other factors."""
 
     def rank(self, analyzed_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -66,12 +65,11 @@ class ResultRanker:
         Returns:
             List[Dict[str, Any]]: The ranked search results
         """
-        ranked_results = sorted(
+        return sorted(
             analyzed_results,
             key=lambda x: self._calculate_rank_score(x),
             reverse=True,
         )
-        return ranked_results
 
     def _calculate_rank_score(self, result: dict[str, Any]) -> float:
         """

@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -36,6 +38,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.context.data_models.activity_data import ActivityDataModel
 from data_models.base import IndalekoBaseModel
+
 
 # pylint: enable=wrong-import-position
 

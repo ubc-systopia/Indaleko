@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+
 # Ensure the project root (indaleko directory) is on sys.path for imports
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 if root not in sys.path:
@@ -16,7 +17,7 @@ from activity.recorders.registration_service import (
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def ip_recorder():
     # Ensure clean state by deleting any existing collection/registration
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
@@ -32,7 +33,7 @@ def ip_recorder():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def wifi_recorder():
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
         str(WiFiLocationRecorder.identifier),

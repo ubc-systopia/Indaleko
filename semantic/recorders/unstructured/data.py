@@ -26,6 +26,7 @@ import sys
 
 from icecream import ic
 
+
 init_path = os.path.dirname(os.path.abspath(__file__))
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,15 +40,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from semantic.characteristics import SemanticDataCharacteristics
 from semantic.collectors import semantic_attributes
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoUnstructuredData:
-    """
-    This is a class object for managing unstructured data in the Indaleko system.
-    """
+    """This is a class object for managing unstructured data in the Indaleko system."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize a new instance of the IndalekoUnstructuredData class object."""
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -60,7 +60,7 @@ class IndalekoUnstructuredData:
         return self.semantic_characteristics
 
 
-def main():
+def main() -> None:
     attributes = [attr for attr, value in semantic_attributes.__dict__.items() if not attr.startswith("__")]
     ic(attributes)
 

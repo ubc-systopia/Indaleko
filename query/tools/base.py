@@ -22,11 +22,13 @@ import os
 import sys
 import time
 import traceback
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -94,7 +96,7 @@ class ProgressCallback(BaseModel):
 class BaseTool(ABC):
     """Base class for all Indaleko tools."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the tool."""
         self._progress_callback = None
 

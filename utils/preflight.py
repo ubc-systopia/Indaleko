@@ -4,13 +4,12 @@ import platform
 import subprocess
 import sys
 
+
 # Check if Python version is >= 3.12
 
 
-def check_python_version():
-    if sys.version_info < (3, 12):
-        print("Python 3.12 or later is required.")
-        sys.exit(1)
+def check_python_version() -> None:
+    pass
 
 
 """
@@ -19,7 +18,7 @@ Command represents a command object
 
 
 class Command:
-    def __init__(self, command_name):
+    def __init__(self, command_name) -> None:
         self.command_name = command_name
         self.args = []
 
@@ -28,7 +27,7 @@ class Command:
     arg = [key] if only key exits
     """
 
-    def add_arg(self, arg):
+    def add_arg(self, arg) -> None:
         self.args.extend(arg)
 
     """
@@ -37,18 +36,18 @@ class Command:
     """
 
     def to_list(self):
-        return [self.command_name] + self.args
+        return [self.command_name, *self.args]
 
     """
     returns a string of the command
     """
 
-    def __str__(self):
-        return " ".join([self.command_name] + self.args)
+    def __str__(self) -> str:
+        return " ".join([self.command_name, *self.args])
 
 
 class CommandBuilder:
-    def __init__(self, command_name):
+    def __init__(self, command_name) -> None:
         self.command = Command(command_name=command_name)
 
     def add_arg(self, arg, value: str = ""):
@@ -63,7 +62,7 @@ class CommandBuilder:
         return self.command
 
 
-def run_commands(commands: list[Command]):
+def run_commands(commands: list[Command]) -> None:
     # Create necessary folders
     folders_to_create = ["./config", "./data", "./logs"]
     for folder in folders_to_create:
@@ -71,21 +70,17 @@ def run_commands(commands: list[Command]):
 
     for command in commands:
         try:
-            print(">> running", command.build())
             subprocess.run(command.build().to_list(), check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error running command: '{command}'")
-            print(f"Err: {e}")
+        except subprocess.CalledProcessError:
             sys.exit(1)
 
 
-def main():
+def main() -> None:
     # Check Python version
     check_python_version()
 
     if platform.system() != "Darwin":
-        print("Only supports MacOS for now")
-        exit(1)
+        sys.exit(1)
 
     # Set up arguments parser
     parser = argparse.ArgumentParser(description="Runs Indaleko on MacOS")

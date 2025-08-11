@@ -60,6 +60,7 @@ import datetime
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -81,6 +82,7 @@ import utils.misc.data_management
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.timestamp_management
+
 from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from utils.i_logging import IndalekoLogging
@@ -89,6 +91,7 @@ from utils.misc.directory_management import (
     indaleko_default_data_dir,
     indaleko_default_log_dir,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -124,7 +127,7 @@ class Indaleko:
         return utils.data_validation.validate_hostname(hostname)
 
     @staticmethod
-    def create_secure_directories(directories: list = None) -> None:
+    def create_secure_directories(directories: list | None = None) -> None:
         """Create secure directories for Indaleko."""
         return utils.misc.directory_management.indaleko_create_secure_directories(
             directories,
@@ -142,12 +145,12 @@ class Indaleko:
         return utils.data_validation.validate_iso_timestamp(source)
 
     @staticmethod
-    def generate_iso_timestamp(ts: datetime = None) -> str:
+    def generate_iso_timestamp(ts: datetime | None = None) -> str:
         """Given a timestamp, convert it to an ISO timestamp."""
         return utils.misc.timestamp_management.generate_iso_timestamp(ts)
 
     @staticmethod
-    def generate_iso_timestamp_for_file(ts: str = None) -> str:
+    def generate_iso_timestamp_for_file(ts: str | None = None) -> str:
         """Create an ISO timestamp for the current time."""
         return utils.misc.timestamp_management.generate_iso_timestamp_for_file(ts)
 
@@ -185,15 +188,13 @@ class Indaleko:
             * service: identifies the service that generated the data (indexer,
               ingester, etc.)
             * timestamp: timestamp to use in the file name
-            * suffix: string to append to the file name
+            * suffix: string to append to the file name.
         """
         return utils.misc.file_name_management.generate_file_name(**kwargs)
 
     @staticmethod
     def extract_keys_from_file_name(file_name: str) -> dict:
-        """
-        Given a file name, extract the keys and values from the file name.
-        """
+        """Given a file name, extract the keys and values from the file name."""
         return utils.misc.file_name_management.extract_keys_from_file_name(file_name)
 
     @staticmethod
@@ -225,14 +226,10 @@ class Indaleko:
         return utils.misc.file_name_management.print_candidate_files(candidates)
 
 
-def main():
-    """Test code for Indaleko.py"""
+def main() -> None:
+    """Test code for Indaleko.py."""
     Indaleko.create_secure_directories()
-    print("Test 1: generate a file name")
-    name = Indaleko.generate_file_name(platform="test", service="test")
-    print(name)
-    print("Test 2: extract keys from file name")
-    print(Indaleko.extract_keys_from_file_name(name))
+    Indaleko.generate_file_name(platform="test", service="test")
 
 
 if __name__ == "__main__":

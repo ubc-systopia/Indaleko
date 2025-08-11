@@ -40,16 +40,18 @@ import os
 import signal
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 # Import the new logging setup
 try:
     from utils.logging_setup import setup_logging
 except ImportError:
     # Fallback if the new logging system isn't available
-    def setup_logging():
+    def setup_logging() -> None:
         """Fallback logging setup if the new system isn't available."""
         logging.basicConfig(
             level=logging.INFO,
@@ -75,6 +77,7 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.handlermixin import IndalekoHandlermixin
 from utils.cli.runner import IndalekoCLIRunner
+
 
 # Constants
 DEFAULT_DB_PATH = Path(IndalekoConstants.default_config_dir)

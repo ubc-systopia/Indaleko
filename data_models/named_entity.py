@@ -45,6 +45,7 @@ from data_models.location_data_model import LocationDataModel
 
 class IndalekoNamedEntityType(str, Enum):
     """Named entity types."""
+
     person = "person"
     organization = "organization"
     location = "location"
@@ -57,6 +58,7 @@ class IndalekoNamedEntityType(str, Enum):
 
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     """Data model for named entities."""
+
     name: str
     uuid: UUID = uuid4()
     category: IndalekoNamedEntityType
@@ -79,6 +81,7 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
 
 class NamedEntityCollection(IndalekoBaseModel):
     """Collection of named entities."""
+
     entities: list[IndalekoNamedEntityDataModel]
 
     class Config:

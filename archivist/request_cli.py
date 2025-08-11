@@ -23,11 +23,14 @@ import json
 import os
 import sys
 import time
+
 from datetime import datetime
 
 import colorama
+
 from colorama import Fore, Style
 from tqdm import tqdm
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +51,7 @@ class RequestArchivistCLI(IndalekoBaseCLI):
         model: str = "gpt-4o",
         debug: bool = False,
         batch_mode: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the CLI for the Request-based Archivist.
 
@@ -123,8 +126,6 @@ To use the CLI, simply type your query and press Enter.
 
     def initialize(self) -> None:
         """Initialize the CLI and assistant."""
-        print(f"{Fore.CYAN}Initializing Request-based Archivist...{Style.RESET_ALL}")
-
         # Initialize the assistant with progress updates
         self.assistant = RequestAssistant(
             model=self.model,
@@ -135,13 +136,6 @@ To use the CLI, simply type your query and press Enter.
         conversation = self.assistant.create_conversation()
         self.conversation_id = conversation.conversation_id
 
-        print(
-            f"{Fore.GREEN}Archivist initialized. Type /help for available commands.{Style.RESET_ALL}",
-        )
-        print(
-            f"{Fore.GREEN}Starting new conversation: {self.conversation_id}{Style.RESET_ALL}",
-        )
-        print()
 
     def run_interactive(self) -> None:
         """Run the CLI in interactive mode."""
@@ -162,17 +156,14 @@ To use the CLI, simply type your query and press Enter.
                         if result is False:  # Exit command
                             break
                     else:
-                        print(
-                            f"{Fore.RED}Unknown command: {command}. Type /help for available commands.{Style.RESET_ALL}",
-                        )
+                        pass
                 else:
                     # Process user message
                     self.process_user_message(user_input)
 
             except KeyboardInterrupt:
-                print("\nInterrupted. Type /exit to quit.")
+                pass
             except EOFError:
-                print("\nExiting...")
                 break
 
     def run_batch(self, input_file: str) -> None:
@@ -188,20 +179,14 @@ To use the CLI, simply type your query and press Enter.
             with open(input_file) as f:
                 queries = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
 
-            print(
-                f"{Fore.GREEN}Processing {len(queries)} queries from {input_file}{Style.RESET_ALL}",
-            )
 
-            for i, query in enumerate(queries):
-                print(
-                    f"\n{Fore.CYAN}Query {i+1}/{len(queries)}: {query}{Style.RESET_ALL}",
-                )
+            for _i, query in enumerate(queries):
                 self.process_user_message(query)
 
         except FileNotFoundError:
-            print(f"{Fore.RED}Error: File {input_file} not found.{Style.RESET_ALL}")
-        except Exception as e:
-            print(f"{Fore.RED}Error processing batch: {e}{Style.RESET_ALL}")
+            pass
+        except Exception:
+            pass
 
     def process_user_message(self, message: str) -> None:
         """
@@ -216,35 +201,29 @@ To use the CLI, simply type your query and press Enter.
         try:
             # Process the message
             if not self.batch_mode:
-                print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
+                pass
 
-            start_time = time.time()
-            response = self.assistant.process_message(
+            time.time()
+            self.assistant.process_message(
                 conversation_id=self.conversation_id,
                 message_content=message,
             )
-            end_time = time.time()
+            time.time()
 
             # Print the response
-            print(f"\n{Fore.GREEN}Archivist:{Style.RESET_ALL} {response['response']}")
 
             # Print debug info
             if self.debug:
-                print(f"\n{Fore.CYAN}Debug Info:{Style.RESET_ALL}")
-                print(f"  Time: {end_time - start_time:.2f}s")
-                print(f"  Action: {response['action']}")
-                print(f"  Timestamp: {response['timestamp']}")
+                pass
 
-            print()
 
-        except Exception as e:
-            print(f"{Fore.RED}Error processing message: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     # Command Handlers
 
     def show_help(self, args: str) -> None:
         """Show the help text."""
-        print(self.help_text)
 
     def clear_conversation(self, args: str) -> None:
         """Clear the current conversation."""
@@ -252,9 +231,6 @@ To use the CLI, simply type your query and press Enter.
         conversation = self.assistant.create_conversation()
         self.conversation_id = conversation.conversation_id
 
-        print(
-            f"{Fore.GREEN}Started new conversation: {self.conversation_id}{Style.RESET_ALL}",
-        )
 
     def save_conversation(self, args: str) -> None:
         """
@@ -274,10 +250,9 @@ To use the CLI, simply type your query and press Enter.
             self.assistant.save_conversations(filepath)
             self.conversation_file = filepath
 
-            print(f"{Fore.GREEN}Conversation saved to {filepath}{Style.RESET_ALL}")
 
-        except Exception as e:
-            print(f"{Fore.RED}Error saving conversation: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def load_conversation(self, args: str) -> None:
         """
@@ -287,7 +262,6 @@ To use the CLI, simply type your query and press Enter.
             args (str): The filename to load from.
         """
         if not args:
-            print(f"{Fore.RED}Error: No filename specified.{Style.RESET_ALL}")
             return
 
         try:
@@ -297,7 +271,6 @@ To use the CLI, simply type your query and press Enter.
                 # Check if file exists as specified
                 filepath = args
                 if not os.path.exists(filepath):
-                    print(f"{Fore.RED}Error: File {args} not found.{Style.RESET_ALL}")
                     return
 
             # Load the conversation
@@ -307,61 +280,36 @@ To use the CLI, simply type your query and press Enter.
             self.conversation_id = next(iter(self.assistant.conversations.keys()))
             self.conversation_file = filepath
 
-            print(f"{Fore.GREEN}Conversation loaded from {filepath}{Style.RESET_ALL}")
-            print(
-                f"{Fore.GREEN}Using conversation: {self.conversation_id}{Style.RESET_ALL}",
-            )
 
             # Print the latest messages
             conversation = self.assistant.get_conversation(self.conversation_id)
             if conversation and conversation.messages:
-                print(f"\n{Fore.CYAN}Recent messages:{Style.RESET_ALL}")
-                for i, msg in enumerate(conversation.messages[-3:]):
-                    role_color = Fore.BLUE if msg.role == "user" else Fore.GREEN
-                    print(
-                        f"{role_color}{msg.role.capitalize()}:{Style.RESET_ALL} {msg.content[:100]}...",
-                    )
+                for _i, _msg in enumerate(conversation.messages[-3:]):
+                    pass
 
-        except Exception as e:
-            print(f"{Fore.RED}Error loading conversation: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def show_forward_prompt(self, args: str) -> None:
         """Show the forward prompt from Archivist memory."""
-        forward_prompt = self.assistant.get_forward_prompt()
+        self.assistant.get_forward_prompt()
 
-        print(f"\n{Fore.CYAN}Archivist Forward Prompt:{Style.RESET_ALL}")
-        print(forward_prompt)
 
     def dump_conversation(self, args: str) -> None:
         """Dump the conversation state."""
         conversation = self.assistant.get_conversation(self.conversation_id)
 
         if not conversation:
-            print(f"{Fore.RED}No active conversation.{Style.RESET_ALL}")
             return
 
-        print(f"\n{Fore.CYAN}Conversation State:{Style.RESET_ALL}")
-        print(f"  ID: {conversation.conversation_id}")
-        print(f"  Created: {conversation.created_at}")
-        print(f"  Updated: {conversation.updated_at}")
-        print(f"  Messages: {len(conversation.messages)}")
-        print(f"  Thread ID: {conversation.execution_context.get('thread_id')}")
 
         if args == "full":
-            print(f"\n{Fore.CYAN}Messages:{Style.RESET_ALL}")
-            for i, msg in enumerate(conversation.messages):
-                role_color = (
-                    Fore.BLUE if msg.role == "user" else (Fore.GREEN if msg.role == "assistant" else Fore.YELLOW)
-                )
-                print(
-                    f"\n{role_color}{msg.role.capitalize()} ({msg.timestamp}):{Style.RESET_ALL}",
-                )
-                print(f"{msg.content}")
+            for _i, _msg in enumerate(conversation.messages):
+                pass
 
     def toggle_debug(self, args: str) -> None:
         """Toggle debug mode."""
         self.debug = not self.debug
-        print(f"{Fore.GREEN}Debug mode: {self.debug}{Style.RESET_ALL}")
 
     def refresh_context(self, args: str) -> None:
         """
@@ -369,24 +317,18 @@ To use the CLI, simply type your query and press Enter.
         This creates a new thread with a summary of the current conversation.
         """
         try:
-            print(f"{Fore.YELLOW}Refreshing conversation context...{Style.RESET_ALL}")
 
             # Refresh the context
-            result = self.assistant.refresh_context(self.conversation_id)
+            self.assistant.refresh_context(self.conversation_id)
 
-            print(f"{Fore.GREEN}Context refreshed successfully.{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}Old thread: {result['old_thread_id']}{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}New thread: {result['new_thread_id']}{Style.RESET_ALL}")
 
             if self.debug:
-                print(f"\n{Fore.CYAN}Summary:{Style.RESET_ALL}")
-                print(result["summary"])
-        except Exception as e:
-            print(f"{Fore.RED}Error refreshing context: {e}{Style.RESET_ALL}")
+                pass
+        except Exception:
+            pass
 
     def exit_cli(self, args: str) -> bool:
         """Exit the CLI."""
-        print(f"{Fore.GREEN}Exiting...{Style.RESET_ALL}")
         return False  # Signal to exit
 
     def manage_entities(self, args: str) -> None:
@@ -396,17 +338,7 @@ To use the CLI, simply type your query and press Enter.
         Args:
             args (str): Command arguments for entity management.
         """
-        entity_help = """
-Named Entity Commands:
-  /entities list [type]  - List all entities or filter by type (person, location, etc.)
-  /entities add TYPE:NAME[:DESCRIPTION] - Add a new named entity
-  /entities delete ID    - Delete an entity by ID
-  /entities search TERM  - Search for entities by name
-  /entities types        - Show available entity types
-"""
-
         if not args:
-            print(entity_help)
             return
 
         # Parse arguments
@@ -423,16 +355,11 @@ Named Entity Commands:
         elif subcommand == "add":
             # Add a new entity
             if not subargs:
-                print(f"{Fore.RED}Error: Missing entity information.{Style.RESET_ALL}")
-                print("Usage: /entities add TYPE:NAME[:DESCRIPTION]")
                 return
 
             # Parse entity information
             parts = subargs.split(":", 2)
             if len(parts) < 2:
-                print(
-                    f"{Fore.RED}Error: Invalid format. Use TYPE:NAME[:DESCRIPTION]{Style.RESET_ALL}",
-                )
                 return
 
             entity_type = parts[0].strip().lower()
@@ -449,9 +376,6 @@ Named Entity Commands:
                 "document",
             ]
             if entity_type not in valid_types:
-                print(
-                    f"{Fore.RED}Error: Invalid entity type. Valid types: {', '.join(valid_types)}{Style.RESET_ALL}",
-                )
                 return
 
             # Create and store the entity
@@ -460,8 +384,6 @@ Named Entity Commands:
         elif subcommand == "delete":
             # Delete an entity by ID
             if not subargs:
-                print(f"{Fore.RED}Error: Missing entity ID.{Style.RESET_ALL}")
-                print("Usage: /entities delete ID")
                 return
 
             entity_id = subargs.strip()
@@ -470,8 +392,6 @@ Named Entity Commands:
         elif subcommand == "search":
             # Search for entities by name
             if not subargs:
-                print(f"{Fore.RED}Error: Missing search term.{Style.RESET_ALL}")
-                print("Usage: /entities search TERM")
                 return
 
             search_term = subargs.strip()
@@ -479,17 +399,10 @@ Named Entity Commands:
 
         elif subcommand == "types":
             # Show available entity types
-            print(f"{Fore.CYAN}Available Entity Types:{Style.RESET_ALL}")
-            print("  - person: People, individuals, names")
-            print("  - location: Places, cities, countries, addresses")
-            print("  - organization: Companies, schools, institutions")
-            print("  - device: Phones, computers, hardware")
-            print("  - event: Meetings, conferences, occasions")
-            print("  - document: Files, reports, papers, specific documents")
+            pass
 
         else:
-            print(f"{Fore.RED}Unknown entity subcommand: {subcommand}{Style.RESET_ALL}")
-            print(entity_help)
+            pass
 
     def _list_entities(self, entity_type: str | None = None) -> None:
         """
@@ -521,26 +434,19 @@ Named Entity Commands:
                 aql_query,
                 bind_vars=bind_vars,
             )
-            entities = [doc for doc in cursor]
+            entities = list(cursor)
 
             if not entities:
-                print(f"{Fore.YELLOW}No entities found.{Style.RESET_ALL}")
                 return
 
             # Group by type if not filtered
             if entity_type:
-                print(
-                    f"{Fore.CYAN}{len(entities)} {entity_type.title()} Entities:{Style.RESET_ALL}",
-                )
                 for entity in entities:
                     # Extract key if present
-                    entity_id = entity.get("_key") or entity.get("id", "unknown")
-                    confidence = entity.get("confidence", 1.0)
-                    print(
-                        f"  [{entity_id}] {entity['name']} (confidence: {confidence:.2f})",
-                    )
+                    entity.get("_key") or entity.get("id", "unknown")
+                    entity.get("confidence", 1.0)
                     if entity.get("description"):
-                        print(f"      {entity['description']}")
+                        pass
             else:
                 # Group by type
                 grouped = {}
@@ -552,21 +458,15 @@ Named Entity Commands:
 
                 # Print groups
                 for etype, ents in grouped.items():
-                    print(
-                        f"\n{Fore.CYAN}{etype.title()} Entities ({len(ents)}):{Style.RESET_ALL}",
-                    )
                     for entity in ents[:5]:  # Show first 5 per type
-                        entity_id = entity.get("_key") or entity.get("id", "unknown")
-                        confidence = entity.get("confidence", 1.0)
-                        print(
-                            f"  [{entity_id}] {entity['name']} (confidence: {confidence:.2f})",
-                        )
+                        entity.get("_key") or entity.get("id", "unknown")
+                        entity.get("confidence", 1.0)
 
                     if len(ents) > 5:
-                        print(f"  ... and {len(ents) - 5} more {etype} entities")
+                        pass
 
-        except Exception as e:
-            print(f"{Fore.RED}Error listing entities: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def _add_entity(self, entity_type: str, name: str, description: str) -> None:
         """
@@ -613,25 +513,18 @@ Named Entity Commands:
                 bind_vars={"name": name, "type": entity_type},
             )
 
-            existing = [doc for doc in cursor]
+            existing = list(cursor)
             if existing:
-                print(
-                    f"{Fore.YELLOW}Entity already exists: {name} ({entity_type}){Style.RESET_ALL}",
-                )
                 return
 
             # Save to database
             collection = self.assistant.db_config._arangodb.collection("NamedEntities")
             doc = json.loads(entity_model.model_dump_json())
-            result = collection.insert(doc)
+            collection.insert(doc)
 
-            print(
-                f"{Fore.GREEN}Added new entity: {name} ({entity_type}){Style.RESET_ALL}",
-            )
-            print(f"Entity ID: {result['_key']}")
 
-        except Exception as e:
-            print(f"{Fore.RED}Error adding entity: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def _delete_entity(self, entity_id: str) -> None:
         """
@@ -646,27 +539,20 @@ Named Entity Commands:
             try:
                 entity = collection.get(entity_id)
                 if not entity:
-                    print(
-                        f"{Fore.RED}Entity not found with ID: {entity_id}{Style.RESET_ALL}",
-                    )
                     return
 
                 # Confirm deletion
-                entity_name = entity.get("name", "Unknown")
-                entity_type = entity.get("entity_type", "unknown")
-                print(
-                    f"{Fore.YELLOW}Deleting: {entity_name} ({entity_type}){Style.RESET_ALL}",
-                )
+                entity.get("name", "Unknown")
+                entity.get("entity_type", "unknown")
 
                 # Delete entity
                 collection.delete(entity_id)
-                print(f"{Fore.GREEN}Entity deleted successfully.{Style.RESET_ALL}")
 
-            except Exception as e:
-                print(f"{Fore.RED}Error retrieving entity: {e}{Style.RESET_ALL}")
+            except Exception:
+                pass
 
-        except Exception as e:
-            print(f"{Fore.RED}Error deleting entity: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def _search_entities(self, search_term: str) -> None:
         """
@@ -690,18 +576,12 @@ Named Entity Commands:
                 bind_vars={"term": search_term},
             )
 
-            entities = [doc for doc in cursor]
+            entities = list(cursor)
 
             if not entities:
-                print(
-                    f"{Fore.YELLOW}No entities found matching: '{search_term}'{Style.RESET_ALL}",
-                )
                 return
 
             # Show results
-            print(
-                f"{Fore.CYAN}Found {len(entities)} entities matching '{search_term}':{Style.RESET_ALL}",
-            )
 
             current_type = None
             for entity in entities:
@@ -709,34 +589,19 @@ Named Entity Commands:
 
                 # Print type header when changing types
                 if etype != current_type:
-                    print(f"\n{Fore.CYAN}{etype.title()} Entities:{Style.RESET_ALL}")
                     current_type = etype
 
                 # Print entity
-                entity_id = entity.get("_key") or entity.get("id", "unknown")
-                confidence = entity.get("confidence", 1.0)
-                print(
-                    f"  [{entity_id}] {entity['name']} (confidence: {confidence:.2f})",
-                )
+                entity.get("_key") or entity.get("id", "unknown")
+                entity.get("confidence", 1.0)
                 if entity.get("description"):
-                    print(f"      {entity['description']}")
+                    pass
 
-        except Exception as e:
-            print(f"{Fore.RED}Error searching entities: {e}{Style.RESET_ALL}")
+        except Exception:
+            pass
 
     def show_memory_commands(self, args: str) -> None:
         """Show memory-related commands."""
-        memory_help = """
-Archivist Memory Commands:
-  /memory save       - Save the current archivist memory
-  /memory goals      - List long-term goals
-  /memory add-goal   - Add a new long-term goal
-  /memory insights   - List insights
-  /memory strategies - List effective strategies
-  /memory topics     - List topics of interest
-"""
-        print(memory_help)
-
         # Handle memory subcommands
         if args:
             parts = args.split(maxsplit=1)
@@ -745,28 +610,20 @@ Archivist Memory Commands:
 
             if subcommand == "save":
                 self.assistant.archivist_memory.save_memory()
-                print(f"{Fore.GREEN}Archivist memory saved.{Style.RESET_ALL}")
 
             elif subcommand == "goals":
                 goals = self.assistant.archivist_memory.memory.long_term_goals
                 if not goals:
-                    print(f"{Fore.YELLOW}No goals stored.{Style.RESET_ALL}")
+                    pass
                 else:
-                    print(f"{Fore.CYAN}Long-Term Goals:{Style.RESET_ALL}")
-                    for i, goal in enumerate(goals):
-                        print(f"  {i+1}. {goal.name} ({goal.progress*100:.0f}%)")
-                        print(f"     {goal.description}")
+                    for _i, _goal in enumerate(goals):
+                        pass
 
             elif subcommand == "add-goal":
                 if not subargs:
-                    print(f"{Fore.RED}Error: No goal specified.{Style.RESET_ALL}")
-                    print("Usage: /memory add-goal NAME:DESCRIPTION")
                     return
 
                 if ":" not in subargs:
-                    print(
-                        f"{Fore.RED}Error: Invalid format. Use NAME:DESCRIPTION{Style.RESET_ALL}",
-                    )
                     return
 
                 name, description = subargs.split(":", 1)
@@ -775,51 +632,40 @@ Archivist Memory Commands:
                     description.strip(),
                 )
                 self.assistant.archivist_memory.save_memory()
-                print(f"{Fore.GREEN}Goal added: {name.strip()}{Style.RESET_ALL}")
 
             elif subcommand == "insights":
                 insights = self.assistant.archivist_memory.memory.insights
                 if not insights:
-                    print(f"{Fore.YELLOW}No insights stored.{Style.RESET_ALL}")
+                    pass
                 else:
-                    print(f"{Fore.CYAN}Insights:{Style.RESET_ALL}")
-                    for i, insight in enumerate(insights):
-                        print(
-                            f"  {i+1}. {insight.insight} (confidence: {insight.confidence:.2f})",
-                        )
+                    for _i, _insight in enumerate(insights):
+                        pass
 
             elif subcommand == "strategies":
                 strategies = self.assistant.archivist_memory.memory.effective_strategies
                 if not strategies:
-                    print(f"{Fore.YELLOW}No strategies stored.{Style.RESET_ALL}")
+                    pass
                 else:
-                    print(f"{Fore.CYAN}Effective Strategies:{Style.RESET_ALL}")
-                    for i, strategy in enumerate(strategies):
-                        print(
-                            f"  {i+1}. {strategy.strategy_name} (success rate: {strategy.success_rate:.2f})",
-                        )
-                        print(f"     {strategy.description}")
+                    for _i, _strategy in enumerate(strategies):
+                        pass
 
             elif subcommand == "topics":
                 topics = self.assistant.archivist_memory.memory.semantic_topics
                 if not topics:
-                    print(f"{Fore.YELLOW}No topics stored.{Style.RESET_ALL}")
+                    pass
                 else:
-                    print(f"{Fore.CYAN}Topics of Interest:{Style.RESET_ALL}")
-                    for topic, importance in sorted(
+                    for _topic, _importance in sorted(
                         topics.items(),
                         key=lambda x: x[1],
                         reverse=True,
                     ):
-                        print(f"  - {topic} (importance: {importance:.2f})")
+                        pass
 
             else:
-                print(
-                    f"{Fore.RED}Unknown memory subcommand: {subcommand}{Style.RESET_ALL}",
-                )
+                pass
 
 
-def main():
+def main() -> None:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(description="Request-based Archivist CLI")
     parser.add_argument("--model", default="gpt-4o", help="The OpenAI model to use")

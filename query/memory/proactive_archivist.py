@@ -22,11 +22,13 @@ import os
 import random
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +44,7 @@ from query.memory.pattern_types import (
     SuggestionPriority,
     SuggestionType,
 )
+
 
 # We'll import the detector by name only to avoid circular imports
 # pylint: enable=wrong-import-position
@@ -107,11 +110,10 @@ class SuggestionHistory(BaseModel):
             negative = self.negative_interactions.get(suggestion_type, 0)
             total = positive + negative
             return positive / total if total > 0 else 0.5
-        else:
-            total_positive = sum(self.positive_interactions.values())
-            total_negative = sum(self.negative_interactions.values())
-            total = total_positive + total_negative
-            return total_positive / total if total > 0 else 0.5
+        total_positive = sum(self.positive_interactions.values())
+        total_negative = sum(self.negative_interactions.values())
+        total = total_positive + total_negative
+        return total_positive / total if total > 0 else 0.5
 
 
 class TemporalPattern(BaseModel):
@@ -206,7 +208,7 @@ class ProactiveArchivistData(BaseModel):
         description="When cross-source patterns were last analyzed",
     )
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         # Set default suggestion thresholds if not provided
         if not self.suggestion_thresholds:
@@ -233,7 +235,7 @@ class ProactiveArchivist:
     proactive_archivist_version = "2025.04.11.02"
     proactive_archivist_description = "Proactive Archivist enhancement with cross-source pattern detection"
 
-    def __init__(self, archivist_memory: ArchivistMemory):
+    def __init__(self, archivist_memory: ArchivistMemory) -> None:
         """
         Initialize the Proactive Archivist.
 
@@ -621,7 +623,7 @@ class ProactiveArchivist:
         description,
         confidence,
         timeframe,
-    ):
+    ) -> None:
         """Add a new temporal pattern or update an existing one."""
         # Check if similar pattern already exists
         for pattern in self.data.temporal_patterns:
@@ -878,7 +880,7 @@ class ProactiveArchivist:
             ic(f"Error in cross-source pattern analysis: {e}")
 
 
-def main():
+def main() -> None:
     """Test the Proactive Archivist capabilities."""
     # Initialize base Archivist memory
     archivist = ArchivistMemory()
@@ -908,13 +910,8 @@ def main():
     suggestions = proactive.generate_suggestions()
 
     # Display suggestions
-    print("\nProactive Suggestions:")
-    print("=====================")
-    for suggestion in suggestions:
-        print(f"\n{suggestion.title}")
-        print(f"Type: {suggestion.suggestion_type}, Priority: {suggestion.priority}")
-        print(f"Confidence: {suggestion.confidence:.2f}")
-        print(f"Content: {suggestion.content}")
+    for _suggestion in suggestions:
+        pass
 
 
 if __name__ == "__main__":

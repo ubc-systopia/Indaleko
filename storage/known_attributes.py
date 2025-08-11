@@ -24,6 +24,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,13 +35,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.storage_semantic_attributes import StorageSemanticAttributes
 
+
 # pylint: enable=wrong-import-position
 
 
 class KnownStorageAttributes:
-    """
-    This class defines known semantic attributes for the storage providers.
-    """
+    """This class defines known semantic attributes for the storage providers."""
 
     _initialized = False
     _attributes_by_provider_type = {}
@@ -52,18 +52,18 @@ class KnownStorageAttributes:
         # empty thus far
     }
 
-    STORAGE_ATTRIBUTES_DEVICE = '3fa47f24-b198-434d-b440-119ec5af4f7d'  # st_dev
-    STORAGE_ATTRIBUTES_GID = '64ec8b5a-78ba-4787-ba8d-cb033ec24116'  # st_gid
-    STORAGE_ATTRIBUTES_MODE = '1bb62d33-0392-4ffe-af1d-5ebfc32afbb9'  # st_mode
-    STORAGE_ATTRIBUTES_NLINK = '06677615-2957-4966-aab9-dde29660c334'  # st_nlink
-    STORAGE_ATTRIBUTES_REPARSE_TAG = '7ebf1a92-94f9-40b0-8887-349c24f0e354'  # windows specific - move?
-    STORAGE_ATTRIBUTES_UID = '1bd30cfc-9320-427d-bdde-60d9e8aa4400'  # st_uid
-    STORAGE_ATTRIBUTES_INODE = '882d75c6-a424-4d8b-a938-c264a281204c'  # st_ino
+    STORAGE_ATTRIBUTES_DEVICE = "3fa47f24-b198-434d-b440-119ec5af4f7d"  # st_dev
+    STORAGE_ATTRIBUTES_GID = "64ec8b5a-78ba-4787-ba8d-cb033ec24116"  # st_gid
+    STORAGE_ATTRIBUTES_MODE = "1bb62d33-0392-4ffe-af1d-5ebfc32afbb9"  # st_mode
+    STORAGE_ATTRIBUTES_NLINK = "06677615-2957-4966-aab9-dde29660c334"  # st_nlink
+    STORAGE_ATTRIBUTES_REPARSE_TAG = "7ebf1a92-94f9-40b0-8887-349c24f0e354"  # windows specific - move?
+    STORAGE_ATTRIBUTES_UID = "1bd30cfc-9320-427d-bdde-60d9e8aa4400"  # st_uid
+    STORAGE_ATTRIBUTES_INODE = "882d75c6-a424-4d8b-a938-c264a281204c"  # st_ino
 
-    STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX = 'f425ae89-fff2-4b93-a90e-0e2fd9220411' #  suffix based MIME type
-    STORAGE_ATTRIBUTES_MIME_TYPE = 'bce15d05-d4fd-4d37-933f-ff6b4e5dde9d'  # MIME type from file analysis
-    STORAGE_ATTRIBUTES_FILE_SUFFIX = 'd4282ceb-ec50-4bbf-8718-680c67a4d257'  # File suffix
-    STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = 'c6724410-a717-44a7-b9d3-6b276e250c1d'  # Lowercase file name
+    STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX = "f425ae89-fff2-4b93-a90e-0e2fd9220411"  #  suffix based MIME type
+    STORAGE_ATTRIBUTES_MIME_TYPE = "bce15d05-d4fd-4d37-933f-ff6b4e5dde9d"  # MIME type from file analysis
+    STORAGE_ATTRIBUTES_FILE_SUFFIX = "d4282ceb-ec50-4bbf-8718-680c67a4d257"  # File suffix
+    STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = "c6724410-a717-44a7-b9d3-6b276e250c1d"  # Lowercase file name
 
     @classmethod
     def _initialize(cls: "KnownStorageAttributes") -> None:
@@ -83,21 +83,21 @@ class KnownStorageAttributes:
             cls._attributes_by_uuid[value.value] = label
             cls._attributes_by_provider_type["base"][label] = value.value
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not self._initialized:
             self._initialize()
 
     @staticmethod
     def get_attribute_by_uuid(uuid_value):
-        """Get the attribute by the UUID"""
+        """Get the attribute by the UUID."""
         return KnownStorageAttributes._attributes_by_uuid.get(uuid_value)
 
 
 KnownStorageAttributes._initialize()
 
 
-def main():
-    """Main function for the module"""
+def main() -> None:
+    """Main function for the module."""
     ic("Starting")
     ic(dir(KnownStorageAttributes))
 

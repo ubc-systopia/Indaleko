@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -406,8 +407,6 @@ def load_complex_explain_result():
 
 def main():
     """Test the query plan visualization."""
-    print("Testing Indaleko Query Plan Visualization")
-    print("=========================================\n")
 
     # Create the plan visualizer
     visualizer = PlanVisualizer(colorize=True, max_depth=10)
@@ -432,27 +431,17 @@ def main():
     ]
 
     # Process each test case
-    for i, test_case in enumerate(test_cases, 1):
-        print(f"\n\n===== Test {i}: {test_case['name']} =====\n")
+    for _i, test_case in enumerate(test_cases, 1):
 
         # Parse and visualize the execution plan
         explain_result = test_case["explain_result"]
         plan = visualizer.parse_plan(explain_result)
 
         # Display the execution plan
-        visualization = visualizer.visualize_text(plan, verbose=test_case["verbose"])
-        print(visualization)
+        visualizer.visualize_text(plan, verbose=test_case["verbose"])
 
         # Print plan statistics
-        print("\nPlan Statistics:")
-        print(f"  Total Cost: {plan.total_cost}")
-        print(f"  Node Count: {len(plan.nodes)}")
-        print(f"  Collections: {', '.join(plan.collections_used)}")
-        print(f"  Optimizations Count: {len(plan.optimizations)}")
-        print(f"  Bottlenecks Count: {len(plan.bottlenecks)}")
-        print(f"  Recommendations Count: {len(plan.recommendations)}")
 
-    print("\nTest completed successfully!")
 
 
 if __name__ == "__main__":

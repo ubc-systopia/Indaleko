@@ -1,5 +1,5 @@
 """
-Base description of Indaleko
+Base description of Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -23,13 +23,14 @@ import sys
 
 from icecream import ic
 
+
 if "INDALEKO_ROOT" not in os.environ:
     os.environ["INDALEKO_ROOT"] = os.path.dirname(os.path.abspath(__file__))
     sys.path.append(os.environ["INDALEKO_ROOT"])
 
 
-def initialize_project():
-    """Initialize the project"""
+def initialize_project() -> None:
+    """Initialize the project."""
     ic("Indaleko project initialization invoked.")
 
 

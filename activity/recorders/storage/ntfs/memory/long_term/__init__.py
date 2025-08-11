@@ -9,6 +9,7 @@ Components:
 - NtfsLongTermMemoryRecorder: Records significant file system activities in long-term memory
 """
 
-from .recorder import NtfsLongTermMemoryRecorder
+from ntfs.memory.long_term.recorder import NtfsLongTermMemoryRecorder
+
 
 __all__ = ["NtfsLongTermMemoryRecorder"]

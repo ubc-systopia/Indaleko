@@ -21,11 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import sys
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Never
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,13 +45,14 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 
+
 # pylint: enable=wrong-import-position
 
 
 class BaseCloudStorageCollector(BaseStorageCollector):
     """This is the base class for all cloud storage recorders in Indaleko."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """This is the constructor for the base cloud storage recorder."""
         if "args" in kwargs:
             self.args = kwargs["args"]
@@ -62,7 +65,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         self.cli_handler_mixin = BaseCloudStorageCollector.cloud_collector_mixin
 
     @staticmethod
-    def get_cloud_storage_collector():
+    def get_cloud_storage_collector() -> Never:
         """This method returns the cloud storage collector."""
         raise NotImplementedError("This method must be implemented by the subclass.")
 
@@ -120,12 +123,11 @@ class BaseCloudStorageCollector(BaseStorageCollector):
             collector = kwargs.get("collector")
             if collector:
                 return collector.get_counts()
-            else:
-                return {}
+            return {}
 
         def capture_performance(
             task_func: Callable[..., Any],
-            output_file_name: Path | str = None,
+            output_file_name: Path | str | None = None,
         ) -> None:
             assert output_file_name
             perf_data = IndalekoPerformanceDataCollector.measure_performance(

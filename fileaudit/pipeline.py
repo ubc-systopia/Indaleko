@@ -2,7 +2,7 @@ import operators
 
 
 class Pipeline:
-    def __init__(self, input_generator: operators.IReader):
+    def __init__(self, input_generator: operators.IReader) -> None:
         self.input_generator = input_generator
         self.operators = []
 

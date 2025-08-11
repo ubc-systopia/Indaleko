@@ -22,11 +22,13 @@ import argparse
 import logging
 import os
 import sys
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,12 +45,13 @@ from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.data_models.runner_data import IndalekoCLIRunnerData
 from utils.cli.handlermixin import IndalekoHandlermixin
 
+
 # from utils import IndalekoLogging
 # pylint: enable=wrong-import-position
 
 
 class IndalekoCLIRunner:
-    """This class provides a common CLI runner"""
+    """This class provides a common CLI runner."""
 
     def __init__(
         self,
@@ -95,7 +98,7 @@ class IndalekoCLIRunner:
             ic(self.cli.get_config_data())
 
     def setup(self) -> None:
-        """This method is used to setup the CLI runner"""
+        """This method is used to setup the CLI runner."""
         if self.runner_data.SetupLogging:
             if self.args.debug:
                 ic("Setup Logging")
@@ -114,7 +117,7 @@ class IndalekoCLIRunner:
             self.runner_data.PerformanceConfiguration()
 
     def cleanup(self) -> None:
-        """This method is used to cleanup the CLI runner"""
+        """This method is used to cleanup the CLI runner."""
         if self.runner_data.PerformanceRecording:
             if self.args.debug:
                 ic("Performance Recording")
@@ -142,45 +145,45 @@ class IndalekoCLIRunner:
         self.cleanup()
 
     class CLIRunnerMixin(ABC):
-        """This class provides a mixin for the CLI runner"""
+        """This class provides a mixin for the CLI runner."""
 
         @abstractmethod
         def get_pre_parser() -> argparse.ArgumentParser | None:
-            """This method is used to get the pre-parser"""
+            """This method is used to get the pre-parser."""
 
         @abstractmethod
-        def setup_logging(kwargs: dict[str, Any] = {}) -> None:
-            """This method is used to setup logging"""
+        def setup_logging(self: dict[str, Any] | None = None) -> None:
+            """This method is used to setup logging."""
 
         @abstractmethod
-        def load_configuration(kwargs: dict[str, Any] = {}) -> IndalekoMachineConfig:
-            """This method is used to load configuration"""
+        def load_configuration(self: dict[str, Any] | None = None) -> IndalekoMachineConfig:
+            """This method is used to load configuration."""
 
         @abstractmethod
-        def add_parameters(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-            """This method is used to add parameters to an existing parser"""
+        def add_parameters(self: argparse.ArgumentParser) -> argparse.ArgumentParser:
+            """This method is used to add parameters to an existing parser."""
 
         @abstractmethod
-        def performance_configuration(kwargs: dict[str, Any] = {}) -> bool:
+        def performance_configuration(self: dict[str, Any] | None = None) -> bool:
             """
             This method is used to configure performance.  Return of False indicates
             performace information is not being recorded.
             """
 
         @abstractmethod
-        def run(kwargs: dict[str, Any] = {}) -> None:
-            """This method is used to run the core CLI utility"""
+        def run(self: dict[str, Any] | None = None) -> None:
+            """This method is used to run the core CLI utility."""
 
         @abstractmethod
-        def performance_recording(kwargs: dict[str, Any] = {}) -> None:
-            """This method is used to record performance"""
+        def performance_recording(self: dict[str, Any] | None = None) -> None:
+            """This method is used to record performance."""
 
         @abstractmethod
-        def cleanup(kwargs: dict[str, Any] = {}) -> None:
-            """This method is used to cleanup"""
+        def cleanup(self: dict[str, Any] | None = None) -> None:
+            """This method is used to cleanup."""
 
     class default_runner_mixin(CLIRunnerMixin):
-        """This class provides a default runner mixin"""
+        """This class provides a default runner mixin."""
 
         @staticmethod
         def get_pre_parser() -> argparse.ArgumentParser | None:
@@ -188,8 +191,7 @@ class IndalekoCLIRunner:
             This method is used to get the pre-parser.  This implementation
             does not add any initial arguments to the parser.
             """
-            pre_parser = argparse.ArgumentParser(add_help=False)
-            return pre_parser
+            return argparse.ArgumentParser(add_help=False)
 
         @staticmethod
         def setup_logging(args: argparse.Namespace, **kwargs: dict[str, Any]) -> None:
@@ -203,7 +205,7 @@ class IndalekoCLIRunner:
             """
             if not args.logdir:
                 return
-            filename = kwargs.get("logfile", None)
+            filename = kwargs.get("logfile")
             filename: Path = Path(args.logdir) / args.logfile
             log_level: int = getattr(args, "log_level", logging.INFO)
             log_format: str = kwargs.get(
@@ -224,9 +226,11 @@ class IndalekoCLIRunner:
 
         @staticmethod
         def load_configuration(
-            kwargs: dict[str, Any] = {},
+            kwargs: dict[str, Any] | None = None,
         ) -> IndalekoMachineConfig | None:
-            """This method is used to load configuration"""
+            """This method is used to load configuration."""
+            if kwargs is None:
+                kwargs = {}
             args: argparse.Namespace | None = kwargs.get("args")
             cli: IndalekoBaseCLI | None = kwargs.get("cli")
             machine_config_class: type[IndalekoMachineConfig] = kwargs["class"]
@@ -259,19 +263,21 @@ class IndalekoCLIRunner:
             return parser
 
         @staticmethod
-        def performance_configuration():
-            """This method is used to configure performance"""
+        def performance_configuration() -> bool:
+            """This method is used to configure performance."""
             return True
 
         @abstractmethod
-        def run(kwargs: dict[str, Any] = {}) -> None:
-            """This method is used to run the core CLI utility"""
+        def run(self: dict[str, Any] | None = None) -> None:
+            """This method is used to run the core CLI utility."""
+            if kwargs is None:
+                pass
             ic("Invoked the default run method, which does nothing.  Please override.")
 
         @staticmethod
-        def performance_recording():
-            """This method is used to record performance"""
+        def performance_recording() -> None:
+            """This method is used to record performance."""
 
         @staticmethod
-        def cleanup():
-            """This method is used to cleanup"""
+        def cleanup() -> None:
+            """This method is used to cleanup."""

@@ -1,4 +1,5 @@
 import collections
+
 from datetime import datetime
 
 from abstract import IOperator, IWriter
@@ -9,18 +10,14 @@ class CompactRecord:
     event_name_datets_sep = "|"  # Separator for event name, date, and timestamp
 
     def __init__(self) -> None:
-        """
-        Initialize CompactRecord object with empty attributes.
-        """
+        """Initialize CompactRecord object with empty attributes."""
         self.proc_name = ""  # Process name
         self.pid = ""  # Process ID
         self.path = ""  # File path
         self.events = []  # List to store events
 
     def add_procname(self, procname: str) -> "CompactRecord":
-        """
-        Add process name to CompactRecord.
-        """
+        """Add process name to CompactRecord."""
         assert isinstance(
             procname, str,
         ), f"procname is not string; got {
@@ -30,18 +27,14 @@ class CompactRecord:
         return self
 
     def add_pid(self, pid: str) -> "CompactRecord":
-        """
-        Add process ID to CompactRecord.
-        """
+        """Add process ID to CompactRecord."""
         assert isinstance(pid, str), f"pid is not a string; got {type(pid)}"
         if self.pid == "":
             self.pid = pid
         return self
 
     def add_path(self, path: str) -> "CompactRecord":
-        """
-        Add file path to CompactRecord.
-        """
+        """Add file path to CompactRecord."""
         assert isinstance(path, str), f"path is not a string; got {type(path)}"
         if self.path == "":
             self.path = path
@@ -52,13 +45,11 @@ class CompactRecord:
         event_name: str,
         event_date: str,
         event_ts: str,
-        procname: str = None,
-        pid: str = None,
-        path: str = None,
+        procname: str | None = None,
+        pid: str | None = None,
+        path: str | None = None,
     ) -> "CompactRecord":
-        """
-        Add an event to CompactRecord. Optionally update process name, PID, or file path.
-        """
+        """Add an event to CompactRecord. Optionally update process name, PID, or file path."""
         assert isinstance(
             event_name, str,
         ), f"event_name is not a string; got {
@@ -100,17 +91,13 @@ class CompactRecord:
         return self
 
     def to_list(self) -> list:
-        """
-        Convert CompactRecord attributes to a list.
-        """
+        """Convert CompactRecord attributes to a list."""
         return [self.pid, self.proc_name, self.path, self.events]
 
 
 class LogCompactor(IOperator):
     def __init__(self, writer: "IWriter", datefunc=None) -> None:
-        """
-        Initialize LogCompactor with a writer and an optional date function.
-        """
+        """Initialize LogCompactor with a writer and an optional date function."""
         # procname-pid: <path>; events=[open|date:ts1, ...., close|date:tsn]
         # expects = [['381720', 'app1', '/path/foo/text1',
         # ['open|today_13:38:34.127535', 'close|today_13:38:34.127529']]]
@@ -127,7 +114,7 @@ class LogCompactor(IOperator):
 
     def get_state_key(self, record):
         """
-        Returns (procname-pid, fd) created based on the given record
+        Returns (procname-pid, fd) created based on the given record.
 
         procname: record[-2]-record[-1]
         fd: record[2]
@@ -200,9 +187,7 @@ class LogCompactor(IOperator):
                 raise Exception(f"not implemented; record={record}")
 
     def get_state(self):
-        """
-        Get the current state of LogCompactor.
-        """
+        """Get the current state of LogCompactor."""
         state = []
         for key in self.state:
             state.append(self.state[key].to_list())

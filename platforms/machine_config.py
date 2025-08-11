@@ -23,10 +23,13 @@ import json
 import os
 import sys
 import uuid
+
 from pathlib import Path
 
 import arango
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -47,6 +50,7 @@ from db.db_collections import IndalekoDBCollections
 from db.i_collections import IndalekoCollections
 from db.service_manager import IndalekoServiceManager
 from utils.data_validation import validate_uuid_string
+
 
 # pylint: enable=wrong-import-position
 

@@ -2,6 +2,7 @@ import logging
 import os
 
 import IndalekoIngest
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -69,20 +70,20 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
         "sha256Checksum",
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.gdrive_creds = None
         self.email = None
 
     def _get_output_file(self) -> str:
-        """This method returns the output file name"""
+        """This method returns the output file name."""
         return f"{self.data_dir}/gdrive-{self.get_email()}-{self.timestamp}.json".replace(
             " ",
             "_",
         ).replace(":", "-")
 
-    def main(self):
-        """Set up the specific features for this ingestor"""
+    def main(self) -> None:
+        """Set up the specific features for this ingestor."""
         self.parser.add_argument(
             "--creds",
             type=str,
@@ -109,7 +110,7 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
             )
 
     def get_metadata(self):
-        """This method extracts the metadata from the Google Drive API"""
+        """This method extracts the metadata from the Google Drive API."""
         if self.gdrive_creds is None:
             self._get_credentials()
         page_token = None
@@ -129,8 +130,7 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
                 if error.resp.status == 401:
                     self._get_credentials()
                     continue
-                else:
-                    raise error
+                raise
             self.metadata.extend(results.get("files", []))
             page_token = results.get("nextPageToken", None)
             if not page_token:
@@ -161,7 +161,7 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
 
     def get_email(self) -> str:
         """This method returns the email address associated with the
-        credentials
+        credentials.
         """
         if self.email is None:
             service = build("people", "v1", credentials=self.gdrive_creds)

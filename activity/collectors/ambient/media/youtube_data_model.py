@@ -22,8 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +39,7 @@ from activity.data_model.activity_classification import (
     IndalekoActivityClassification,
     IndalekoMultiClassifiedActivityDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -170,12 +173,11 @@ def calculate_watch_percentage(watch_data):
     """Calculate the percentage of the video that was watched."""
     if "percent_watched" in watch_data:
         return float(watch_data["percent_watched"])
-    elif "current_time" in watch_data and "duration" in watch_data:
-        if watch_data["duration"] > 0:
-            return min(
-                1.0,
-                float(watch_data["current_time"]) / float(watch_data["duration"]),
-            )
+    if "current_time" in watch_data and "duration" in watch_data and watch_data["duration"] > 0:
+        return min(
+            1.0,
+            float(watch_data["current_time"]) / float(watch_data["duration"]),
+        )
     return 0.0
 
 
@@ -184,8 +186,7 @@ def parse_youtube_datetime(datetime_str):
     if not datetime_str:
         return None
     try:
-        dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
-        return dt
+        return datetime.fromisoformat(datetime_str)
     except (ValueError, TypeError):
         return None
 
@@ -453,8 +454,8 @@ def calculate_productivity_score(video_data, watch_data):
     return min(score, 1.0)  # Cap at 1.0
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     YouTubeVideoActivity.test_model_main()
 
 

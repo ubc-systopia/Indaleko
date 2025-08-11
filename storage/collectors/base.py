@@ -28,10 +28,13 @@ import stat
 import sys
 import tempfile
 import uuid
+
 from pathlib import Path
 
 import jsonlines
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,6 +57,7 @@ from utils.misc.file_name_management import (
     generate_file_name,
     indaleko_file_name_prefix,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -99,7 +103,7 @@ class BaseStorageCollector:
     # local requires it, cloud does not
     requires_machine_config = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         if self.requires_machine_config:
             assert "machine_config" in kwargs, "machine_config must be specified"
             self.machine_config = kwargs["machine_config"]
@@ -196,7 +200,7 @@ class BaseStorageCollector:
 
     @classmethod
     def get_collector_service_registration_name(cls) -> str:
-        """This function returns the service name for registration"""
+        """This function returns the service name for registration."""
         return cls.collector_data.ServiceRegistrationName
 
     @classmethod
@@ -238,7 +242,7 @@ class BaseStorageCollector:
         """This function finds the files to ingest:
         search_dir: path to the search directory
         prefix: prefix of the collector file
-        suffix: suffix of the collector file (default is .json)
+        suffix: suffix of the collector file (default is .json).
         """
         assert search_dir is not None, "search_dir must be a valid path"
         assert os.path.isdir(search_dir), "search_dir must be a valid directory"
@@ -247,13 +251,11 @@ class BaseStorageCollector:
         return [x for x in os.listdir(search_dir) if x.startswith(prefix) and x.endswith(suffix) and "collector-" in x]
 
     def get_counts(self):
-        """
-        Retrieves counters about the collector.
-        """
+        """Retrieves counters about the collector."""
         return {x: getattr(self, x) for x in BaseStorageCollector.counter_values}
 
     def generate_collector_file_name(self: "BaseStorageCollector", **kwargs) -> str:
-        """Generate a file name for the Linux local collector"""
+        """Generate a file name for the Linux local collector."""
         if "platform" not in kwargs:
             kwargs["platform"] = self.collector_data.PlatformName
         if "collector_name" not in kwargs:
@@ -282,7 +284,7 @@ class BaseStorageCollector:
         )
         if not isinstance(collector_name, str):
             raise ValueError("collector_name must be a string")
-        machine_id = kwargs.get("machine_id", None)
+        machine_id = kwargs.get("machine_id")
         storage_description = None
         if "storage_description" in kwargs:
             storage_description = str(uuid.UUID(kwargs["storage_description"]).hex)
@@ -385,14 +387,13 @@ class BaseStorageCollector:
     def convert_to_serializable(data):
         if isinstance(data, (int, float, str, bool, type(None))):
             return data
-        elif isinstance(data, list):
+        if isinstance(data, list):
             return [BaseStorageCollector.convert_to_serializable(item) for item in data]
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             return {key: BaseStorageCollector.convert_to_serializable(value) for key, value in data.items()}
-        else:
-            if hasattr(data, "__dict__"):
-                return BaseStorageCollector.convert_to_serializable(data.__dict__)
-            return None
+        if hasattr(data, "__dict__"):
+            return BaseStorageCollector.convert_to_serializable(data.__dict__)
+        return None
 
     def collect(self, **kwargs) -> None:
         """
@@ -431,25 +432,25 @@ class BaseStorageCollector:
                     data.append(entry)
                     count += 1
                 if self.debug and count % 10000 == 0:
-                    print("Processed", count, "entries, continuing")
+                    pass
         self.data = data
         if self.debug:
-            print("Processed", count, "entries (complete)")
+            pass
         self.output_count = count
 
     @staticmethod
     def write_data_to_file(
         collector: "BaseStorageCollector",
-        output_file_name: str = None,
+        output_file_name: str | None = None,
     ) -> None:
-        """Write the data to a file"""
+        """Write the data to a file."""
         if output_file_name is None:
             if hasattr(collector, "output_file_name"):
                 output_file_name = collector.output_file_name
             else:
                 output_file_name = collector.generate_collector_file_name()
                 ic("Warning: implicit output file name being used")
-                assert False
+                raise AssertionError
         data_file_name, count = collector.record_data_in_file(
             collector.data,
             collector.data_dir,
@@ -462,7 +463,7 @@ class BaseStorageCollector:
     @staticmethod
     def __write_data_to_file(
         data: list,
-        file_name: str = None,
+        file_name: str | None = None,
         jsonlines_output: bool = True,
     ) -> int:
         """
@@ -492,7 +493,7 @@ class BaseStorageCollector:
                         logging.exception("Entry: %s", entry)
                         logging.exception("Output count: %d", output_count)
                         logging.exception("Data size %d", len(data))
-                        raise err
+                        raise
                     except UnicodeEncodeError as err:
                         logging.exception("Error writing entry to JSONLines file: %s", err)
                         logging.exception("Entry: %s", entry)
@@ -503,10 +504,8 @@ class BaseStorageCollector:
                         )
                         continue  # ignoring
             logging.info("Wrote JSONLines data to %s", file_name)
-            print("Wrote JSONLines data to", file_name)
         else:
             json.dump(data, file_name, indent=4)
-            print("Wrote JSON data to", file_name)
             logging.info("Wrote JSON data to %s", file_name)
         return output_count
 
@@ -542,7 +541,6 @@ class BaseStorageCollector:
             if os.path.exists(preferred_file_name):
                 os.remove(preferred_file_name)
             shutil.move(temp_file_name, preferred_file_name)
-            print(f"Renamed {temp_file_name} to {preferred_file_name}")
         except (FileNotFoundError, PermissionError, FileExistsError, OSError) as e:
             logging.exception(
                 "Unable to rename temp file %s to %s : %s",
@@ -558,7 +556,7 @@ class BaseStorageCollector:
         return preferred_file_name, count
 
 
-def main():
+def main() -> None:
     """Test code for this module."""
     collector = BaseStorageCollector()
     output_file = collector.generate_collector_file_name(
@@ -567,9 +565,7 @@ def main():
     ic(output_file)
     with open(output_file, "w", encoding="utf-8-sig") as output:
         output.write("Hello, world!\n")
-        print(f"Wrote {output_file}")
-    metadata = collector.extract_metadata_from_collector_file_name(output_file)
-    print(json.dumps(metadata, indent=4))
+    collector.extract_metadata_from_collector_file_name(output_file)
 
 
 if __name__ == "__main__":

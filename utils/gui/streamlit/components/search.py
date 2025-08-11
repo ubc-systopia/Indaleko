@@ -1,5 +1,5 @@
 """
-Search component for Indaleko Streamlit GUI
+Search component for Indaleko Streamlit GUI.
 
 This module provides the search interface for natural language queries.
 
@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import uuid
+
 from datetime import UTC, datetime
 
 import streamlit as st
@@ -30,9 +31,9 @@ from utils.gui.streamlit.mock_modules import FacetGenerator, MockQueryProcessor
 from utils.gui.streamlit.services.query import execute_query
 
 
-def render_search():
+def render_search() -> None:
     """
-    Render the search interface with natural language query capabilities
+    Render the search interface with natural language query capabilities.
 
     Provides:
     - Query input with explain and debug options
@@ -67,14 +68,14 @@ def render_search():
     if advanced:
         col1, col2, col3 = st.columns(3)
         with col1:
-            use_enhanced_nl = st.checkbox("Enhanced NL", value=True)
-            context_aware = st.checkbox("Context Aware", value=True)
+            st.checkbox("Enhanced NL", value=True)
+            st.checkbox("Context Aware", value=True)
         with col2:
-            deduplicate = st.checkbox("Deduplicate Results", value=True)
-            similarity_threshold = st.slider("Similarity Threshold", 0.0, 1.0, 0.85)
+            st.checkbox("Deduplicate Results", value=True)
+            st.slider("Similarity Threshold", 0.0, 1.0, 0.85)
         with col3:
             dynamic_facets = st.checkbox("Dynamic Facets", value=True)
-            max_results = st.number_input("Max Results", value=100, min_value=1)
+            st.number_input("Max Results", value=100, min_value=1)
 
     # Search with form for cancel capability
     search_col1, search_col2 = st.columns([3, 1])

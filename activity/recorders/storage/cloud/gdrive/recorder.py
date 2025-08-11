@@ -26,8 +26,10 @@ import os
 import socket
 import sys
 import uuid
+
 from datetime import timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,6 +59,7 @@ from activity.collectors.storage.semantic_attributes import (
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -68,7 +71,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
     functionality for storing and querying Google Drive file system activities.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the Google Drive storage activity recorder.
 
@@ -274,7 +277,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         document = self._build_gdrive_activity_document(activity_data)
 
         # Store in database
-        result = self._collection.add_document(document)
+        self._collection.add_document(document)
 
         return activity_data.activity_id
 
@@ -316,7 +319,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_mime_type(
         self,
@@ -356,7 +359,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_folder(
         self,
@@ -396,7 +399,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_shared_activities(self, limit: int = 100, offset: int = 0) -> list[dict]:
         """
@@ -429,7 +432,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_google_drive_specific_statistics(self) -> dict[str, Any]:
         """
@@ -512,7 +515,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
                 stats["sharing_percentage"] = 0
 
         except Exception as e:
-            self._logger.error(f"Error generating Google Drive statistics: {e}")
+            self._logger.exception(f"Error generating Google Drive statistics: {e}")
 
         return stats
 
@@ -560,7 +563,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         try:
             super()._register_with_service_manager()
         except Exception as e:
-            self._logger.error(f"Error registering with service manager: {e}")
+            self._logger.exception(f"Error registering with service manager: {e}")
             # Continue even if registration fails
 
 
@@ -583,23 +586,20 @@ if __name__ == "__main__":
     # Collect and store activities
     try:
         # Collect data
-        print("Collecting Google Drive activities...")
         collector.collect_data()
 
         # Store collected activities
         storage_activities = [activity.to_storage_activity() for activity in collector.activities]
         activity_ids = recorder.store_activities(storage_activities)
-        print(f"Stored {len(activity_ids)} activities")
 
         # Get statistics
         stats = recorder.get_google_drive_specific_statistics()
-        print("Activity statistics:")
-        for key, value in stats.items():
+        for value in stats.values():
             # Skip complex values for cleaner output
             if isinstance(value, dict) and len(value) > 5:
-                print(f"  {key}: {len(value)} items")
+                pass
             else:
-                print(f"  {key}: {value}")
+                pass
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except Exception:
+        pass

@@ -26,6 +26,7 @@ import logging
 import os
 import sys
 
+
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,12 +49,12 @@ from query.context.recommendations.entity_relationship import (
 from query.context.recommendations.query_history import QueryHistoryRecommender
 from query.context.recommendations.temporal_pattern import TemporalPatternRecommender
 
+
 # pylint: enable=wrong-import-position
 
 
 def test_query_history_recommender():
     """Test the QueryHistoryRecommender."""
-    print("\n===== Testing QueryHistoryRecommender =====")
     recommender = QueryHistoryRecommender(debug=True)
 
     # Test with a current query
@@ -62,99 +63,62 @@ def test_query_history_recommender():
         max_suggestions=3,
     )
 
-    print(f"Generated {len(suggestions)} suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-        )
-        print(f"   Rationale: {suggestion.rationale}")
-        print(f"   Tags: {suggestion.tags}")
-        print()
+    for _i, _suggestion in enumerate(suggestions):
+        pass
 
     # Test feedback
     if suggestions:
-        print("Testing feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
             result_count=5,
         )
-        print("Feedback recorded")
 
 
 def test_activity_context_recommender():
     """Test the ActivityContextRecommender."""
-    print("\n===== Testing ActivityContextRecommender =====")
 
     # Initialize database config for the recommender
     try:
         from db.db_config import IndalekoDBConfig
 
         db_config = IndalekoDBConfig()
-        print("Database connection established")
-    except Exception as e:
-        print(f"Failed to establish database connection: {e}")
-        print("Continuing with mock data...")
+    except Exception:
         db_config = None
 
     # Create the recommender with actual database connection
     recommender = ActivityContextRecommender(db_config=db_config, debug=True)
 
     # Generate suggestions
-    print("Generating suggestions from activities...")
     suggestions = recommender.generate_suggestions(max_suggestions=5)
 
-    print(f"Generated {len(suggestions)} suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-        )
-        print(f"   Rationale: {suggestion.rationale}")
-        print(
-            f"   Source context: {suggestion.source_context.get('activity_type', 'unknown')}",
-        )
-        print(f"   Tags: {suggestion.tags}")
-        print()
+    for i, _suggestion in enumerate(suggestions):
+        pass
 
     # Test feedback
     if suggestions:
-        print("Testing feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.HELPFUL,
             result_count=7,
         )
-        print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
-        print("\nGenerating new suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(max_suggestions=5)
 
-        print(f"Generated {len(new_suggestions)} suggestions after feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
-            print(
-                f"   Source context: {suggestion.source_context.get('activity_type', 'unknown')}",
-            )
-            print()
+        for i, _suggestion in enumerate(new_suggestions):
+            pass
 
         # Check if feedback affected confidence scores
         for i, new_suggestion in enumerate(new_suggestions):
             if i < len(suggestions) and new_suggestion.query_text == suggestions[i].query_text:
                 confidence_change = new_suggestion.confidence - suggestions[i].confidence
                 if abs(confidence_change) > 0.01:
-                    print(f"Suggestion confidence changed by {confidence_change:.2f}")
-                    print(f"   From: {suggestions[i].confidence:.2f}")
-                    print(f"   To: {new_suggestion.confidence:.2f}")
-                    print()
+                    pass
 
 
 def test_entity_relationship_recommender():
     """Test the EntityRelationshipRecommender."""
-    print("\n===== Testing EntityRelationshipRecommender =====")
 
     # Create recommender
     recommender = EntityRelationshipRecommender(debug=True)
@@ -180,8 +144,6 @@ def test_entity_relationship_recommender():
         ],
     }
 
-    print(f"Generating suggestions for query: '{current_query}'")
-    print(f"Context entities: {len(context_data['entities'])}")
 
     # Generate suggestions
     suggestions = recommender.generate_suggestions(
@@ -190,59 +152,37 @@ def test_entity_relationship_recommender():
         max_suggestions=5,
     )
 
-    print(f"Generated {len(suggestions)} suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-        )
-        print(f"   Rationale: {suggestion.rationale}")
-        print(
-            f"   Entity type: {suggestion.source_context.get('entity_type', 'unknown')}",
-        )
+    for _i, suggestion in enumerate(suggestions):
         if "relationship" in suggestion.source_context:
-            print(
-                f"   Relationship: {suggestion.source_context['relationship']} with {suggestion.source_context.get('source_entity', 'unknown')}",
-            )
-        print(f"   Tags: {suggestion.tags}")
-        print()
+            pass
 
     # Test feedback
     if suggestions:
-        print("Testing feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
             result_count=5,
         )
-        print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
-        print("\nGenerating new suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
             current_query=current_query,
             context_data=context_data,
             max_suggestions=5,
         )
 
-        print(f"Generated {len(new_suggestions)} suggestions after feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(new_suggestions):
 
             # Check if confidence changed
             for orig in suggestions:
                 if suggestion.query_text == orig.query_text:
                     confidence_change = suggestion.confidence - orig.confidence
                     if abs(confidence_change) > 0.01:
-                        print(f"   Confidence change: {confidence_change:+.2f}")
-            print()
+                        pass
 
 
 def test_temporal_pattern_recommender():
     """Test the TemporalPatternRecommender."""
-    print("\n===== Testing TemporalPatternRecommender =====")
 
     # Create recommender
     recommender = TemporalPatternRecommender(debug=True)
@@ -258,7 +198,6 @@ def test_temporal_pattern_recommender():
     ]
 
     for test_time in test_times:
-        print(f"\nTesting time: {test_time.strftime('%A, %I:%M %p')}")
 
         # Create context with current time
         context_data = {"current_time": test_time.isoformat()}
@@ -269,64 +208,42 @@ def test_temporal_pattern_recommender():
             max_suggestions=3,
         )
 
-        print(f"Generated {len(suggestions)} suggestions:")
-        for i, suggestion in enumerate(suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(suggestions):
 
             # Show time window
             time_window = suggestion.source_context.get("time_window", {})
             if "days_of_week" in time_window:
-                days = [calendar.day_name[d] for d in time_window["days_of_week"]]
-                print(f"   Days: {', '.join(days)}")
+                [calendar.day_name[d] for d in time_window["days_of_week"]]
             if "hour_range" in time_window:
-                hr = time_window["hour_range"]
-                print(f"   Hours: {hr[0]}:00 - {hr[1]}:00")
+                time_window["hour_range"]
 
-            print(
-                f"   Match score: {suggestion.source_context.get('match_score', 0):.2f}",
-            )
-            print(f"   Tags: {suggestion.tags}")
-            print()
 
     # Test feedback
     if suggestions:
-        print("Testing feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
             result_count=7,
         )
-        print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
-        print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
             context_data=context_data,
             max_suggestions=3,
         )
 
-        print(f"Generated {len(new_suggestions)} suggestions after feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(new_suggestions):
 
             # Check if this matches an original suggestion to see confidence change
             for orig in suggestions:
                 if suggestion.query_text == orig.query_text:
                     confidence_change = suggestion.confidence - orig.confidence
                     if abs(confidence_change) > 0.01:
-                        print(f"   Confidence change: {confidence_change:+.2f}")
-            print()
+                        pass
 
 
 def test_recommendation_engine():
     """Test the RecommendationEngine."""
-    print("\n===== Testing RecommendationEngine =====")
     engine = RecommendationEngine(debug=True)
 
     # Generate recommendations
@@ -335,33 +252,22 @@ def test_recommendation_engine():
         max_results=5,
     )
 
-    print(f"Generated {len(recommendations)} recommendations:")
-    for i, recommendation in enumerate(recommendations):
-        print(
-            f"{i+1}. {recommendation.query_text} (confidence: {recommendation.confidence:.2f})",
-        )
-        print(f"   Source: {recommendation.source.value}")
-        print(f"   Rationale: {recommendation.rationale}")
-        print()
+    for _i, _recommendation in enumerate(recommendations):
+        pass
 
     # Test feedback
     if recommendations:
-        print("Testing feedback:")
         engine.record_feedback(
             suggestion_id=recommendations[0].suggestion_id,
             feedback=FeedbackType.ACCEPTED,
             result_count=3,
         )
-        print("Feedback recorded")
 
     # Check acceptance rate
-    print("\nAcceptance rates:")
     for source in RecommendationSource:
-        rate = engine.get_acceptance_rate(source)
-        print(f"{source.value}: {rate:.2f}")
+        engine.get_acceptance_rate(source)
 
     # Test updating settings
-    print("\nUpdating settings:")
     new_settings = RecommendationSettings(
         max_suggestions=10,
         min_confidence=0.6,
@@ -371,23 +277,15 @@ def test_recommendation_engine():
         },
     )
     engine.update_settings(new_settings)
-    print("Settings updated")
 
     # Generate recommendations again
-    print("\nGenerating recommendations with new settings:")
     new_recommendations = engine.get_recommendations(
         current_query="Find documents about Indaleko",
         max_results=5,
     )
 
-    print(f"Generated {len(new_recommendations)} recommendations:")
-    for i, recommendation in enumerate(new_recommendations):
-        print(
-            f"{i+1}. {recommendation.query_text} (confidence: {recommendation.confidence:.2f})",
-        )
-        print(f"   Source: {recommendation.source.value}")
-        print(f"   Rationale: {recommendation.rationale}")
-        print()
+    for _i, _recommendation in enumerate(new_recommendations):
+        pass
 
 
 def main():

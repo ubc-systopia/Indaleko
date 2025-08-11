@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from typing import Any
+
 
 # from datetime import datetime
 
@@ -39,41 +41,38 @@ from activity.collectors.ambient.data_models.smart_thermostat import (
     ThermostatSensorData,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class SmartThermostatCollector(AmbientCollector):
-    """
-    This class provides a common base for smart thermostat data collectors.
-    """
+    """This class provides a common base for smart thermostat data collectors."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the object."""
         self.config = kwargs.get("config", {})
         self.data = ThermostatSensorData()
 
     def collect_data(self) -> None:
-        """Collect smart thermostat data"""
+        """Collect smart thermostat data."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def process_data(self, data: Any) -> dict[str, Any]:
-        """Process the collected data"""
+        """Process the collected data."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def store_data(self, data: dict[str, Any]) -> None:
-        """Store the processed data"""
+        """Store the processed data."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def update_data(self) -> None:
-        """Update the data in the database"""
+        """Update the data in the database."""
         raise NotImplementedError("Subclasses must implement this method")
 
     def get_description(self) -> str:
-        """
-        Get a description of the smart thermostat data collector.
-        """
+        """Get a description of the smart thermostat data collector."""
         return "Base class for smart thermostat data collectors"
 
     def get_latest_db_update(self) -> dict[str, Any]:
-        """Get the latest data update from the database"""
+        """Get the latest data update from the database."""
         raise NotImplementedError("Subclasses must implement this method")

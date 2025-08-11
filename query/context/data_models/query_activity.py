@@ -24,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from pydantic import Field, validator
 
 from data_models.base import IndalekoBaseModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -73,7 +76,7 @@ class QueryActivityData(IndalekoBaseModel):
 
     # Add pydantic validator to ensure timezone awareness
     @validator("timestamp")
-    def ensure_timezone(cls, v):
+    def ensure_timezone(self, v):
         """Ensure the timestamp has a timezone."""
         if v.tzinfo is None:
             return v.replace(tzinfo=UTC)
@@ -97,10 +100,10 @@ class QueryActivityData(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """Test code for QueryActivityData model."""
     # Create a test instance
-    test_instance = QueryActivityData(
+    QueryActivityData(
         query_id=uuid.uuid4(),
         query_text="Find documents about Indaleko",
         execution_time=123.45,
@@ -112,15 +115,10 @@ def main():
     )
 
     # Print as JSON
-    print(test_instance.model_dump_json(indent=2))
 
     # Test serialization to dictionary
-    print("\nSerialized to dictionary:")
-    print(test_instance.model_dump())
 
     # Test building ArangoDB document
-    print("\nArangoDB document:")
-    print(test_instance.build_arangodb_doc())
 
 
 if __name__ == "__main__":

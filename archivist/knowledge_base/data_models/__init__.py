@@ -18,6 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .feedback_record import FeedbackRecordDataModel, FeedbackType
-from .knowledge_pattern import KnowledgePatternDataModel, KnowledgePatternType
-from .learning_event import LearningEventDataModel, LearningEventType
+from knowledge_base.data_models.feedback_record import FeedbackRecordDataModel, FeedbackType
+from knowledge_base.data_models.knowledge_pattern import (
+    KnowledgePatternDataModel,
+    KnowledgePatternType,
+)
+from knowledge_base.data_models.learning_event import LearningEventDataModel, LearningEventType

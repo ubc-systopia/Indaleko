@@ -23,8 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +42,7 @@ from db import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
 from utils.misc.named_entity import IndalekoNamedEntity
 from utils.misc.string_similarity import jaro_winkler_similarity
+
 
 # pylint: enable=wrong-import-position
 
@@ -74,9 +77,7 @@ class EntityEquivalenceNode(IndalekoBaseModel):
 
 
 class EntityEquivalenceRelation(IndalekoBaseModel):
-    """
-    Represents a relation between two entity nodes in the equivalence graph.
-    """
+    """Represents a relation between two entity nodes in the equivalence graph."""
 
     source_id: UUID  # ID of the source entity
     target_id: UUID  # ID of the target entity
@@ -100,9 +101,7 @@ class EntityEquivalenceRelation(IndalekoBaseModel):
 
 
 class EntityEquivalenceGroup(IndalekoBaseModel):
-    """
-    Represents a group of equivalent entity references.
-    """
+    """Represents a group of equivalent entity references."""
 
     group_id: UUID = uuid4()
     canonical_id: UUID  # The ID of the canonical entity reference
@@ -136,7 +135,7 @@ class EntityEquivalenceManager:
     4. Managing the persistence of equivalence data
     """
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         """
         Initialize the entity equivalence manager.
 
@@ -157,7 +156,7 @@ class EntityEquivalenceManager:
         # Load existing data
         self._load_data()
 
-    def _setup_collections(self):
+    def _setup_collections(self) -> None:
         """Set up the necessary collections in the database."""
         from db.i_collections import IndalekoCollections
 
@@ -178,7 +177,7 @@ class EntityEquivalenceManager:
         self.relations_collection = relations_collection._arangodb_collection
         self.groups_collection = groups_collection._arangodb_collection
 
-    def _load_data(self):
+    def _load_data(self) -> None:
         """Load existing entity equivalence data from the database."""
         # Load nodes
         cursor = self.nodes_collection.all()
@@ -665,7 +664,7 @@ class EntityEquivalenceManager:
         return results
 
 
-def main():
+def main() -> None:
     """Test the entity equivalence functionality."""
     # Initialize the manager
     manager = EntityEquivalenceManager()
@@ -723,37 +722,24 @@ def main():
     manager.merge_entities(loc3.entity_id, loc1.entity_id, relation_type="nickname")
 
     # Test retrieving canonical references
-    canonical = manager.get_canonical_reference(node2.entity_id)
-    print(
-        f"Canonical reference for '{node2.name}': {canonical.name if canonical else 'None'}",
-    )
+    manager.get_canonical_reference(node2.entity_id)
 
     # Test retrieving all references
     all_refs = manager.get_all_references(node1.entity_id)
-    print(f"All references for '{node1.name}':")
-    for ref in all_refs:
-        print(f"  - {ref.name}")
+    for _ref in all_refs:
+        pass
 
     # Test getting the entity graph
-    graph = manager.get_entity_graph(node1.entity_id)
-    print("\nEntity Graph:")
-    print(f"Nodes: {len(graph['nodes'])}")
-    print(f"Edges: {len(graph['edges'])}")
+    manager.get_entity_graph(node1.entity_id)
 
     # Test listing all groups
     groups = manager.list_entity_groups()
-    print(f"\nEntity Groups ({len(groups)}):")
     for group in groups:
-        print(f"  - {group['canonical']['name']} ({len(group['members'])} members)")
-        for member in group["members"]:
-            print(f"    - {member['name']}")
+        for _member in group["members"]:
+            pass
 
     # Statistics
-    stats = manager.get_stats()
-    print("\nStatistics:")
-    print(f"  - Nodes: {stats['node_count']}")
-    print(f"  - Groups: {stats['group_count']}")
-    print(f"  - Relations: {stats['relation_count']}")
+    manager.get_stats()
 
 
 if __name__ == "__main__":

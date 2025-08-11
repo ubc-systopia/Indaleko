@@ -27,6 +27,7 @@ import sys
 # from typing import Union, List
 from pydantic import BaseModel, Field  # , AwareDatetime, field_validator
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -41,13 +42,12 @@ from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoDBStatisticsDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the Indaleko database statistics.
-    """
+    """This class defines the data model for the Indaleko database statistics."""
 
     class __collection_attributes(BaseModel):
         """This defines the information for a given collection."""
@@ -165,7 +165,7 @@ class IndalekoDBStatisticsDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoDBStatisticsDataModel.test_model_main()
 

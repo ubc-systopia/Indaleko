@@ -38,9 +38,11 @@ import os
 import signal
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -55,6 +57,7 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
 
+
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 
@@ -67,7 +70,7 @@ class IntegratedNtfsActivityRunner:
     integrated interface for continuous data collection.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the integrated runner.
 
@@ -85,6 +88,7 @@ class IntegratedNtfsActivityRunner:
         log_level = logging.DEBUG if self.verbose else logging.INFO
         # Configure root logger
         import socket
+
         from logging import Formatter
         from logging.handlers import RotatingFileHandler
 
@@ -102,7 +106,7 @@ class IntegratedNtfsActivityRunner:
         log_dir = kwargs.get("log_dir", "logs")
         os.makedirs(log_dir, exist_ok=True)
         machine_id = kwargs.get("machine_id") or socket.gethostname()
-        ts = datetime.now(UTC).strftime("%Y_%m_%dT%H#%M#%S.%fZ")
+        datetime.now(UTC).strftime("%Y_%m_%dT%H#%M#%S.%fZ")
         fname = build_indaleko_log_name(
             platform="Windows",
             service="ntfs_activity_collector",
@@ -182,7 +186,7 @@ class IntegratedNtfsActivityRunner:
             self.recorder = NtfsHotTierRecorder(**recorder_config)
             self.logger.info("Hot tier recorder initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize recorder: {e!s}")
+            self.logger.exception(f"Failed to initialize recorder: {e!s}")
             self.logger.warning("Will continue with file output only")
             self.recorder = None
             self.backup_to_files = True  # Force file backup if recorder fails
@@ -193,7 +197,7 @@ class IntegratedNtfsActivityRunner:
 
         self.logger.info("Integrated NTFS activity runner initialized")
 
-    def _signal_handler(self, sig, frame):
+    def _signal_handler(self, sig, frame) -> None:
         """Handle termination signals gracefully."""
         self.logger.info(f"Received signal {sig}, shutting down...")
         self.running = False
@@ -203,7 +207,7 @@ class IntegratedNtfsActivityRunner:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return os.path.join(self.output_dir, f"ntfs_activity_{timestamp}.jsonl")
 
-    def _rotate_output_file(self):
+    def _rotate_output_file(self) -> None:
         """Rotate the output file if it exceeds the maximum size."""
         if not self.backup_to_files:
             return
@@ -222,7 +226,7 @@ class IntegratedNtfsActivityRunner:
             self.output_file = open(filename, "w", encoding="utf-8")
             self.current_file_size = 0
 
-    def _write_activities_to_file(self, activities: list[dict[str, Any]]):
+    def _write_activities_to_file(self, activities: list[dict[str, Any]]) -> None:
         """Write activities to backup file if enabled."""
         if not self.backup_to_files or not activities:
             return
@@ -260,12 +264,12 @@ class IntegratedNtfsActivityRunner:
             activity_ids = self.recorder.store_activities(activities)
             return len(activity_ids)
         except Exception as e:
-            self.logger.error(f"Error recording activities: {e!s}")
+            self.logger.exception(f"Error recording activities: {e!s}")
             if self.verbose:
                 self.logger.exception("Detailed error:")
             return 0
 
-    def start(self):
+    def start(self) -> None:
         """Start the integrated collection and recording process."""
         self.running = True
         self.start_time = datetime.now(UTC)  # Use timezone-aware datetime
@@ -365,7 +369,7 @@ class IntegratedNtfsActivityRunner:
 
                 except Exception as collection_error:
                     # Log other errors normally with full details
-                    self.logger.error(
+                    self.logger.exception(
                         f"Error collecting activities: {collection_error}",
                     )
 
@@ -396,7 +400,7 @@ class IntegratedNtfsActivityRunner:
                     time.sleep(sleep_time)
 
             except Exception as e:
-                self.logger.error(f"Error in collection/recording cycle: {e!s}")
+                self.logger.exception(f"Error in collection/recording cycle: {e!s}")
                 if self.verbose:
                     self.logger.exception("Detailed error:")
                 # Sleep a bit to avoid rapid error loops
@@ -405,7 +409,7 @@ class IntegratedNtfsActivityRunner:
         # Cleanup
         self.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the integrated runner and clean up resources."""
         self.logger.info("Stopping integrated NTFS activity runner...")
 
@@ -451,12 +455,12 @@ class IntegratedNtfsActivityRunner:
                     for activity_type, count in stats["by_type"].items():
                         self.logger.info(f"  - {activity_type}: {count}")
             except Exception as e:
-                self.logger.error(f"Failed to retrieve hot tier statistics: {e!s}")
+                self.logger.exception(f"Failed to retrieve hot tier statistics: {e!s}")
 
         self.logger.info("Integrated NTFS activity runner stopped")
 
 
-def main():
+def main() -> None:
     """Main entry point for the integrated runner."""
     parser = argparse.ArgumentParser(
         description="Integrated NTFS Activity Collection and Recording",
@@ -582,34 +586,16 @@ def main():
     }
 
     # Display configuration
-    print("\n============================================================")
-    print("     Integrated NTFS Activity Collection and Recording")
-    print("============================================================\n")
-    print(f"Volumes:           {', '.join(args.volumes)}")
-    print(f"Duration:          {args.duration} hours")
-    print(f"Interval:          {args.interval} seconds")
-    print(f"TTL:               {args.ttl_days} days")
-    print(f"File Backup:       {'Disabled' if args.no_file_backup else 'Enabled'}")
     if not args.no_file_backup:
-        print(f"Output Directory:  {args.output_dir}")
-        print(f"Max File Size:     {args.max_file_size} MB")
-    print(f"Database Config:   {args.db_config_path}")
-    print(f"Verbose:           {args.verbose}")
-    print(f"Auto Reset:        {'Disabled' if args.no_auto_reset else 'Enabled'}")
+        pass
     if not args.no_auto_reset:
-        print(f"  Error Threshold:   {args.error_threshold} consecutive errors")
-        print(f"  Empty Threshold:   {args.empty_threshold} consecutive empty results")
-    print(
-        f"State File:        {'Enabled' if getattr(args, 'use_state_file', False) else 'Disabled'}",
-    )
-    print("\nPress Ctrl+C to stop at any time...")
+        pass
 
     try:
         # Create and start the integrated runner
         runner = IntegratedNtfsActivityRunner(**config)
         runner.start()
-    except Exception as e:
-        print(f"Error running integrated NTFS activity runner: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

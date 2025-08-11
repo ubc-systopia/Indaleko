@@ -52,11 +52,14 @@ import os
 import sys
 import tempfile
 import uuid
+
 from pathlib import Path
 from typing import Any
 
 import jsonlines
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -92,6 +95,7 @@ from utils.misc.file_name_management import (
     extract_keys_from_file_name,
     generate_file_name,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -181,7 +185,7 @@ class BaseStorageRecorder:
         self.data_dir = kwargs.get("data_dir", indaleko_default_data_dir)
         self.output_dir = kwargs.get("output_dir", self.data_dir)
         self.input_dir = kwargs.get("input_dir", self.data_dir)
-        self.input_file = kwargs.get("input_file", None)
+        self.input_file = kwargs.get("input_file")
         self.config_dir = kwargs.get("config_dir", indaleko_default_config_dir)
         self.log_dir = kwargs.get("log_dir", indaleko_default_log_dir)
         self.recorder_service = IndalekoServiceManager().register_service(
@@ -248,9 +252,7 @@ class BaseStorageRecorder:
         return cls.recorder_name
 
     def get_counts(self) -> dict:
-        """
-        Retrieves counters about the recorder.
-        """
+        """Retrieves counters about the recorder."""
         return {x: getattr(self, x) for x in BaseStorageRecorder.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
@@ -271,7 +273,7 @@ class BaseStorageRecorder:
         name = generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
-    def generate_file_name(self, target_dir: str = None, suffix=None) -> str:
+    def generate_file_name(self, target_dir: str | None = None, suffix=None) -> str:
         """This will generate a file name for the recorder output file."""
         if suffix is None:
             suffix = self.file_suffix
@@ -294,9 +296,7 @@ class BaseStorageRecorder:
 
     @staticmethod
     def extract_metadata_from_recorder_file_name(file_name: str) -> dict:
-        """
-        This will extract the metadata from the given file name.
-        """
+        """This will extract the metadata from the given file name."""
         data = extract_keys_from_file_name(file_name)
         if "machine" in data:
             data["machine"] = str(uuid.UUID(data["machine"]))
@@ -307,7 +307,7 @@ class BaseStorageRecorder:
     @staticmethod
     def write_data_to_file(
         data: list,
-        file_name: str = None,
+        file_name: str | None = None,
         jsonlines_output: bool = True,
     ) -> int:
         """
@@ -337,7 +337,7 @@ class BaseStorageRecorder:
                         logging.exception("Entry: %s", entry)
                         logging.exception("Output count: %d", output_count)
                         logging.exception("Data size %d", len(data))
-                        raise err
+                        raise
             logging.info("Wrote JSONLines data to %s", file_name)
             ic("Wrote JSON data to", file_name)
         else:
@@ -379,9 +379,7 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_load_string(**kwargs) -> str:
-        """
-        This will build the load string for the arangoimport command.
-        """
+        """This will build the load string for the arangoimport command."""
         db_config = IndalekoDBConfig()
         load_string = "arangoimport"
         if "collection" in kwargs:
@@ -466,7 +464,7 @@ class BaseStorageRecorder:
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_SUFFIX,
-                Value=ext[1:] if ext.startswith(".") else ext,
+                Value=ext.removeprefix("."),
             ),
         ]
 
@@ -605,7 +603,7 @@ class BaseStorageRecorder:
         )
 
     def build_dirmap(self) -> None:
-        """This function builds the directory/file map"""
+        """This function builds the directory/file map."""
         for item in self.dir_data:
             fqp = os.path.join(item["LocalPath"], item["Label"])
             identifier = item.args["ObjectIdentifier"]
@@ -679,21 +677,21 @@ class BaseStorageRecorder:
 
     @staticmethod
     def arangoimport_object_data(recorder: "BaseStorageRecorder") -> None:
-        """Import the object data into the database"""
+        """Import the object data into the database."""
         if recorder.object_data_load_string is None:
             raise ValueError("object_data_load_string must be set")
         recorder.execute_command(recorder.object_data_load_string)
 
     @staticmethod
     def arangoimport_relationship_data(recorder: "BaseStorageRecorder") -> None:
-        """Import the relationship data into the database"""
+        """Import the relationship data into the database."""
         if recorder.relationship_data_load_string is None:
             raise ValueError("relationship_data_load_string must be set")
         recorder.execute_command(recorder.relationship_data_load_string)
 
     @staticmethod
     def bulk_upload_object_data(recorder: "BaseStorageRecorder") -> None:
-        """Bulk upload the object data to the database"""
+        """Bulk upload the object data to the database."""
         assert isinstance(
             recorder,
             BaseStorageRecorder,
@@ -702,7 +700,7 @@ class BaseStorageRecorder:
 
     @staticmethod
     def bulk_upload_relationship_data(recorder: "BaseStorageRecorder") -> None:
-        """Bulk upload the relationship data to the database"""
+        """Bulk upload the relationship data to the database."""
         assert isinstance(
             recorder,
             BaseStorageRecorder,
@@ -750,14 +748,13 @@ class BaseStorageRecorder:
 
     @staticmethod
     def execute_command(command: str) -> None:
-        """Execute a command"""
+        """Execute a command."""
         result = os.system(command)
         logging.info("Command %s result: %d", command, result)
-        print(f"Command {command} result: {result}")
 
     @staticmethod
     def write_object_data_to_file(recorder: "BaseStorageRecorder", **kwargs) -> None:
-        """Write the object data to a file"""
+        """Write the object data to a file."""
         output_file = kwargs.get("output_file")
         if not output_file and hasattr(recorder, "output_object_file"):
             output_file = recorder.output_object_file
@@ -777,13 +774,12 @@ class BaseStorageRecorder:
             file=output_file,
         )
         logging.info("Load string: %s", recorder.object_data_load_string)
-        print("Load string (objects): ", recorder.object_data_load_string)
         if hasattr(recorder, "output_count"):  # should be there
             recorder.output_count += count
 
     @staticmethod
     def write_edge_data_to_file(recorder: "BaseStorageRecorder", **kwargs) -> None:
-        """Write the edge data to a file"""
+        """Write the edge data to a file."""
         output_file = kwargs.get("output_file")
         if not output_file and hasattr(recorder, "output_object_file"):
             output_file = recorder.output_edge_file
@@ -799,7 +795,6 @@ class BaseStorageRecorder:
             file=data_file_name,
         )
         logging.info("Load string: %s", recorder.relationship_data_load_string)
-        print("Load string (relationships): ", recorder.relationship_data_load_string)
         if hasattr(recorder, "edge_count"):
             recorder.edge_count += count
 
@@ -840,25 +835,21 @@ class BaseStorageRecorder:
             PermissionError,
             FileExistsError,
             OSError,
-        ) as e:
+        ):
             logging.exception(
                 "Unable to rename temp file %s to output file %s",
                 temp_file_name,
                 preferred_file_name,
             )
-            print(
-                f"Unable to rename temp file {temp_file_name} to output file {preferred_file_name}",
-            )
-            print(f"Error: {e}")
             preferred_file_name = temp_file_name
         return preferred_file_name, count
 
     def get_object_path(self: "BaseStorageRecorder", obj: IndalekoObject):
-        """Given an Indaleko object, return a valid local path to the object"""
+        """Given an Indaleko object, return a valid local path to the object."""
         return obj["LocalPath"]  # default is no change
 
     def is_object_directory(self: "BaseStorageRecorder", obj: IndalekoObject) -> bool:
-        """Return True if the object is a directory"""
+        """Return True if the object is a directory."""
         assert isinstance(
             obj,
             IndalekoObject,
@@ -870,7 +861,7 @@ class BaseStorageRecorder:
         )
 
     def normalize(self) -> None:
-        """Normalize the data from the collector"""
+        """Normalize the data from the collector."""
         self.load_collector_data_from_file()
         for item in self.collector_data:
             try:
@@ -908,7 +899,7 @@ class BaseStorageRecorder:
     def map_posix_storage_attributes_to_semantic_attributes(
         posix_attributes: dict[str, Any],
     ) -> list[IndalekoSemanticAttributeDataModel]:
-        """Map POSIX storage attributes to semantic attributes"""
+        """Map POSIX storage attributes to semantic attributes."""
         semantic_attributes = []
         if "st_dev" in posix_attributes:
             semantic_attributes.append(
@@ -996,8 +987,8 @@ class BaseStorageRecorder:
         self.output_edge_file = self.generate_output_file_name(**kwargs)
 
 
-def main():
-    """Test code for IndalekoStorageRecorder.py"""
+def main() -> None:
+    """Test code for IndalekoStorageRecorder.py."""
     # Now parse the arguments
     recorder = BaseStorageRecorder(
         recorder_data=IndalekoStorageRecorderDataModel(
@@ -1012,9 +1003,7 @@ def main():
     )
     assert recorder is not None, "Could not create recorder."
     fname = recorder.generate_file_name()
-    print(fname)
-    metadata = recorder.extract_metadata_from_recorder_file_name(fname)
-    print(json.dumps(metadata, indent=4))
+    recorder.extract_metadata_from_recorder_file_name(fname)
 
 
 if __name__ == "__main__":

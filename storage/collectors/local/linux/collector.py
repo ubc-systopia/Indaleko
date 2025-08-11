@@ -25,6 +25,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -38,13 +39,12 @@ from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
-    """
-    This is the class that collects metadata from Linux local file systems.
-    """
+    """This is the class that collects metadata from Linux local file systems."""
 
     linux_platform = "Linux"
     linux_local_collector_name = "fs_collector"
@@ -74,7 +74,7 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
         ServiceDescription=indaleko_linux_local_collector_service_description,
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(
             **kwargs,
             **IndalekoLinuxLocalStorageCollector.indaleko_linux_local_collector_service,
@@ -83,7 +83,7 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
     class linux_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoLinuxMachineConfig:
-            """Load the machine configuration"""
+            """Load the machine configuration."""
             debug = keys.get("debug", False)
             if debug:
                 ic(f"linux_local_collector_mixin.load_machine_config: {keys}")
@@ -100,7 +100,7 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
     cli_handler_mixin = linux_local_collector_mixin
 
 
-def main():
+def main() -> None:
     """The CLI handler for the linux local storage collector."""
     BaseLocalStorageCollector.local_collector_runner(
         IndalekoLinuxLocalStorageCollector,

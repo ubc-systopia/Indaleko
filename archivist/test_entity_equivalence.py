@@ -22,6 +22,7 @@ import argparse
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from archivist.entity_equivalence import EntityEquivalenceManager
 from data_models.named_entity import IndalekoNamedEntityType
 from db.db_collections import IndalekoDBCollections
+
 
 # pylint: enable=wrong-import-position
 
@@ -53,18 +55,14 @@ def reset_collections():
 
     # Truncate the collections
     nodes_collection._arangodb_collection.truncate()
-    print(f"Truncated {nodes_collection_name} collection")
 
     relations_collection._arangodb_collection.truncate()
-    print(f"Truncated {relations_collection_name} collection")
 
     groups_collection._arangodb_collection.truncate()
-    print(f"Truncated {groups_collection_name} collection")
 
 
 def test_entity_creation():
     """Test creating entity equivalence nodes."""
-    print("\nTesting entity creation...")
 
     # Initialize manager
     manager = EntityEquivalenceManager()
@@ -85,8 +83,6 @@ def test_entity_creation():
         context="Nickname",
     )
 
-    print(f"Created entity: {entity1.name} (ID: {entity1.entity_id})")
-    print(f"Created entity: {entity2.name} (ID: {entity2.entity_id})")
 
     # Verify data
     assert entity1.name == "Elizabeth Jones"
@@ -94,30 +90,26 @@ def test_entity_creation():
     assert entity2.name == "Beth"
     assert entity2.canonical is False
 
-    print("Entity creation test passed!")
     return entity1, entity2
 
 
 def test_entity_merging(entity1, entity2):
     """Test merging entity equivalence nodes."""
-    print("\nTesting entity merging...")
 
     # Initialize manager
     manager = EntityEquivalenceManager()
 
     # Merge entities
-    success = manager.merge_entities(
+    manager.merge_entities(
         entity2.entity_id,
         entity1.entity_id,
         relation_type="nickname",
         confidence=0.9,
     )
 
-    print(f"Merge result: {success}")
 
     # Verify canonical reference
     canonical = manager.get_canonical_reference(entity2.entity_id)
-    print(f"Canonical for '{entity2.name}': {canonical.name}")
 
     assert canonical is not None
     assert canonical.entity_id == entity1.entity_id
@@ -126,19 +118,16 @@ def test_entity_merging(entity1, entity2):
     # Verify all references
     all_refs = manager.get_all_references(entity1.entity_id)
     ref_names = [ref.name for ref in all_refs]
-    print(f"All references: {', '.join(ref_names)}")
 
     assert len(all_refs) == 2
     assert "Elizabeth Jones" in ref_names
     assert "Beth" in ref_names
 
-    print("Entity merging test passed!")
     return entity1, entity2
 
 
 def test_entity_graph(entity1):
     """Test generating entity graphs."""
-    print("\nTesting entity graph generation...")
 
     # Initialize manager
     manager = EntityEquivalenceManager()
@@ -146,25 +135,21 @@ def test_entity_graph(entity1):
     # Get entity graph
     graph = manager.get_entity_graph(entity1.entity_id)
 
-    print(f"Graph nodes: {len(graph['nodes'])}")
-    print(f"Graph edges: {len(graph['edges'])}")
 
     # Print graph structure
-    for node in graph["nodes"]:
-        print(f"Node: {node['name']} (ID: {node['id']})")
+    for _node in graph["nodes"]:
+        pass
 
-    for edge in graph["edges"]:
-        print(f"Edge: {edge['source']} -> {edge['target']} ({edge['type']})")
+    for _edge in graph["edges"]:
+        pass
 
     assert len(graph["nodes"]) >= 2
     assert len(graph["edges"]) >= 1
 
-    print("Entity graph test passed!")
 
 
 def test_multiple_equivalence_classes():
     """Test handling multiple equivalence classes."""
-    print("\nTesting multiple equivalence classes...")
 
     # Initialize manager
     manager = EntityEquivalenceManager()
@@ -199,12 +184,9 @@ def test_multiple_equivalence_classes():
 
     # Get all groups
     groups = manager.list_entity_groups()
-    print(f"Total groups: {len(groups)}")
 
     for group in groups:
-        print(f"Group: {group['canonical']['name']} ({len(group['members'])} members)")
-        member_names = [m["name"] for m in group["members"]]
-        print(f"  Members: {', '.join(member_names)}")
+        [m["name"] for m in group["members"]]
 
     # Verify groups are separate
     person_group = None
@@ -228,12 +210,10 @@ def test_multiple_equivalence_classes():
     assert p_canonical.name == "John Smith"
     assert l_canonical.name == "New York City"
 
-    print("Multiple equivalence classes test passed!")
 
 
 def test_statistics():
     """Test entity equivalence statistics."""
-    print("\nTesting statistics...")
 
     # Initialize manager
     manager = EntityEquivalenceManager()
@@ -241,20 +221,15 @@ def test_statistics():
     # Get statistics
     stats = manager.get_stats()
 
-    print(f"Nodes: {stats['node_count']}")
-    print(f"Groups: {stats['group_count']}")
-    print(f"Relations: {stats['relation_count']}")
 
     assert stats["node_count"] >= 4
     assert stats["group_count"] >= 2
     assert stats["relation_count"] >= 2
 
-    print("Statistics test passed!")
 
 
 def run_all_tests():
     """Run all entity equivalence tests."""
-    print("Starting entity equivalence tests...")
 
     # Reset collections for clean test
     reset_collections()
@@ -266,7 +241,6 @@ def run_all_tests():
     test_multiple_equivalence_classes()
     test_statistics()
 
-    print("\nAll entity equivalence tests completed successfully!")
 
 
 def main():

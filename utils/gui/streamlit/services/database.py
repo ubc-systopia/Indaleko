@@ -1,5 +1,5 @@
 """
-Database services for Indaleko Streamlit GUI
+Database services for Indaleko Streamlit GUI.
 
 These services handle database operations and data retrieval.
 
@@ -26,7 +26,7 @@ import streamlit as st
 
 def get_db_stats(db_info):
     """
-    Get database statistics for dashboard display
+    Get database statistics for dashboard display.
 
     Args:
         db_info: IndalekoDBInfo or MockDBInfo object
@@ -86,7 +86,7 @@ def get_db_stats(db_info):
 
 def get_storage_summary(db_service):
     """
-    Get storage volume distribution data for charts
+    Get storage volume distribution data for charts.
 
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
@@ -164,7 +164,7 @@ def get_storage_summary(db_service):
 
 def get_file_type_distribution(db_service):
     """
-    Get file extension distribution data for charts
+    Get file extension distribution data for charts.
 
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
@@ -246,7 +246,7 @@ def get_file_type_distribution(db_service):
 
 def get_activity_timeline(db_service):
     """
-    Get activity timeline data for charts
+    Get activity timeline data for charts.
 
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
@@ -329,7 +329,7 @@ def get_activity_timeline(db_service):
 
 def get_cross_source_patterns(db_service):
     """
-    Get cross-source pattern data for visualization
+    Get cross-source pattern data for visualization.
 
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
@@ -369,7 +369,7 @@ def get_cross_source_patterns(db_service):
 
 
 def _get_patterns_from_db(db):
-    """Get patterns from database"""
+    """Get patterns from database."""
     collection_name = "CrossSourcePatterns"
     if not db.has_collection(collection_name):
         return []
@@ -385,7 +385,7 @@ def _get_patterns_from_db(db):
 
 
 def _get_correlations_from_db(db):
-    """Get correlations from database"""
+    """Get correlations from database."""
     collection_name = "CrossSourceCorrelations"
     if not db.has_collection(collection_name):
         return []
@@ -413,13 +413,13 @@ def _get_correlations_from_db(db):
 
 
 def _get_suggestions_from_db(db):
-    """Get suggestions from database"""
+    """Get suggestions from database."""
     collection_name = "ProactiveSuggestions"
     if not db.has_collection(collection_name):
         return []
 
     try:
-        collection = db.collection(collection_name)
+        db.collection(collection_name)
         now = datetime.now(UTC)
 
         # Get active (not expired, not dismissed) suggestions
@@ -451,7 +451,7 @@ def _get_suggestions_from_db(db):
 
 
 def _get_mock_pattern_data():
-    """Return mock pattern data for testing"""
+    """Return mock pattern data for testing."""
     now = datetime.now(UTC)
 
     # Create mock patterns

@@ -27,8 +27,10 @@ import os
 import re
 import sys
 import uuid
+
 from enum import Enum
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -40,6 +42,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.context.navigation import QueryNavigator
+
 
 # pylint: enable=wrong-import-position
 
@@ -62,7 +65,7 @@ class QueryRelationshipDetector:
     such as refinements, broadening, pivots, and more.
     """
 
-    def __init__(self, db_config=None, debug=False, use_llm=False):
+    def __init__(self, db_config=None, debug=False, use_llm=False) -> None:
         """
         Initialize the QueryRelationshipDetector.
 
@@ -92,7 +95,7 @@ class QueryRelationshipDetector:
                     "Initialized LLM connector for relationship detection",
                 )
             except Exception as e:
-                self._logger.error(f"Error initializing LLM connector: {e}")
+                self._logger.exception(f"Error initializing LLM connector: {e}")
                 self._use_llm = False
 
     def detect_relationship(
@@ -447,7 +450,7 @@ class QueryRelationshipDetector:
         return "mixed"
 
 
-def main():
+def main() -> None:
     """Test functionality of QueryRelationshipDetector."""
     logging.basicConfig(level=logging.DEBUG)
 
@@ -463,19 +466,10 @@ def main():
         ("Find documents about Indaleko", "Find documents about Indaleko"),
     ]
 
-    print("Testing relationship detection:")
-    for i, (q1, q2) in enumerate(query_pairs):
+    for _i, (q1, q2) in enumerate(query_pairs):
         rel_type, confidence = detector.detect_relationship(q1, q2)
-        print(f"\nQuery Pair {i+1}:")
-        print(f"  Q1: {q1}")
-        print(f"  Q2: {q2}")
-        print(f"  Relationship: {rel_type.value}")
-        print(f"  Confidence: {confidence:.2f}")
 
         # Test specific relationship methods
-        print(f"  Is Refinement: {detector.detect_refinements(q1, q2)}")
-        print(f"  Is Broadening: {detector.detect_broadening(q1, q2)}")
-        print(f"  Is Pivot: {detector.detect_pivot(q1, q2)}")
 
     # Test batch detection
     queries = [
@@ -486,12 +480,10 @@ def main():
         "Who authored Indaleko documents?",
     ]
 
-    print("\nBatch relationship detection:")
     relationships = detector.detect_relationship_batch(queries)
 
-    for i, (rel_type, confidence) in enumerate(relationships):
-        print(f"  {i+1}. {queries[i]} → {queries[i+1]}")
-        print(f"     {rel_type.value} ({confidence:.2f})")
+    for _i, (_rel_type, _confidence) in enumerate(relationships):
+        pass
 
 
 if __name__ == "__main__":

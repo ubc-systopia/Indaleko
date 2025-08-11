@@ -25,8 +25,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -45,6 +47,7 @@ from query.context.data_models.recommendation import (
 )
 from query.context.recommendations.base import RecommendationProvider
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -58,7 +61,7 @@ class EntityRelationshipRecommender(RecommendationProvider):
     and detected entities in past queries and activities.
     """
 
-    def __init__(self, db_config=None, debug: bool = False):
+    def __init__(self, db_config=None, debug: bool = False) -> None:
         """
         Initialize the entity relationship recommender.
 
@@ -78,7 +81,7 @@ class EntityRelationshipRecommender(RecommendationProvider):
             self._entity_manager = EntityEquivalenceManager(db_config=db_config)
             self._logger.info("Connected to Entity Equivalence Manager")
         except Exception as e:
-            self._logger.error(f"Error connecting to Entity Equivalence Manager: {e}")
+            self._logger.exception(f"Error connecting to Entity Equivalence Manager: {e}")
             self._entity_manager = None
 
         # Initialize entity type configurations
@@ -175,8 +178,8 @@ class EntityRelationshipRecommender(RecommendationProvider):
         }
 
         # Track successful entity-template combinations
-        self._entity_type_success = {entity_type: 0 for entity_type in self._entity_types}
-        self._entity_type_failure = {entity_type: 0 for entity_type in self._entity_types}
+        self._entity_type_success = dict.fromkeys(self._entity_types, 0)
+        self._entity_type_failure = dict.fromkeys(self._entity_types, 0)
         self._template_success = {}  # {template: success_count}
         self._template_failure = {}  # {template: failure_count}
 
@@ -257,7 +260,7 @@ class EntityRelationshipRecommender(RecommendationProvider):
                 query_entities = self._extract_entities_from_query(current_query)
                 entities.extend(query_entities)
             except Exception as e:
-                self._logger.error(f"Error extracting entities from query: {e}")
+                self._logger.exception(f"Error extracting entities from query: {e}")
 
         # If no entities found, generate some based on recent activities
         if not entities:
@@ -819,13 +822,10 @@ class EntityRelationshipRecommender(RecommendationProvider):
         )
 
 
-def main():
+def main() -> None:
     """Test the EntityRelationshipRecommender."""
     logging.basicConfig(level=logging.DEBUG)
 
-    print("=" * 80)
-    print("Testing EntityRelationshipRecommender")
-    print("=" * 80)
 
     # Create recommender
     recommender = EntityRelationshipRecommender(debug=True)
@@ -851,8 +851,6 @@ def main():
         ],
     }
 
-    print(f"\nGenerating suggestions for query: '{current_query}'")
-    print(f"Context entities: {len(context_data['entities'])}")
 
     # Generate suggestions
     suggestions = recommender.generate_suggestions(
@@ -862,54 +860,33 @@ def main():
     )
 
     # Print suggestions
-    print(f"\nGenerated {len(suggestions)} suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-        )
-        print(f"   Rationale: {suggestion.rationale}")
-        print(
-            f"   Entity type: {suggestion.source_context.get('entity_type', 'unknown')}",
-        )
+    for _i, suggestion in enumerate(suggestions):
         if "relationship" in suggestion.source_context:
-            print(
-                f"   Relationship: {suggestion.source_context['relationship']} with {suggestion.source_context.get('source_entity', 'unknown')}",
-            )
-        print(f"   Tags: {suggestion.tags}")
-        print()
+            pass
 
     # Test feedback
     if suggestions:
-        print("Testing feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
             result_count=7,
         )
-        print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
-        print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
             current_query=current_query,
             context_data=context_data,
             max_suggestions=5,
         )
 
-        print(f"\nGenerated {len(new_suggestions)} suggestions after feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(new_suggestions):
 
             # Check if this matches an original suggestion to see confidence change
             for orig in suggestions:
                 if suggestion.query_text == orig.query_text:
                     confidence_change = suggestion.confidence - orig.confidence
                     if abs(confidence_change) > 0.01:
-                        print(f"   Confidence change: {confidence_change:+.2f}")
-            print()
+                        pass
 
 
 if __name__ == "__main__":

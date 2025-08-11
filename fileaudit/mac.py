@@ -5,24 +5,24 @@ import operators
 import pipeline
 
 
-def print_result(t):
-    if t != None and t[0] == 0:
-        print(t[1])
+def print_result(t) -> None:
+    if t is not None and t[0] == 0:
+        pass
 
 
-def to_csv(t, header: bool = False):
+def to_csv(t, header: bool = False) -> None:
     if header:
-        print("ts,syscall,fid,path,procname,pid")
-    if t != None and t[0] == 0:
-        print(",".join(t[1]))
+        pass
+    if t is not None and t[0] == 0:
+        pass
 
 
 class CompressorWriter:
-    def write(self, arr):
-        print(arr)
+    def write(self, arr) -> None:
+        pass
 
 
-def main():
+def main() -> None:
     from os import path
 
     parser = argparse.ArgumentParser()

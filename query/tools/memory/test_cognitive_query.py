@@ -30,7 +30,9 @@ import json
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,8 +46,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 try:
     from query.tools.base import ToolInput
     from query.tools.memory.cognitive_query import CognitiveMemoryQueryTool
-except ImportError as e:
-    print(f"Error importing Cognitive Memory Query Tool: {e}")
+except ImportError:
     sys.exit(1)
 
 
@@ -151,14 +152,13 @@ def run_test(
 
             # Return results
             return result_data
-        else:
-            logger.error(f"Query execution failed: {result.error}")
-            if result.trace:
-                logger.debug(f"Error trace:\n{result.trace}")
-            return {"error": result.error}
+        logger.error(f"Query execution failed: {result.error}")
+        if result.trace:
+            logger.debug(f"Error trace:\n{result.trace}")
+        return {"error": result.error}
 
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled error: {e}")
         import traceback
 
         logger.debug(f"Exception trace:\n{traceback.format_exc()}")
@@ -252,11 +252,9 @@ def main():
 
     # Handle test modes - override parameters as needed
     if args.test_tier:
-        print(f"Testing specific memory tier: {args.test_tier}")
         args.memory_tiers = args.test_tier
 
     if args.test_w5h:
-        print("Testing W5H filtering with sample filter")
         # Create a sample W5H filter for testing
         test_w5h = {
             "what": ["document", "text_file"],
@@ -264,20 +262,16 @@ def main():
             "why": ["project_work"],
         }
         args.w5h_filter = json.dumps(test_w5h)
-        print(f"Using W5H filter: {args.w5h_filter}")
 
     if args.test_concepts:
-        print("Testing concept filtering with sample concepts")
         args.concept_filter = "document,text,project"
-        print(f"Using concept filter: {args.concept_filter}")
 
     # Process W5H filter if provided
     w5h_filter = None
     if args.w5h_filter:
         try:
             w5h_filter = json.loads(args.w5h_filter)
-        except json.JSONDecodeError as e:
-            print(f"Error parsing W5H filter: {e}")
+        except json.JSONDecodeError:
             sys.exit(1)
 
     # Process concept filter if provided
@@ -302,33 +296,25 @@ def main():
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2)
-        print(f"Results saved to {args.output}")
 
     # Print summary of results
     if "error" in results:
-        print(f"Error: {results['error']}")
         sys.exit(1)
     else:
         # Print summary
         result_list = results.get("results", [])
-        print(f"\nFound {len(result_list)} results across memory tiers")
 
         # Print tier statistics
         tier_stats = results.get("tier_stats", {})
-        print("\nResults by memory tier:")
-        for tier, stats in tier_stats.items():
-            print(f"  {tier}: {stats['count']} results")
+        for _tier, _stats in tier_stats.items():
+            pass
 
         # Print top results
         if result_list:
-            print("\nTop results:")
-            for i, result in enumerate(result_list[:5]):  # Show top 5
-                memory_tier = result.get("memory_tier", "unknown")
-                file_path = result.get("Record", {}).get("Data", {}).get("file_path", "unknown")
-                importance = result.get("Record", {}).get("Data", {}).get("importance_score", 0.0)
-                print(
-                    f"  {i+1}. [{memory_tier}] {file_path} (importance: {importance:.2f})",
-                )
+            for _i, result in enumerate(result_list[:5]):  # Show top 5
+                result.get("memory_tier", "unknown")
+                result.get("Record", {}).get("Data", {}).get("file_path", "unknown")
+                result.get("Record", {}).get("Data", {}).get("importance_score", 0.0)
 
     return 0
 

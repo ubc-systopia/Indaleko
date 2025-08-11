@@ -6,6 +6,7 @@ builds and inserts location activity documents into its ArangoDB collection.
 """
 
 import uuid
+
 from datetime import datetime
 from typing import Any
 
@@ -32,7 +33,7 @@ class WiFiLocationRecorder(BaseLocationDataRecorder):
     version = "1.0.0"
     description = "WiFi Location Recorder"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         # Instantiate the WiFi location collector
         self.provider = WiFiLocation()

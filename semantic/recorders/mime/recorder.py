@@ -27,11 +27,13 @@ import os
 import sys
 import traceback
 import uuid
+
 from datetime import datetime
 from typing import Any
 
 # third-party imports
 from tqdm import tqdm
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,14 +47,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoJSONEncoder(json.JSONEncoder):
-    """Custom JSON encoder for Indaleko data models"""
+    """Custom JSON encoder for Indaleko data models."""
 
     def default(self, obj):
-        """Override default to handle UUID and datetime objects"""
+        """Override default to handle UUID and datetime objects."""
         if isinstance(obj, uuid.UUID):
             return str(obj)
         if isinstance(obj, datetime):
@@ -61,9 +64,9 @@ class IndalekoJSONEncoder(json.JSONEncoder):
 
 
 class MimeTypeRecorder:
-    """Class for recording MIME type information to Indaleko database"""
+    """Class for recording MIME type information to Indaleko database."""
 
-    def __init__(self, db_config: dict | None = None):
+    def __init__(self, db_config: dict | None = None) -> None:
         """
         Initialize the MIME type recorder.
 
@@ -93,15 +96,15 @@ class MimeTypeRecorder:
         if db_config:
             self._connect_to_db()
 
-    def _connect_to_db(self):
-        """Connect to the Indaleko database"""
+    def _connect_to_db(self) -> None:
+        """Connect to the Indaleko database."""
         try:
             # TODO: Implement database connection
             self._logger.info("Database connection would be established here.")
             # For now, we'll skip actual DB connection since it's not implemented
             self._db_connection = True
         except Exception as e:
-            self._logger.error(f"Failed to connect to database: {e}")
+            self._logger.exception(f"Failed to connect to database: {e}")
             traceback.print_exc()
 
     def lookup_object_by_path(self, file_path: str) -> uuid.UUID | None:
@@ -151,7 +154,7 @@ class MimeTypeRecorder:
 
             return mime_data
         except Exception as e:
-            self._logger.error(f"Error processing file {file_path}: {e}")
+            self._logger.exception(f"Error processing file {file_path}: {e}")
             traceback.print_exc()
             return None
 
@@ -204,7 +207,7 @@ class MimeTypeRecorder:
         # Collect file paths
         file_list = []
 
-        for root, dirs, files in os.walk(directory_path):
+        for root, _dirs, files in os.walk(directory_path):
             for file in files:
                 file_path = os.path.join(root, file)
 
@@ -241,7 +244,7 @@ class MimeTypeRecorder:
                 json.dump(results, f, cls=IndalekoJSONEncoder, indent=2)
             self._logger.info(f"Exported {len(results)} results to {output_file}")
         except Exception as e:
-            self._logger.error(f"Error exporting results to {output_file}: {e}")
+            self._logger.exception(f"Error exporting results to {output_file}: {e}")
             traceback.print_exc()
 
     def summarize_results(self, results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -288,8 +291,8 @@ class MimeTypeRecorder:
         }
 
 
-def main():
-    """Command-line interface for the MIME type recorder"""
+def main() -> None:
+    """Command-line interface for the MIME type recorder."""
     parser = argparse.ArgumentParser(description="Indaleko MIME Type Recorder")
 
     # Required arguments
@@ -354,17 +357,12 @@ def main():
     # Print summary
     if args.summary or not args.output:
         summary = recorder.summarize_results(results)
-        print("\nMIME Type Detection Summary:")
-        print(f"  Total files processed: {summary['total_files']}")
-        print(f"  Average confidence: {summary['avg_confidence']:.2f}")
-        print(f"  Extension match rate: {summary['extension_match_percentage']:.1f}%")
-        print("\nMIME Type Distribution:")
-        for mime_type, count in sorted(
+        for _mime_type, _count in sorted(
             summary["mime_type_counts"].items(),
             key=lambda x: x[1],
             reverse=True,
         )[:10]:
-            print(f"  {mime_type}: {count} files")
+            pass
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ import sys
 import time
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Never
 
 from arango.cursor import Cursor
 from icecream import ic
@@ -278,7 +278,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             # This is a safeguard in case the cursor wasn't already converted by execute_tool
             from arango.cursor import Cursor
             if "results" in executor_output and isinstance(executor_output["results"], Cursor):
-                executor_output["results"] = [doc for doc in executor_output["results"]]
+                executor_output["results"] = list(executor_output["results"])
 
             # Also check lists that might contain cursors
             if "results" in executor_output and isinstance(executor_output["results"], list):
@@ -308,9 +308,9 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             }
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             import traceback
-            verbose_ic(f"Error processing query: {str(e)}")
+            verbose_ic(f"Error processing query: {e!s}")
             verbose_ic(traceback.format_exc())
-            return {"error": f"Error processing query: {str(e)}"}
+            return {"error": f"Error processing query: {e!s}"}
 
     def process_command(self, command: str) -> bool:
         """
@@ -482,11 +482,11 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 # Set up a timeout for batch processing
                 import signal
 
-                def timeout_handler(signum, frame):
+                def timeout_handler(signum, frame) -> Never:
                     raise TimeoutError("Query execution timed out")
 
                 # Only set timeout handler on platforms that support SIGALRM
-                if hasattr(signal, 'SIGALRM'):
+                if hasattr(signal, "SIGALRM"):
                     signal.signal(signal.SIGALRM, timeout_handler)
 
             # First, let's dump out the batch file contents if we have one
@@ -532,7 +532,6 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
     def _make_serializable(self, obj: object) -> object:
         """Convert an object to a JSON-serializable format. Now with 100% more MATCH."""
-
         match obj:
             case dict():  # Handle dicts
                 return {k: self._make_serializable(v) for k, v in obj.items()}
@@ -566,13 +565,12 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             if "error" not in result:
                 self._display_results(result)
                 return result
-            else:
-                verbose_ic(f"Error: {result['error']}")
-                return result
+            verbose_ic(f"Error: {result['error']}")
+            return result
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             import traceback
-            error_msg = f"Error processing query: {str(e)}"
+            error_msg = f"Error processing query: {e!s}"
             verbose_ic(error_msg)
             verbose_ic(traceback.format_exc())
             return {"error": error_msg, "query": query}

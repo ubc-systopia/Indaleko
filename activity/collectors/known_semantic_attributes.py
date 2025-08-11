@@ -25,6 +25,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -55,9 +56,9 @@ class KnownSemanticAttributes:
     }
 
     @classmethod
-    def _initialize(cls):
+    def _initialize(cls) -> None:
         """Dynamically construct the list of known activity data provider
-        semantic attributes
+        semantic attributes.
         """
         if cls._initialized:
             return
@@ -82,7 +83,7 @@ class KnownSemanticAttributes:
 
     @staticmethod
     def safe_import(name: str, quiet: bool = False):
-        """Given a module name, load it and then extract the important data from it"""
+        """Given a module name, load it and then extract the important data from it."""
         module = None
         try:
             module = importlib.import_module(name)
@@ -91,27 +92,27 @@ class KnownSemanticAttributes:
                 ic(f"Import module {name} failed {e}")
         return module
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not self._initialized:
             self._initialize()
         ic(dir(self))
 
     @staticmethod
     def get_attribute_by_uuid(uuid_value):
-        """Get the attribute by the UUID"""
+        """Get the attribute by the UUID."""
         return KnownSemanticAttributes._attributes_by_uuid.get(uuid_value)
 
     @staticmethod
     def get_all_attributes() -> dict[str, dict[str, str]]:
-        """Get all of the known attributes"""
+        """Get all of the known attributes."""
         return KnownSemanticAttributes._attributes_by_provider_type
 
 
 KnownSemanticAttributes._initialize()
 
 
-def main():
-    """Main function for the module"""
+def main() -> None:
+    """Main function for the module."""
     ic("Starting")
     ic(dir(KnownSemanticAttributes))
     ic(KnownSemanticAttributes._attributes_by_uuid)

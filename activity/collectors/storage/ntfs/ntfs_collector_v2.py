@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""
+r"""
 NTFS Storage Activity Collector V2 for Indaleko.
 
 This module provides a collector for NTFS file system activities using the
@@ -61,11 +61,13 @@ import sys
 import threading
 import time
 import uuid
+
 from ctypes import wintypes
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from icecream import ic
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -81,6 +83,8 @@ WINDOWS_AVAILABLE = sys.platform.startswith("win")
 # pylint: disable=wrong-import-position
 # Import basic modules that are platform-agnostic
 # Import storage activity models
+import contextlib
+
 from activity.collectors.storage.data_models.storage_activity_data_model import (  # noqa: E402
     NtfsStorageActivityData,
     StorageActivityType,
@@ -90,10 +94,14 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 
 # No longer needed: from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 # Import machine config for cli handling
-from platforms.machine_config import IndalekoMachineConfig  # noqa: E402
 from utils.cli.base import IndalekoBaseCLI  # noqa: E402
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel  # noqa: E402
 from utils.cli.runner import IndalekoCLIRunner  # noqa: E402
+
+
+if TYPE_CHECKING:
+    from platforms.machine_config import IndalekoMachineConfig
+
 
 # Only import Windows-specific base class if on Windows
 if WINDOWS_AVAILABLE:
@@ -105,7 +113,7 @@ else:
     class WindowsStorageActivityCollector:
         """Placeholder base class for non-Windows platforms."""
 
-        def __init__(self, **kwargs):
+        def __init__(self, **kwargs) -> None:
             # Store kwargs for potential use
             self._kwargs = kwargs
 
@@ -122,11 +130,11 @@ else:
             self._volume_handles = {}
             self._stop_event = threading.Event()
 
-        def start_monitoring(self):
+        def start_monitoring(self) -> None:
             """Mock implementation."""
             self._active = True
 
-        def stop_monitoring(self):
+        def stop_monitoring(self) -> None:
             """Mock implementation."""
             self._active = False
 
@@ -134,7 +142,7 @@ else:
             """Return an empty list."""
             return self._activities
 
-        def add_activity(self, activity):
+        def add_activity(self, activity) -> None:
             """Add an activity to the collection."""
             self._activities.append(activity)
 
@@ -453,7 +461,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         """Get the service version for this collector."""
         return cls.indaleko_ntfs_collector_service_version
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the NTFS storage activity collector.
 
@@ -536,11 +544,11 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         self._last_processed_usn = {}
 
         # State persistence - prioritize explicit state_file parameter
-        self._state_file = kwargs.get("state_file", None)
+        self._state_file = kwargs.get("state_file")
 
         if self._state_file is None:
             # Config directory is preferred for state file
-            config_dir = kwargs.get("config_dir", None)
+            config_dir = kwargs.get("config_dir")
 
             # Try to find Indaleko config directory if not specified
             if config_dir is None and os.environ.get("INDALEKO_ROOT"):
@@ -586,7 +594,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         self._try_unprivileged = kwargs.get("try_unprivileged", True)
 
         # Output path for saving activities
-        self._output_path = kwargs.get("output_path", None)
+        self._output_path = kwargs.get("output_path")
 
         # Print debug information
         if self._debug:
@@ -629,7 +637,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
         return NoOpContext()
 
-    def _save_state(self):
+    def _save_state(self) -> None:
         """Save the collector state to a file for resuming later."""
         if not self._state_file:
             self._logger.debug("No state file specified, skipping state save")
@@ -654,10 +662,10 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             self._logger.info(f"Saved collector state to {self._state_file}")
             ic(f"Saved collector state to {self._state_file}")
         except Exception as e:
-            self._logger.error(f"Error saving state to {self._state_file}: {e}")
+            self._logger.exception(f"Error saving state to {self._state_file}: {e}")
             ic(f"Error saving state to {self._state_file}: {e}")
 
-    def _load_state(self):
+    def _load_state(self) -> None:
         """Load the collector state from a file."""
         if not self._state_file or not os.path.exists(self._state_file):
             self._logger.debug("No state file found, starting with empty state")
@@ -696,17 +704,15 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
             self._logger.info(f"Loaded collector state from {self._state_file}")
         except Exception as e:
-            self._logger.error(f"Error loading state from {self._state_file}: {e}")
+            self._logger.exception(f"Error loading state from {self._state_file}: {e}")
             ic(f"Error loading state from {self._state_file}: {e}")
             # Continue with empty state
 
     def retrieve_activities(self, last_processed_usn: int) -> list[Any]:
-        """
-        Retrieve the activities from the USN journal, starting from the last processed USN.
-        """
+        """Retrieve the activities from the USN journal, starting from the last processed USN."""
         ic(dir(self))
 
-    def start_monitoring(self):
+    def start_monitoring(self) -> None:
         """Start monitoring the USN Journal on all configured volumes."""
         with self.perf_context("start_monitoring"):
             if self._active:
@@ -730,11 +736,11 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                     self._logger.info(f"Starting monitoring for volume {volume}")
                     self._start_volume_monitoring(volume)
                 except Exception as e:
-                    self._logger.error(
+                    self._logger.exception(
                         f"Failed to start monitoring volume {volume}: {e}",
                     )
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop monitoring the USN Journal on all volumes."""
         with self.perf_context("stop_monitoring"):
             if not self._active:
@@ -763,7 +769,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                         self._logger.debug(f"Closing handle for volume {volume}")
                         ctypes.windll.kernel32.CloseHandle(handle)
                 except Exception as e:
-                    self._logger.error(f"Error closing handle for volume {volume}: {e}")
+                    self._logger.exception(f"Error closing handle for volume {volume}: {e}")
 
             # Save state before clearing
             self._save_state()
@@ -806,16 +812,15 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
                 # Try to get the volume name using Win32
                 try:
-                    volume_name = win32file.GetVolumeNameForVolumeMountPoint(
+                    return win32file.GetVolumeNameForVolumeMountPoint(
                         f"{drive_letter}\\",
                     )
-                    return volume_name
                 except Exception as e:
                     self._logger.debug(f"Error getting volume GUID with Win32API: {e}")
 
             return None
         except Exception as e:
-            self._logger.error(f"Error getting volume GUID path: {e}")
+            self._logger.exception(f"Error getting volume GUID path: {e}")
             return None
 
     def map_drive_letter_to_volume_guid(self, drive_letter):
@@ -854,10 +859,10 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
             return None
         except Exception as e:
-            self._logger.error(f"Error mapping drive letter to GUID: {e}")
+            self._logger.exception(f"Error mapping drive letter to GUID: {e}")
             return None
 
-    def _start_volume_monitoring(self, volume: str):
+    def _start_volume_monitoring(self, volume: str) -> None:
         """
         Start monitoring a specific volume.
 
@@ -879,7 +884,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         try:
             handle = get_volume_handle(volume_path)
         except Exception as e:
-            self._logger.error(f"Failed to open volume {volume}: {e}")
+            self._logger.exception(f"Failed to open volume {volume}: {e}")
             raise
 
         # Initialize the USN Journal
@@ -904,12 +909,10 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             }
             ic(usn_journal_info)
         except Exception as e:
-            self._logger.error(f"Error initializing USN journal: {e}")
+            self._logger.exception(f"Error initializing USN journal: {e}")
             # Close handle and re-raise
-            try:
+            with contextlib.suppress(Exception):
                 ctypes.windll.kernel32.CloseHandle(handle)
-            except Exception:
-                pass
             raise
 
         # Store volume handle and journal info
@@ -925,7 +928,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         self._journal_threads.append(journal_thread)
         journal_thread.start()
 
-    def _monitor_usn_journal(self, volume: str):
+    def _monitor_usn_journal(self, volume: str) -> None:
         """
         Monitor the USN Journal for a specific volume.
 
@@ -965,7 +968,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                     f"No saved state for volume {volume}, starting from first USN: {first_usn}",
                 )
         except (KeyError, TypeError) as e:
-            self._logger.error("Invalid journal info structure: %s", e)
+            self._logger.exception("Invalid journal info structure: %s", e)
             ic(f"ERROR: Invalid journal info structure: {e}")
             return
 
@@ -1115,7 +1118,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             f"Stopped monitoring USN journal on volume {volume}. Processed {record_count} total records.",
         )
 
-    def _process_usn_record(self, volume: str, record: dict[str, Any]):
+    def _process_usn_record(self, volume: str, record: dict[str, Any]) -> None:
         """
         Process a USN record and create an activity from it.
 
@@ -1206,7 +1209,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
             traceback.print_exc()
 
-    def _event_processing_thread(self):
+    def _event_processing_thread(self) -> None:
         """Process events from the queue."""
         while not self._stop_event.is_set() or not self._event_queue.empty():
             try:
@@ -1223,9 +1226,9 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                 self._event_queue.task_done()
 
             except Exception as e:
-                self._logger.error(f"Error processing event: {e}")
+                self._logger.exception(f"Error processing event: {e}")
 
-    def _process_event(self, event: dict[str, Any]):
+    def _process_event(self, event: dict[str, Any]) -> None:
         """
         Process a USN journal event.
 
@@ -1254,27 +1257,26 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             # Use our defined constants directly
             if reason_flags & 0x00000100:  # FILE_CREATE
                 return StorageActivityType.CREATE
-            elif reason_flags & 0x00000200:  # FILE_DELETE
+            if reason_flags & 0x00000200:  # FILE_DELETE
                 return StorageActivityType.DELETE
-            elif reason_flags & 0x00001000 or reason_flags & 0x00002000:  # RENAME_OLD_NAME or RENAME_NEW_NAME
+            if reason_flags & 0x00001000 or reason_flags & 0x00002000:  # RENAME_OLD_NAME or RENAME_NEW_NAME
                 return StorageActivityType.RENAME
-            elif reason_flags & 0x00000800:  # SECURITY_CHANGE
+            if reason_flags & 0x00000800:  # SECURITY_CHANGE
                 return StorageActivityType.SECURITY_CHANGE
-            elif (
+            if (
                 reason_flags & 0x00000400
                 or reason_flags & 0x00008000
                 or reason_flags & 0x00020000
                 or reason_flags & 0x00040000
             ):  # Various attribute changes
                 return StorageActivityType.ATTRIBUTE_CHANGE
-            elif reason_flags & 0x80000000:  # CLOSE
+            if reason_flags & 0x80000000:  # CLOSE
                 return StorageActivityType.CLOSE
-            elif (
+            if (
                 reason_flags & 0x00000001 or reason_flags & 0x00000002 or reason_flags & 0x00000004
             ):  # DATA_OVERWRITE, DATA_EXTEND, DATA_TRUNCATION
                 return StorageActivityType.MODIFY
-            else:
-                return StorageActivityType.OTHER
+            return StorageActivityType.OTHER
         except Exception as e:
             self._logger.warning(
                 f"Error determining activity type: {e}, using default MODIFY",
@@ -1336,7 +1338,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             )
             return file_path
         except Exception as e:
-            self._logger.error(f"Error saving activities to file: {e}")
+            self._logger.exception(f"Error saving activities to file: {e}")
             return None
 
     @classmethod
@@ -1385,7 +1387,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> "IndalekoMachineConfig":
-            """Load the machine configuration"""
+            """Load the machine configuration."""
             if "machine_config_file" not in keys:
                 raise ValueError(
                     "load_machine_config: machine_config_file must be specified",
@@ -1460,15 +1462,14 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         )
 
         # Performance measurement wrapper
-        def collect_data(collector, **kwargs):
+        def collect_data(collector, **kwargs) -> None:
             collector.collect_data()
 
         def extract_counters(**kwargs):
             collector = kwargs.get("collector")
             if collector:
                 return {"activities": len(collector.get_activities())}
-            else:
-                return {}
+            return {}
 
         # Measure performance and collect data
         with collector.perf_context("total_collection_time"):
@@ -1492,7 +1493,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         return None
 
 
-def main():
+def main() -> None:
     """The CLI handler for the NTFS storage activity collector."""
     try:
         # Don't attempt to import Windows-specific modules if we're just showing help

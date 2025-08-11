@@ -1,7 +1,8 @@
-"""initializtion logic for the db management models in Indaleko"""
+"""initializtion logic for the db management models in Indaleko."""
 
 import os
 import sys
+
 
 # from icecream import ic
 
@@ -23,6 +24,7 @@ from db.i_collections import IndalekoCollections  # noqa: E402
 from db.service_manager import IndalekoServiceManager  # noqa: E402
 from db.utils.query_performance import timed_aql_execute  # noqa: E402
 
+
 # pylint: enable=wrong-import-position
 
 __version__ = "0.1.0"
@@ -31,8 +33,8 @@ __all__ = [
     "IndalekoCollection",
     "IndalekoCollectionIndex",
     "IndalekoCollections",
-    "IndalekoDBConfig",
     "IndalekoDBCollections",
+    "IndalekoDBConfig",
     "IndalekoServiceManager",
     "timed_aql_execute",
 ]

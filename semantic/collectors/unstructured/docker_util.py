@@ -30,7 +30,9 @@ import docker
 
 # third-party imports
 import docker.errors
+
 from icecream import ic
+
 
 # Indaleko imports
 
@@ -47,6 +49,7 @@ from Indaleko import Indaleko
 from utils.i_logging import IndalekoLogging
 from utils.misc.i_docker import IndalekoDocker
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -60,7 +63,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
     default_container_name = "unstructured"
 
     def __init__(self, **kwargs) -> None:
-        """Initialize the Docker support for Unstructured"""
+        """Initialize the Docker support for Unstructured."""
         self.config_dir = kwargs.get("config_dir", Indaleko.default_config_dir)
         self.data_dir = kwargs.get("data_dir", Indaleko.default_data_dir)
         self.log_dir = kwargs.get("log_dir", Indaleko.default_log_dir)
@@ -78,7 +81,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
         self.docker_client.ping()
 
     def get_image(self, image_name: str) -> dict:
-        """Get the Docker image by name"""
+        """Get the Docker image by name."""
         try:
             current_image = self.docker_client.images.get(image_name)
         except docker.errors.ImageNotFound as ex:
@@ -89,7 +92,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     def update_unstructured_image(self, image_name: str = default_image_name) -> bool:
         """
-        Update the Unstructured Docker image
+        Update the Unstructured Docker image.
 
         Returns:
             True - docker image wasa updated
@@ -98,7 +101,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def update_image(args: argparse.Namespace) -> bool:
-        """Update the Docker image"""
+        """Update the Docker image."""
         image_name = args.image
         docker_client = docker.from_env()
         current_image = None
@@ -120,7 +123,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def install_command(args: argparse.Namespace) -> None:
-        """Install the Unstructured Docker container"""
+        """Install the Unstructured Docker container."""
         updated = IndalekoUnstructuredDocker.update_image(args.image)
         if updated:
             ic(f"Updated Unstructured Docker image {args.image}")
@@ -130,7 +133,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def list_command(args: argparse.Namespace) -> None:
-        """List the Unstructured Docker container(s)"""
+        """List the Unstructured Docker container(s)."""
         docker_client = docker.from_env()
 
         try:
@@ -150,7 +153,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def start_command(args: argparse.Namespace) -> None:
-        """Start the Unstructured Docker container"""
+        """Start the Unstructured Docker container."""
         docker_client = docker.from_env()
         containers_list = [container.name for container in docker_client.containers.list(all=True)]
         running_containers = [container.name for container in docker_client.containers.list()]
@@ -164,7 +167,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def stop_command(args: argparse.Namespace) -> None:
-        """Stop the Unstructured Docker container"""
+        """Stop the Unstructured Docker container."""
         docker_client = docker.from_env()
         running_containers = [container.name for container in docker_client.containers.list()]
         if args.name not in running_containers:
@@ -175,11 +178,11 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
     @staticmethod
     def uninstall_command(args: argparse.Namespace) -> None:
-        """Uninstall the Unstructured Docker container"""
+        """Uninstall the Unstructured Docker container."""
         raise NotImplementedError("Not yet implemented")
 
 
-def main():
+def main() -> None:
     """This is the entry point for testing the docker/unstructured integration in Indaleko."""
     now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()

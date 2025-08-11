@@ -33,6 +33,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -42,6 +43,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
+
 
 # pylint: enable=wrong-import-position
 
@@ -53,7 +55,7 @@ indaleko_icon_file = os.path.join(
 
 
 class MainScreen(BoxLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.orientation = "vertical"  # Main screen layout, top to bottom
 
@@ -117,12 +119,12 @@ class MainScreen(BoxLayout):
         # Add the main content area to the main screen layout
         self.add_widget(main_content_layout)
 
-    def on_create_button_press(self, instance):
+    def on_create_button_press(self, instance) -> None:
         # Logic for when the "Create" button is pressed
         self.interaction_content.text = "Starting database creation...\nRunning pre-flight checks..."
         # Here you'd add the code for checking prerequisites and creating the database
 
-    def on_import_button_press(self, instance):
+    def on_import_button_press(self, instance) -> None:
         # Logic for when the "Import" button is pressed
         self.interaction_content.text = "Select a configuration file to import."
         file_chooser = FileChooserIconView(size_hint=(1, None), height=300)
@@ -130,7 +132,7 @@ class MainScreen(BoxLayout):
         self.interaction_area.clear_widgets()
         self.interaction_area.add_widget(file_chooser)
 
-    def on_file_selected(self, filechooser, selection, touch):
+    def on_file_selected(self, filechooser, selection, touch) -> None:
         if selection:
             selected_file = selection[0]
             logging.info(f"Selected file: {selected_file}")
@@ -140,7 +142,7 @@ class MainScreen(BoxLayout):
             self.interaction_area.clear_widgets()
             self.interaction_area.add_widget(self.interaction_content)
 
-    def on_search_button_press(self, instance):
+    def on_search_button_press(self, instance) -> None:
         # Logic for when the "Search" button is pressed
         self.interaction_area.clear_widgets()
         search_layout = BoxLayout(orientation="vertical")
@@ -166,14 +168,14 @@ class MainScreen(BoxLayout):
 
         self.interaction_area.add_widget(search_layout)
 
-    def perform_search(self, instance):
+    def perform_search(self, instance) -> None:
         query = self.query_input.text
         # Here you'd invoke the Indaleko search function, stubbed for now
         results = f"Performing search for: {query}"
         # Display results
         self.result_label.text = results
 
-    def on_maintenance_button_press(self, instance):
+    def on_maintenance_button_press(self, instance) -> None:
         # Placeholder for the maintenance logic
         self.interaction_content.text = "Performing maintenance tasks..."
         # Placeholder for the maintenance logic
@@ -181,7 +183,7 @@ class MainScreen(BoxLayout):
         self.interaction_area.clear_widgets()
         self.interaction_area.add_widget(self.interaction_content)
 
-    def show_error_popup(self, message):
+    def show_error_popup(self, message) -> None:
         popup = Popup(title="Error", content=Label(text=message), size_hint=(0.6, 0.4))
         popup.open()
 
@@ -191,8 +193,8 @@ class IndalekoApp(App):
         return MainScreen()
 
 
-def main():
-    """Main entry point for the Indaleko Kivy Console"""
+def main() -> None:
+    """Main entry point for the Indaleko Kivy Console."""
     IndalekoApp().run()
 
 

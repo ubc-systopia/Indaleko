@@ -1,3 +1,1 @@
-"""
-Google Drive Activity Recorder initialization.
-"""
+"""Google Drive Activity Recorder initialization."""

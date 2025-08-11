@@ -41,9 +41,11 @@ import os
 import socket
 import sys
 import uuid
+
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -52,6 +54,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
         current_path = os.path.dirname(current_path)
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
+
+# Local imports for transition snapshots
+import contextlib
+import json
+import os
 
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.storage.data_models.storage_activity_data_model import (
@@ -67,12 +74,9 @@ from activity.collectors.storage.semantic_attributes import (
 
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
-# Local imports for transition snapshots
-import json
-import os
-from datetime import UTC, datetime
 from activity.recorders.storage.ntfs.tiered.importance_scorer import ImportanceScorer
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -101,7 +105,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         "low": 0.2,  # Low importance events get significant aggregation
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the warm tier recorder.
 
@@ -159,7 +163,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         try:
             super().__init__(**kwargs)
         except Exception as e:
-            self._logger.error(f"Error during parent initialization: {e}")
+            self._logger.exception(f"Error during parent initialization: {e}")
             if not kwargs.get("no_db", False):
                 raise  # Only re-raise if we're supposed to connect to the database
 
@@ -172,7 +176,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 storage_location="warm_tier",
             )
         except Exception as e:
-            self._logger.error(f"Error setting up metadata: {e}")
+            self._logger.exception(f"Error setting up metadata: {e}")
             # Create minimal metadata
             self._metadata = StorageActivityMetadata(
                 provider_type=StorageProviderType.LOCAL_NTFS,
@@ -186,7 +190,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             self._setup_indices()
 
         # Store the hot tier collection name for transitions
-        self._hot_tier_collection_name = kwargs.get("hot_tier_collection_name", None)
+        self._hot_tier_collection_name = kwargs.get("hot_tier_collection_name")
 
         # Register with activity registration service if enabled
         if self._register_enabled and not kwargs.get("no_db", False):
@@ -260,18 +264,18 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 service.register_provider(**registration_kwargs)
                 self._logger.info(f"Successfully registered with service manager: {self._recorder_id}")
             except Exception as e:
-                self._logger.error(f"Error registering with service manager: {e}")
+                self._logger.exception(f"Error registering with service manager: {e}")
                 import traceback
 
                 self._logger.debug(f"Registration error details: {traceback.format_exc()}")
 
         except Exception as e:
-            self._logger.error(f"Error creating registration data: {e}")
+            self._logger.exception(f"Error creating registration data: {e}")
             import traceback
 
             self._logger.debug(f"Registration data error details: {traceback.format_exc()}")
 
-    def _setup_collections(self):
+    def _setup_collections(self) -> None:
         """Set up required collections for the warm tier recorder."""
         try:
             # Activities collection should already be created by parent class
@@ -289,11 +293,11 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 self._logger.info(f"Continuing with entity collection: {self._entity_collection_name}")
 
         except Exception as e:
-            self._logger.error(f"Error setting up collections: {e}")
+            self._logger.exception(f"Error setting up collections: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
-    def _setup_indices(self):
+    def _setup_indices(self) -> None:
         """Set up required indices for the warm tier recorder."""
         try:
             # Set up TTL index on warm tier collection
@@ -329,11 +333,11 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             self._logger.info("Finished setting up indices")
 
         except Exception as e:
-            self._logger.error(f"Error setting up indices: {e}")
+            self._logger.exception(f"Error setting up indices: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
-    def _setup_ttl_index(self):
+    def _setup_ttl_index(self) -> None:
         """Set up TTL index for automatic expiration of warm tier data."""
         try:
             # Calculate TTL in seconds
@@ -357,8 +361,8 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             self._logger.info(f"Created TTL index with {self._ttl_days} day expiration")
 
         except Exception as e:
-            self._logger.error(f"Error setting up TTL index: {e}")
-            self._logger.error("This may be due to an unsupported ArangoDB version or configuration")
+            self._logger.exception(f"Error setting up TTL index: {e}")
+            self._logger.exception("This may be due to an unsupported ArangoDB version or configuration")
             self._logger.warning("Warm tier data will not automatically expire - manual cleanup will be needed")
 
     def find_hot_tier_activities_to_transition(
@@ -416,12 +420,12 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 },
             )
 
-            activities = [doc for doc in cursor]
+            activities = list(cursor)
             self._logger.info(f"Found {len(activities)} activities in hot tier ready for transition")
             return activities
 
         except Exception as e:
-            self._logger.error(f"Error finding hot tier activities: {e}")
+            self._logger.exception(f"Error finding hot tier activities: {e}")
             return []
 
     def _find_hot_tier_collections(self) -> list[str]:
@@ -451,7 +455,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return hot_tier_collections
 
         except Exception as e:
-            self._logger.error(f"Error finding hot tier collections: {e}")
+            self._logger.exception(f"Error finding hot tier collections: {e}")
             return hot_tier_collections
 
     def mark_hot_tier_activities_transitioned(self, activities: list[dict[str, Any]]) -> int:
@@ -511,9 +515,9 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return updated_count
 
         except Exception as e:
-            self._logger.error(f"Error marking hot tier activities as transitioned: {e}")
+            self._logger.exception(f"Error marking hot tier activities as transitioned: {e}")
             return 0
-    
+
     def run_transition_with_snapshots(
         self,
         age_threshold_hours: int = 12,
@@ -537,15 +541,12 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         os.makedirs(snapshot_dir, exist_ok=True)
 
         # Fetch hot-tier docs
-        hot_docs = self.find_hot_tier_activities_to_transition(
-            age_threshold_hours, batch_size
-        )
+        hot_docs = self.find_hot_tier_activities_to_transition(age_threshold_hours, batch_size)
         hot_count = len(hot_docs)
         # Write raw hot docs
         hot_path = os.path.join(snapshot_dir, "hot.jsonl")
         with open(hot_path, "w", encoding="utf-8") as hf:
-            for doc in hot_docs:
-                hf.write(json.dumps(doc, default=str) + "\n")
+            hf.writelines(json.dumps(doc, default=str) + "\n" for doc in hot_docs)
 
         # Process for warm tier
         warm_docs = self.process_hot_tier_activities(hot_docs)
@@ -553,23 +554,18 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         # Write processed warm docs
         warm_path = os.path.join(snapshot_dir, "warm.jsonl")
         with open(warm_path, "w", encoding="utf-8") as wf:
-            for doc in warm_docs:
-                wf.write(json.dumps(doc, default=str) + "\n")
+            wf.writelines(json.dumps(doc, default=str) + "\n" for doc in warm_docs)
 
         # Store to warm tier collection
         self.store_activities(warm_docs)
 
         # Optionally mark hot docs as transitioned
-        try:
+        with contextlib.suppress(Exception):
             self.mark_hot_tier_activities_transitioned(hot_docs)
-        except Exception:
-            pass
 
         # Log compression ratio
         ratio = (warm_count / hot_count) if hot_count else 0.0
-        self._logger.info(
-            f"Warm tier compression ratio: {warm_count}/{hot_count} = {ratio:.2f}"
-        )
+        self._logger.info(f"Warm tier compression ratio: {warm_count}/{hot_count} = {ratio:.2f}")
         return hot_count, warm_count
 
     def get_entity_metadata(self, entity_id: str) -> dict[str, Any] | None:
@@ -607,7 +603,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return None
 
         except Exception as e:
-            self._logger.error(f"Error getting entity metadata: {e}")
+            self._logger.exception(f"Error getting entity metadata: {e}")
             return None
 
     def group_activities_for_aggregation(self, activities: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -640,7 +636,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 continue
 
             try:
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                timestamp = datetime.fromisoformat(timestamp_str)
                 # Calculate the time window (truncate to N-hour windows)
                 window_hours = self._aggregation_window
                 hour_of_day = timestamp.hour
@@ -690,7 +686,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             timestamp_str = activity_data.get("timestamp", "")
             if timestamp_str:
                 try:
-                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                    timestamp = datetime.fromisoformat(timestamp_str)
                     timestamps.append(timestamp)
                 except Exception:
                     pass
@@ -917,7 +913,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                         self.store_activity(ntfs_data)
                         successful_transitions += 1
                     except Exception as e:
-                        self._logger.error(f"Error converting hot tier data: {e}")
+                        self._logger.exception(f"Error converting hot tier data: {e}")
                 else:
                     # For already processed aggregated activities
                     self.store_activity(activity)
@@ -931,7 +927,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return successful_transitions
 
         except Exception as e:
-            self._logger.error(f"Error transitioning from hot tier: {e}")
+            self._logger.exception(f"Error transitioning from hot tier: {e}")
             return 0
 
     def _build_warm_tier_document(
@@ -993,7 +989,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                     enhanced_activity = NtfsStorageActivityData(**activity_data)
                     return super().build_activity_document(enhanced_activity, semantic_attributes)
                 except Exception as e:
-                    self._logger.error(f"Error building document from dict: {e}")
+                    self._logger.exception(f"Error building document from dict: {e}")
                     # Try to build a document directly
                     return self._build_direct_document(activity_data, semantic_attributes)
 
@@ -1028,7 +1024,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         try:
             return super().build_activity_document(activity_data, semantic_attributes)
         except Exception as e:
-            self._logger.error(f"Error building warm tier document: {e}")
+            self._logger.exception(f"Error building warm tier document: {e}")
             # Fall back to parent implementation directly
             return super().build_activity_document(activity_data, semantic_attributes)
 
@@ -1065,7 +1061,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 semantic_attrs.append(attr)
 
         # Build the document
-        document = {
+        return {
             "_key": doc_id,
             "Record": {
                 "Timestamp": datetime.now(UTC).isoformat(),
@@ -1077,7 +1073,6 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             },
         }
 
-        return document
 
     def store_activity(self, activity_data: NtfsStorageActivityData | dict[str, Any]) -> uuid.UUID:
         """
@@ -1099,15 +1094,14 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             document = self._build_warm_tier_document(activity_data)
 
             # Store in database
-            result = self._collection.add_document(document)
+            self._collection.add_document(document)
 
             # Return activity ID
             if isinstance(activity_data, NtfsStorageActivityData):
                 return activity_data.activity_id
-            else:
-                return uuid.UUID(activity_data.get("activity_id", str(uuid.uuid4())))
+            return uuid.UUID(activity_data.get("activity_id", str(uuid.uuid4())))
         except Exception as e:
-            self._logger.error(f"Error storing activity in warm tier: {e}")
+            self._logger.exception(f"Error storing activity in warm tier: {e}")
             return uuid.uuid4()
 
     def get_warm_tier_statistics(self) -> dict[str, Any]:
@@ -1240,7 +1234,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error getting warm tier statistics: {e}")
+            self._logger.exception(f"Error getting warm tier statistics: {e}")
             return {"error": str(e)}
 
     def get_recorder_name(self) -> str:
@@ -1385,7 +1379,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             self._logger.info("Warm tier data updated successfully")
 
         except Exception as e:
-            self._logger.error(f"Error updating warm tier data: {e}")
+            self._logger.exception(f"Error updating warm tier data: {e}")
 
     def get_latest_db_update(self) -> dict[str, Any]:
         """
@@ -1438,7 +1432,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 }
 
         except Exception as e:
-            self._logger.error(f"Error getting latest update: {e}")
+            self._logger.exception(f"Error getting latest update: {e}")
             return {
                 "tier": "warm",
                 "error": str(e),
@@ -1509,7 +1503,7 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             return processed_data
 
         except Exception as e:
-            self._logger.error(f"Error enhancing processed data: {e}")
+            self._logger.exception(f"Error enhancing processed data: {e}")
             # Return original processed data as fallback
             return processed_data
 
@@ -1558,10 +1552,10 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
             try:
                 self.store_activity(data)
             except Exception as e:
-                self._logger.error(f"Failed to store data in warm tier: {e}")
+                self._logger.exception(f"Failed to store data in warm tier: {e}")
 
         except Exception as e:
-            self._logger.error(f"Error storing data in warm tier: {e}")
+            self._logger.exception(f"Error storing data in warm tier: {e}")
 
 
 # Command-line interface
@@ -1609,14 +1603,8 @@ if __name__ == "__main__":
     logger = logging.getLogger("NtfsWarmTierRecorder")
 
     # Display configuration
-    print("=== NTFS Warm Tier Recorder ===")
-    print(f"- TTL days: {args.ttl_days}")
-    print(f"- Debug mode: {'Enabled' if args.debug else 'Disabled'}")
-    print(f"- Database: {'Disabled' if args.no_db else 'Enabled'}")
     if args.db_config:
-        print(f"- DB Config: {args.db_config}")
-    print(f"- Transition: {'Enabled' if args.transition else 'Disabled'}")
-    print()
+        pass
 
     try:
         # Create recorder
@@ -1633,79 +1621,57 @@ if __name__ == "__main__":
         if args.stats:
             stats = recorder.get_warm_tier_statistics()
 
-            print("\nWarm Tier Statistics:")
             if "error" in stats:
-                print(f"  Error: {stats['error']}")
+                pass
             else:
-                print(f"  Total activities: {stats.get('total_count', 0):,}")
 
                 # Show aggregation statistics
                 if "by_aggregation" in stats:
-                    print("  Aggregation:")
-                    for type_name, count in stats["by_aggregation"].items():
-                        print(f"    {type_name}: {count:,}")
+                    for _type_name, _count in stats["by_aggregation"].items():
+                        pass
 
                     # Show detailed aggregation stats if available
                     if "aggregation_stats" in stats:
                         agg_stats = stats["aggregation_stats"]
-                        print("  Aggregation Statistics:")
-                        print(f"    Total original activities: {agg_stats.get('count_sum', 0):,}")
-                        print(f"    Average aggregation size: {agg_stats.get('count_avg', 0):.1f}")
-                        print(f"    Max aggregation size: {agg_stats.get('count_max', 0):,}")
-                        print(f"    Min aggregation size: {agg_stats.get('count_min', 0):,}")
 
                 if "by_type" in stats:
-                    print("  Activities by type:")
-                    for activity_type, count in stats["by_type"].items():
-                        print(f"    {activity_type}: {count:,}")
+                    for _activity_type, _count in stats["by_type"].items():
+                        pass
 
                 if "by_importance" in stats:
-                    print("  Activities by importance:")
-                    for importance, count in stats["by_importance"].items():
-                        print(f"    {importance}: {count:,}")
+                    for _importance, _count in stats["by_importance"].items():
+                        pass
 
                 if "by_time" in stats:
-                    print("  Activities by time:")
-                    for time_range, count in stats["by_time"].items():
-                        print(f"    {time_range}: {count:,}")
+                    for _time_range, _count in stats["by_time"].items():
+                        pass
 
         # Check hot tier for transition-ready activities
         if args.hot_tier:
-            print("\nChecking hot tier for transition-ready activities...")
             activities = recorder.find_hot_tier_activities_to_transition(
                 age_threshold_hours=args.age_hours,
                 batch_size=args.batch_size,
             )
 
             if activities:
-                print(f"Found {len(activities)} activities ready for transition")
 
                 # If transition is enabled, process them directly
                 if args.transition:
-                    print("Processing activities for warm tier (direct)...")
                     count = recorder.transition_from_hot_tier()
-                    print(f"Transitioned {count} activities to warm tier")
             else:
-                print("No activities found ready for transition")
+                pass
         # Run warm-tier transition with snapshots
         elif args.transition:
-            print("\nRunning warm-tier transition with snapshots...")
             hot_count, warm_count = recorder.run_transition_with_snapshots(
                 age_threshold_hours=args.age_hours,
                 batch_size=args.batch_size,
                 data_root=args.data_dir,
             )
             ratio = (warm_count / hot_count) if hot_count else 0.0
-            print(
-                f"Snapshot transition complete: {hot_count} hot -> {warm_count} warm "
-                f"(ratio {ratio:.2f})"
-            )
 
-        print("\nDone.")
 
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
-        print(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         import traceback
 
         traceback.print_exc()

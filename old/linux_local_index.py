@@ -15,7 +15,7 @@ class IndalekoLinuxMachineConfig:
     machine information.
     """
 
-    def __init__(self, config_dir: str):
+    def __init__(self, config_dir: str) -> None:
         assert platform.system() == "Linux", "This class is for Linux"
         assert config_dir is not None, f"No config directory specified: {config_dir}"
         assert os.path.exists(config_dir), "Config directory does not exist"
@@ -57,7 +57,7 @@ class IndalekoLinuxMachineConfig:
         return candidate_files[0][1]
 
 
-def construct_linux_output_file_name(path: str, configdir="./config"):
+def construct_linux_output_file_name(path: str, configdir="./config") -> str:
     linuxcfg = IndalekoLinuxMachineConfig(config_dir=configdir)
     timestamp = datetime.datetime.now(datetime.UTC).isoformat()
     return f'linux-local-fs-data-machine={linuxcfg.get_config_data()["MachineUuid"]}-date={timestamp}.json'
@@ -104,7 +104,7 @@ def get_default_index_path():
     return os.path.expanduser("~")
 
 
-def main():
+def main() -> None:
     # Now parse the arguments
     li = local_index.LocalIndex()
     li.add_arguments(
@@ -114,7 +114,6 @@ def main():
         help="Path to index",
     )
     args = li.parse_args()
-    print(args)
     machine_config = IndalekoLinuxMachineConfig(config_dir=args.confdir)
     # now I have the path being parsed, let's figure out the drive GUID
     li.set_output_file(construct_linux_output_file_name(args.path))

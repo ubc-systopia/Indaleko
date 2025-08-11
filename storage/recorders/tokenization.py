@@ -101,7 +101,7 @@ def tokenize_filename(filename: str) -> dict[str, str | list[str]]:
     return result
 
 
-def main():
+def main() -> None:
     """Test the tokenization functions."""
     test_names = [
         "IndalekoObjectDataModel.py",
@@ -115,11 +115,9 @@ def main():
     ]
 
     for name in test_names:
-        print(f"Tokenizing: {name}")
         tokens = tokenize_filename(name)
-        for token_type, token_value in tokens.items():
-            print(f"  {token_type}: {token_value}")
-        print()
+        for _token_type, _token_value in tokens.items():
+            pass
 
 
 if __name__ == "__main__":

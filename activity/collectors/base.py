@@ -22,10 +22,12 @@ import datetime
 import os
 import sys
 import uuid
+
 from abc import ABC, abstractmethod
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +45,7 @@ from utils.misc.directory_management import (
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import indaleko_file_name_prefix
+
 
 # pylint: enable=wrong-import-position
 
@@ -68,11 +71,11 @@ class CollectorBase(ABC):
 
     @abstractmethod
     def get_collector_name(self) -> str:
-        """Get the name of the provider"""
+        """Get the name of the provider."""
 
     @abstractmethod
     def get_provider_id(self) -> uuid.UUID:
-        """Get the UUID for the provider"""
+        """Get the UUID for the provider."""
 
     @abstractmethod
     def retrieve_data(self, data_id: uuid.UUID) -> dict:
@@ -102,7 +105,7 @@ class CollectorBase(ABC):
     def cache_duration(self) -> datetime.timedelta:
         """
         Retrieve the maximum duration that data from this provider may be
-        cached
+        cached.
         """
 
     @abstractmethod
@@ -115,21 +118,19 @@ class CollectorBase(ABC):
 
     @abstractmethod
     def get_json_schema(self) -> dict:
-        """
-        Retrieve the JSON data schema to use for the database.
-        """
+        """Retrieve the JSON data schema to use for the database."""
 
     @abstractmethod
     def collect_data(self) -> None:
-        """Collect data from the provider"""
+        """Collect data from the provider."""
 
     @abstractmethod
     def process_data(self, data: Any) -> dict[str, Any]:
-        """Process the collected data"""
+        """Process the collected data."""
 
     @abstractmethod
     def store_data(self, data: dict[str, Any]) -> None:
-        """Store the processed data"""
+        """Store the processed data."""
 
 
 class BaseActivityCollector:
@@ -154,7 +155,7 @@ class BaseActivityCollector:
     file_prefix = indaleko_file_name_prefix
     file_suffix = ".jsonl"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         if self.requires_machine_config:
             assert "machine_config" in kwargs, "machine_config must be specified"
             self.machine_config = kwargs["machine_config"]
@@ -212,13 +213,13 @@ class BaseActivityCollector:
                     "storage_description must be a string, " f'not {type(kwargs["storage_description"])}'
                 )
                 self.storage_description = kwargs["storage_description"]
-        self.path = kwargs.get("path", None)
+        self.path = kwargs.get("path")
         self.collector_service = None
         if not self.offline:
             ic("might want to add registration here")
 
 
-def main():
+def main() -> None:
     """This is a test interface for the provider base."""
     ic("ProviderBase test interface")
 

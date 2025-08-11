@@ -32,9 +32,11 @@ import logging
 import os
 import pkgutil
 import sys
+
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -60,6 +62,7 @@ from db import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
 from db.i_collections import IndalekoCollections
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -80,7 +83,7 @@ class ContinuousLearningSystem:
         db_config: IndalekoDBConfig | None = None,
         base_path: str | None = None,
         cache_duration: int = 3600,
-    ):
+    ) -> None:
         """
         Initialize the continuous learning system.
 
@@ -115,12 +118,12 @@ class ContinuousLearningSystem:
         # Initialize
         self._initialize()
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         """Initialize the continuous learning system."""
         # Load current collection schemas
         self._load_collection_schemas()
 
-    def _load_collection_schemas(self):
+    def _load_collection_schemas(self) -> None:
         """Load the current schemas for all collections."""
         try:
             collection = IndalekoCollections.get_collection(
@@ -145,7 +148,7 @@ class ContinuousLearningSystem:
                 f"Loaded schemas for {len(self._collection_schema_cache)} collections",
             )
         except Exception as e:
-            self.logger.error(f"Error loading collection schemas: {e!s}")
+            self.logger.exception(f"Error loading collection schemas: {e!s}")
 
     def _discover_classes(
         self,
@@ -165,11 +168,8 @@ class ContinuousLearningSystem:
         discovered_classes = []
 
         # Function to check if a class is a subclass of one of the base classes
-        def is_subclass_of_interest(cls):
-            for base_name in base_class_names:
-                if base_name in str(cls.__bases__):
-                    return True
-            return False
+        def is_subclass_of_interest(cls) -> bool:
+            return any(base_name in str(cls.__bases__) for base_name in base_class_names)
 
         # Discover modules and classes
         for module_path in module_paths:
@@ -178,7 +178,7 @@ class ContinuousLearningSystem:
                 module = importlib.import_module(module_path)
 
                 # Walk through the module and its submodules
-                for _, name, is_pkg in pkgutil.walk_packages(
+                for _, name, _is_pkg in pkgutil.walk_packages(
                     module.__path__,
                     module.__name__ + ".",
                 ):
@@ -711,7 +711,7 @@ class ContinuousLearningSystem:
             cursor = collection.all().limit(100)
 
             # Process documents
-            docs = [doc for doc in cursor]
+            docs = list(cursor)
             total = len(docs)
 
             if total == 0:
@@ -951,10 +951,10 @@ class ContinuousLearningSystem:
         """
         if isinstance(query_results, list) and query_results:
             return query_results[0]
-        elif isinstance(query_results, dict):
+        if isinstance(query_results, dict):
             if "result" in query_results and isinstance(query_results["result"], list) and query_results["result"]:
                 return query_results["result"][0]
-            elif "_id" in query_results:
+            if "_id" in query_results:
                 return query_results
 
         return None
@@ -975,16 +975,15 @@ class ContinuousLearningSystem:
 
         if "count" in query_lower and not isinstance(query_results, list):
             return "count"
-        elif any(term in query_lower for term in ["find", "search", "locate", "get"]):
+        if any(term in query_lower for term in ["find", "search", "locate", "get"]):
             return "search"
-        elif any(term in query_lower for term in ["list", "show", "display"]):
+        if any(term in query_lower for term in ["list", "show", "display"]):
             return "list"
-        elif any(term in query_lower for term in ["summarize", "summary", "aggregate"]):
+        if any(term in query_lower for term in ["summarize", "summary", "aggregate"]):
             return "summarize"
-        elif any(term in query_lower for term in ["related", "connected", "linked"]):
+        if any(term in query_lower for term in ["related", "connected", "linked"]):
             return "relationship"
-        else:
-            return "general"
+        return "general"
 
     def _generate_patterns_from_query(
         self,
@@ -1390,43 +1389,42 @@ class ContinuousLearningSystem:
                 "removed_recorder_types": list(removed_recorder_types),
                 "change_detected": change_detected,
             }
-        else:
-            # If no patterns exist, this is the first run
-            # Create a new pattern to record the initial state
-            self.kb_manager.create_knowledge_pattern(
-                pattern_type=KnowledgePatternType.collector_recorder,
-                name="Collector/Recorder Initial State",
-                pattern_data={
-                    "collector_count": discovery["total_collectors"],
-                    "recorder_count": discovery["total_recorders"],
-                    "collector_types": list(discovery["collectors"].keys()),
-                    "recorder_types": list(discovery["recorders"].keys()),
-                },
-                source="collector_discovery",
-                confidence=0.95,
-                metadata={
-                    "discovery_time": datetime.now(UTC).isoformat(),
-                    "initial_discovery": True,
-                },
-            )
+        # If no patterns exist, this is the first run
+        # Create a new pattern to record the initial state
+        self.kb_manager.create_knowledge_pattern(
+            pattern_type=KnowledgePatternType.collector_recorder,
+            name="Collector/Recorder Initial State",
+            pattern_data={
+                "collector_count": discovery["total_collectors"],
+                "recorder_count": discovery["total_recorders"],
+                "collector_types": list(discovery["collectors"].keys()),
+                "recorder_types": list(discovery["recorders"].keys()),
+            },
+            source="collector_discovery",
+            confidence=0.95,
+            metadata={
+                "discovery_time": datetime.now(UTC).isoformat(),
+                "initial_discovery": True,
+            },
+        )
 
-            # Return initial results
-            return {
-                "status": "initial",
-                "collectors": discovery["collectors"],
-                "recorders": discovery["recorders"],
-                "total_collectors": discovery["total_collectors"],
-                "total_recorders": discovery["total_recorders"],
-                "new_collector_types": list(discovery["collectors"].keys()),
-                "new_recorder_types": list(discovery["recorders"].keys()),
-                "removed_collector_types": [],
-                "removed_recorder_types": [],
-                "change_detected": False,
-                "message": "Initial collector/recorder discovery",
-            }
+        # Return initial results
+        return {
+            "status": "initial",
+            "collectors": discovery["collectors"],
+            "recorders": discovery["recorders"],
+            "total_collectors": discovery["total_collectors"],
+            "total_recorders": discovery["total_recorders"],
+            "new_collector_types": list(discovery["collectors"].keys()),
+            "new_recorder_types": list(discovery["recorders"].keys()),
+            "removed_collector_types": [],
+            "removed_recorder_types": [],
+            "change_detected": False,
+            "message": "Initial collector/recorder discovery",
+        }
 
 
-def main():
+def main() -> None:
     """Test the continuous learning system."""
     # Configure logging
     logging.basicConfig(
@@ -1438,38 +1436,27 @@ def main():
     learning_system = ContinuousLearningSystem()
 
     # Discover collectors and recorders
-    print("\n--- Discovering Collectors and Recorders ---")
     discovery = learning_system.discover_collectors_and_recorders()
-    print(
-        f"Found {discovery['total_collectors']} collectors and {discovery['total_recorders']} recorders",
-    )
 
     # Print collector types
-    print("\nCollector Types:")
-    for collector_type, collectors in discovery["collectors"].items():
-        print(f"- {collector_type} ({len(collectors)} collectors)")
+    for _collector_type, _collectors in discovery["collectors"].items():
+        pass
 
     # Print recorder types
-    print("\nRecorder Types:")
-    for recorder_type, recorders in discovery["recorders"].items():
-        print(f"- {recorder_type} ({len(recorders)} recorders)")
+    for _recorder_type, _recorders in discovery["recorders"].items():
+        pass
 
     # Analyze collection schemas
-    print("\n--- Analyzing Collection Schemas ---")
     schema_analysis = learning_system.analyze_collection_schemas()
-    print(f"Analyzed {schema_analysis['collections_analyzed']} collections")
 
     # Print schema changes if any
     if schema_analysis.get("schema_changes"):
-        print("\nSchema Changes Detected:")
-        for collection, changes in schema_analysis["schema_changes"].items():
-            print(f"- {collection}")
-            print(f"  {changes.get('message', 'Changes detected')}")
+        for changes in schema_analysis["schema_changes"].values():
+            pass
     else:
-        print("No schema changes detected")
+        pass
 
     # Simulate learning from a query
-    print("\n--- Learning from Sample Query ---")
     query_text = "FOR doc IN Objects FILTER doc.Label LIKE '%test%' RETURN doc"
     query_results = [{"_id": "Objects/123", "Label": "test_file.txt"}]
     execution_time = 0.05
@@ -1480,11 +1467,8 @@ def main():
         execution_time=execution_time,
     )
 
-    print(f"Learned from query: {learning_result['learned_from_query']}")
-    print(f"Generated {learning_result['patterns_generated']} patterns")
 
     # Simulate user feedback
-    print("\n--- Processing User Feedback ---")
     feedback_data = {
         "comment": "These results were exactly what I was looking for!",
         "relevance": 0.9,
@@ -1499,26 +1483,20 @@ def main():
         query_id=learning_result["event_id"],
     )
 
-    print(f"Processed feedback: {feedback_result['processed']}")
     if feedback_result["additional_insights"]:
-        print("Additional insights extracted:")
-        for insight in feedback_result["additional_insights"]:
-            print(f"- {insight['description']} (confidence: {insight['confidence']})")
+        for _insight in feedback_result["additional_insights"]:
+            pass
 
     # Detect collector changes
-    print("\n--- Detecting Collector Changes ---")
     changes = learning_system.detect_collector_changes()
 
     if changes["status"] == "initial":
-        print("Initial collector/recorder detection completed")
+        pass
     else:
-        print(f"Change detected: {changes['change_detected']}")
         if changes["new_collector_types"]:
-            print(f"New collector types: {', '.join(changes['new_collector_types'])}")
+            pass
         if changes["removed_collector_types"]:
-            print(
-                f"Removed collector types: {', '.join(changes['removed_collector_types'])}",
-            )
+            pass
 
 
 if __name__ == "__main__":

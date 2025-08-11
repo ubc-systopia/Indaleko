@@ -3,8 +3,10 @@ import ctypes
 import platform
 import struct
 import sys
+
 from ctypes import wintypes
 from datetime import UTC, datetime
+
 
 # Windows API constants
 FSCTL_QUERY_USN_JOURNAL = 0x900F4
@@ -127,7 +129,7 @@ class UsnJournalReader:
     reading journal entries, and managing the handle lifecycle.
     """
 
-    def __init__(self, volume="C:", verbose=False):
+    def __init__(self, volume="C:", verbose=False) -> None:
         """
         Initialize the USN journal reader for a specific volume.
 
@@ -148,11 +150,9 @@ class UsnJournalReader:
         self.journal_data = None
 
         if self.verbose:
-            print(f"UsnJournalReader initialized for volume: {self.volume}")
-            print(f"Using volume path: {self.volume_path}")
-            print(f"Running with administrator privileges: {is_admin()}")
+            pass
 
-    def open(self):
+    def open(self) -> bool | None:
         """
         Open the volume handle and query journal information.
 
@@ -164,27 +164,22 @@ class UsnJournalReader:
             self.journal_data = self._query_usn_journal()
 
             if self.verbose:
-                print(f"Successfully opened volume {self.volume}")
-                print(f"Journal ID: {self.journal_data.UsnJournalID}")
-                print(f"First USN: {self.journal_data.FirstUsn}")
-                print(f"Next USN: {self.journal_data.NextUsn}")
-                print(f"Lowest Valid USN: {self.journal_data.LowestValidUsn}")
+                pass
 
             return True
-        except Exception as e:
-            print(f"Error opening USN journal: {e}")
+        except Exception:
             self.close()
             return False
 
-    def close(self):
+    def close(self) -> None:
         """Close the volume handle if it's open."""
         if self.handle:
             try:
                 ctypes.windll.kernel32.CloseHandle(self.handle)
                 if self.verbose:
-                    print(f"Closed handle for volume {self.volume}")
-            except Exception as e:
-                print(f"Error closing handle: {e}")
+                    pass
+            except Exception:
+                pass
             finally:
                 self.handle = None
                 self.journal_data = None
@@ -200,9 +195,8 @@ class UsnJournalReader:
         Returns:
             Tuple containing (list of USN record dictionaries, next_usn)
         """
-        if not self.handle or not self.journal_data:
-            if not self.open():
-                return [], None
+        if (not self.handle or not self.journal_data) and not self.open():
+            return [], None
 
         try:
             # Use provided start_usn or default to FirstUsn
@@ -214,7 +208,7 @@ class UsnJournalReader:
                 start_usn = max(start_usn, self.journal_data.LowestValidUsn)
 
             if self.verbose:
-                print(f"Starting from USN: {start_usn}")
+                pass
 
             # Read USN journal
             buffer, bytes_returned = self._read_usn_journal(
@@ -223,7 +217,7 @@ class UsnJournalReader:
             )
 
             if self.verbose:
-                print(f"Read {bytes_returned} bytes from USN journal")
+                pass
 
             # Get the next USN from the buffer
             next_usn = None
@@ -246,12 +240,11 @@ class UsnJournalReader:
                 offset += struct.unpack_from("<I", buffer, offset)[0]
 
             if self.verbose:
-                print(f"Found {records_found} records")
+                pass
 
             return records, next_usn
 
-        except Exception as e:
-            print(f"Error reading USN journal records: {e}")
+        except Exception:
             return [], None
 
     def _get_volume_handle(self):
@@ -303,10 +296,6 @@ class UsnJournalReader:
         # Check if the requested USN is below the first valid USN
         # If so, immediately use the low water mark instead of retrying with an invalid USN
         if self.journal_data and start_usn < self.journal_data.FirstUsn:
-            print(
-                f"Requested USN {start_usn} is below First USN {self.journal_data.FirstUsn}",
-            )
-            print(f"Using First USN {self.journal_data.FirstUsn} as the starting point")
 
             # Update the starting USN to use the first valid USN
             start_usn = self.journal_data.FirstUsn
@@ -352,35 +341,27 @@ class UsnJournalReader:
 
                             # If we get here, the handle was invalid but we've recovered
                             if self.verbose:
-                                print(
-                                    "Handle was invalid but has been successfully reopened",
-                                )
+                                pass
 
                             # Increment retry counter and continue to next iteration
                             retries += 1
                             continue
-                        except Exception as recover_error:
+                        except Exception:
                             if self.verbose:
-                                print(
-                                    f"Failed to recover from error 0: {recover_error}",
-                                )
+                                pass
                             # Return empty results, allowing the collector to handle this gracefully
                             return buffer, 0
 
                     # Error 0x18 (ERROR_NO_MORE_FILES) can happen when there are no new records
                     if error == 0x18:
                         if self.verbose:
-                            print(
-                                f"No more USN records found after position {start_usn}",
-                            )
+                            pass
                         return buffer, 0
 
                     # Error 0xC0000023 (STATUS_BUFFER_TOO_SMALL) or 0x7A (ERROR_INSUFFICIENT_BUFFER)
                     if error in (0xC0000023, 0x7A):
                         if self.verbose:
-                            print(
-                                "Buffer too small for USN records, need to increase buffer size",
-                            )
+                            pass
                         raise BufferError("USN journal buffer too small")
 
                     # Try to get the NTSTATUS code if possible (for better diagnostics)
@@ -410,15 +391,13 @@ class UsnJournalReader:
                         error_msg += f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
                         error_msg += f"Requested USN: {start_usn}"
 
-                    print(error_msg)
 
                     # Create a more informative Win32 error
                     if error == 0:
                         error_obj = OSError(f"USN Journal Error: {error_msg}")
                         error_obj.winerror = error
                         raise error_obj
-                    else:
-                        raise ctypes.WinError(error)
+                    raise ctypes.WinError(error)
 
                 # If we get here, the operation was successful
                 return buffer, bytes_returned.value
@@ -428,12 +407,7 @@ class UsnJournalReader:
                 # This happens when the requested USN is too old and has been overwritten
                 if getattr(e, "winerror", 0) == 0x570 or str(e).find("journal entry has been deleted") != -1:
                     if self.verbose:
-                        print(
-                            f"Journal entry at USN {start_usn} has been deleted due to journal rotation",
-                        )
-                        print(
-                            f"Resetting to lowest valid USN: {self.journal_data.LowestValidUsn}",
-                        )
+                        pass
 
                     # Return empty buffer but with special metadata for the collector to handle
                     empty_buffer = ctypes.create_string_buffer(8)
@@ -501,7 +475,7 @@ class UsnJournalReader:
         return False  # Don't suppress exceptions
 
 
-def main():
+def main() -> None:
     # Add argument parsing for better integration
     parser = argparse.ArgumentParser(description="USN Journal Reader")
     parser.add_argument(
@@ -525,14 +499,10 @@ def main():
     args = parser.parse_args()
 
     if not is_admin():
-        print("This script must be run with administrative privileges.")
         sys.exit(1)
 
     # Check Windows version
-    win_version = platform.win32_ver()[0]
-    print(
-        f"Running on Windows {win_version}. Note: USN journal behavior may vary across versions.",
-    )
+    platform.win32_ver()[0]
 
     # Use UsnJournalReader class with context manager
     with UsnJournalReader(volume=args.volume, verbose=args.verbose) as reader:
@@ -542,17 +512,11 @@ def main():
         )
 
         # Display the records
-        for record in records:
-            print(f"\nUSN: {record['USN']}")
-            print(f"File: {record['FileName']}")
-            print(f"Timestamp: {record['Timestamp']}")
-            print(f"Reasons: {', '.join(record['Reasons'])}")
-            print(f"Attributes: {', '.join(record['Attributes'])}")
-            print(f"FileRef: {record['FileReferenceNumber']}")
-            print(f"ParentFileRef: {record['ParentFileReferenceNumber']}")
+        for _record in records:
+            pass
 
         if next_usn:
-            print(f"\nNext USN position: {next_usn}")
+            pass
 
 
 if __name__ == "__main__":

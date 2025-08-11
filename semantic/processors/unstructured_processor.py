@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Indaleko Project - Unstructured Semantic Processor
+Indaleko Project - Unstructured Semantic Processor.
 
 This module provides a unified interface for collecting and recording semantic
 metadata using unstructured.io. It coordinates the collector and recorder
@@ -36,8 +36,10 @@ import pathlib
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -68,7 +70,7 @@ class UnstructuredProcessor:
     a simplified interface for collecting and recording semantic metadata.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the UnstructuredProcessor.
 
@@ -411,7 +413,7 @@ class UnstructuredProcessor:
                     ):
                         files.append(file_path)
         except Exception as e:
-            self._logger.error(f"Error finding files: {e!s}")
+            self._logger.exception(f"Error finding files: {e!s}")
 
         return files
 
@@ -451,10 +453,7 @@ class UnstructuredProcessor:
 
             # Check MIME type
             mime_type, _ = mimetypes.guess_type(file_path)
-            if mime_type not in self._collector.SUPPORTED_FILE_TYPES:
-                return False
-
-            return True
+            return mime_type in self._collector.SUPPORTED_FILE_TYPES
         except Exception as e:
             self._logger.warning(f"Error checking file {file_path}: {e!s}")
             return False
@@ -521,7 +520,7 @@ class UnstructuredProcessor:
             result["pages"] = dict(sorted(result["pages"].items()))
 
         except Exception as e:
-            self._logger.error(f"Error extracting PDF content: {e!s}")
+            self._logger.exception(f"Error extracting PDF content: {e!s}")
 
         return result
 
@@ -553,7 +552,7 @@ class UnstructuredProcessor:
         return self._recorder
 
 
-def main():
+def main() -> None:
     """Main function for testing the UnstructuredProcessor."""
     import argparse
 
@@ -641,16 +640,12 @@ def main():
         if hasattr(args, "output") and args.output and "content" in result:
             with open(args.output, "w") as f:
                 json.dump(result["content"], f, indent=2)
-            print(f"Extracted content written to {args.output}")
 
     # Print results
     if "performance" in result:
-        performance = result.pop("performance")
-        print(json.dumps(result, indent=2))
-        print("\nPerformance statistics:")
-        print(json.dumps(performance, indent=2))
+        result.pop("performance")
     else:
-        print(json.dumps(result, indent=2))
+        pass
 
 
 if __name__ == "__main__":

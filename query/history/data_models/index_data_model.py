@@ -39,10 +39,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import sys
+
 from typing import Any
 
 from icecream import ic
 from pydantic import AwareDatetime, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -56,6 +58,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -133,7 +136,7 @@ class IndalekoIndexDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     ic("Testing IndalekoObjectDataModel")
     IndalekoIndexDataModel.test_model_main()

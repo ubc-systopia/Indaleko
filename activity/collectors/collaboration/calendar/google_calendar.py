@@ -26,7 +26,9 @@ import json
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 try:
     from google.auth.transport.requests import Request
@@ -74,7 +76,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
         "https://www.googleapis.com/auth/userinfo.email",
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the Google Calendar collector.
 
         Args:
@@ -162,7 +164,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                         self.SCOPES,
                     )
             except Exception as e:
-                self.logger.error(f"Error loading token file: {e}")
+                self.logger.exception(f"Error loading token file: {e}")
                 # If token is corrupted, we'll recreate it
 
         # If no valid credentials or they're expired
@@ -172,7 +174,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                     # Refresh the token
                     creds.refresh(Request())
                 except Exception as e:
-                    self.logger.error(f"Error refreshing token: {e}")
+                    self.logger.exception(f"Error refreshing token: {e}")
                     # If refresh fails, we'll recreate it
                     creds = None
 
@@ -198,7 +200,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                     )
                     creds = flow.run_local_server(port=0)
                 except Exception as e:
-                    self.logger.error(f"Error running OAuth flow: {e}")
+                    self.logger.exception(f"Error running OAuth flow: {e}")
                     return None
 
             # Save the credentials for future use
@@ -207,7 +209,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                     token_info = json.loads(creds.to_json())
                     json.dump(token_info, token_file)
             except Exception as e:
-                self.logger.error(f"Error saving token: {e}")
+                self.logger.exception(f"Error saving token: {e}")
 
         return creds
 
@@ -235,7 +237,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
             return True
 
         except Exception as e:
-            self.logger.error(f"Authentication error: {e}")
+            self.logger.exception(f"Authentication error: {e}")
             return False
 
     def get_calendars(self) -> list[dict[str, Any]]:
@@ -276,7 +278,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
             return result
 
         except HttpError as e:
-            self.logger.error(f"Error retrieving calendars: {e}")
+            self.logger.exception(f"Error retrieving calendars: {e}")
             return []
 
     def get_events(
@@ -325,12 +327,11 @@ class GoogleCalendarCollector(CalendarCollectorBase):
 
             # Execute query
             events_result = self.service.events().list(**params).execute()
-            events = events_result.get("items", [])
+            return events_result.get("items", [])
 
-            return events
 
         except HttpError as e:
-            self.logger.error(f"Error retrieving events: {e}")
+            self.logger.exception(f"Error retrieving events: {e}")
             return []
 
     def get_event_details(self, calendar_id: str, event_id: str) -> dict[str, Any]:
@@ -349,12 +350,11 @@ class GoogleCalendarCollector(CalendarCollectorBase):
 
         try:
             # Get the event
-            event = self.service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+            return self.service.events().get(calendarId=calendar_id, eventId=event_id).execute()
 
-            return event
 
         except HttpError as e:
-            self.logger.error(f"Error retrieving event details: {e}")
+            self.logger.exception(f"Error retrieving event details: {e}")
             return {}
 
     def convert_to_calendar_event(
@@ -374,7 +374,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
         try:
             # Get calendar info (if available)
             calendar_info = self._calendars_cache.get(calendar_id, {})
-            calendar_name = calendar_info.get("summary", "Unknown Calendar")
+            calendar_info.get("summary", "Unknown Calendar")
 
             # Extract basic event details
             event_id = event_data.get("id", "")
@@ -656,7 +656,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                         break
 
             # Create CalendarEvent
-            calendar_event = CalendarEvent(
+            return CalendarEvent(
                 # Event identifiers
                 event_id=event_id,
                 provider_name="google",
@@ -701,8 +701,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                 occurrence_time=start_time,
             )
 
-            return calendar_event
 
         except Exception as e:
-            self.logger.error(f"Error converting event: {e}")
+            self.logger.exception(f"Error converting event: {e}")
             return None

@@ -21,15 +21,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from indaleko.tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
-from indaleko.tools.db_schema_viz.schema_analyzer import group_collections, analyze_indexes
-from indaleko.tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
+from indaleko.tools.db_schema_viz.graphviz_generator import (
+    generate_dot,
+    generate_output,
+)
+from indaleko.tools.db_schema_viz.schema_analyzer import (
+    analyze_indexes,
+    group_collections,
+)
+from indaleko.tools.db_schema_viz.schema_extractor import (
+    extract_collections,
+    extract_relationships,
+)
+
 
 __all__ = [
-    'extract_collections',
-    'extract_relationships',
-    'group_collections',
-    'analyze_indexes',
-    'generate_dot',
-    'generate_output',
+    "analyze_indexes",
+    "extract_collections",
+    "extract_relationships",
+    "generate_dot",
+    "generate_output",
+    "group_collections",
 ]

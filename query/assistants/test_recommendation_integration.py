@@ -22,8 +22,8 @@ import argparse
 import os
 import sys
 
-from colorama import Fore, Style
-from colorama import init as colorama_init
+from colorama import Fore, init as colorama_init
+
 
 # Set up path for imports
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -41,9 +41,9 @@ from query.memory.archivist_memory import ArchivistMemory
 def print_colored(text: str, color: str = Fore.WHITE, bold: bool = False) -> None:
     """Print colored text."""
     if bold:
-        print(f"{color}{Style.BRIGHT}{text}{Style.RESET_ALL}")
+        pass
     else:
-        print(f"{color}{text}{Style.RESET_ALL}")
+        pass
 
 
 def run_test_conversation(assistant: IndalekoAssistant, model: str = "gpt-4o") -> None:
@@ -76,11 +76,10 @@ def run_test_conversation(assistant: IndalekoAssistant, model: str = "gpt-4o") -
         print_colored(f"\nQuery {i}: {query}", Fore.YELLOW, bold=True)
 
         # Process the query
-        response = assistant.process_message(conversation_id, query)
+        assistant.process_message(conversation_id, query)
 
         # Display the response
         print_colored("\nAssistant: ", Fore.GREEN)
-        print(response["response"])
 
         # Display recommendations if available
         conv = assistant.get_conversation(conversation_id)
@@ -105,11 +104,10 @@ def run_test_conversation(assistant: IndalekoAssistant, model: str = "gpt-4o") -
     print_colored(f"\nQuery: {direct_query}", Fore.YELLOW)
 
     # Process the query
-    response = assistant.process_message(conversation_id, direct_query)
+    assistant.process_message(conversation_id, direct_query)
 
     # Display the response
     print_colored("\nAssistant: ", Fore.GREEN)
-    print(response["response"])
 
     # Save the conversation for reference
     file_path = os.path.join(
