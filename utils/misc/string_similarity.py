@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 
+
 try:
     import jellyfish
 
@@ -51,9 +52,8 @@ def jaro_winkler_similarity(s1: str, s2: str, prefix_weight: float = 0.1) -> flo
     if JELLYFISH_AVAILABLE:
         # Use the jellyfish library if available
         return jellyfish.jaro_winkler_similarity(s1, s2)
-    else:
-        # Fallback to a pure Python implementation
-        return _jaro_winkler_similarity_pure_python(s1, s2, prefix_weight)
+    # Fallback to a pure Python implementation
+    return _jaro_winkler_similarity_pure_python(s1, s2, prefix_weight)
 
 
 def _jaro_winkler_similarity_pure_python(
@@ -162,8 +162,7 @@ def _jaro_similarity(s1: str, s2: str) -> float:
 
     # Calculate Jaro similarity
     transpositions = transpositions // 2
-    jaro = (matches / len1 + matches / len2 + (matches - transpositions) / matches) / 3
-    return jaro
+    return (matches / len1 + matches / len2 + (matches - transpositions) / matches) / 3
 
 
 def weighted_filename_similarity(
@@ -200,8 +199,8 @@ def weighted_filename_similarity(
     base2, ext2 = os.path.splitext(os.path.basename(file2))
 
     # Remove leading dot from extensions
-    ext1 = ext1[1:] if ext1.startswith(".") else ext1
-    ext2 = ext2[1:] if ext2.startswith(".") else ext2
+    ext1 = ext1.removeprefix(".")
+    ext2 = ext2.removeprefix(".")
 
     # Calculate Jaro-Winkler similarity for base filenames
     name_similarity = jaro_winkler_similarity(base1.lower(), base2.lower())
@@ -224,13 +223,12 @@ def weighted_filename_similarity(
         token_similarity = common_tokens / all_tokens if all_tokens > 0 else 0.0
 
     # Calculate weighted similarity
-    weighted_similarity = (
+    return (
         weights["name"] * name_similarity
         + weights["extension"] * extension_similarity
         + weights["name_tokens"] * token_similarity
     )
 
-    return weighted_similarity
 
 
 def _tokenize_filename(filename: str) -> list[str]:
@@ -368,7 +366,7 @@ def multi_attribute_identity_resolution(
     return is_same_entity, weighted_score
 
 
-def main():
+def main() -> None:
     """Test the string similarity functions with sample filenames."""
     test_pairs = [
         # Similar filenames
@@ -386,22 +384,14 @@ def main():
         ("short.txt", "completely_different_long_filename.txt"),
     ]
 
-    print("Jaro-Winkler Similarity Tests:")
-    print("=============================")
 
     for file1, file2 in test_pairs:
-        similarity = jaro_winkler_similarity(file1, file2)
-        print(f"'{file1}' <-> '{file2}': {similarity:.4f}")
+        jaro_winkler_similarity(file1, file2)
 
-    print("\nWeighted Filename Similarity Tests:")
-    print("=================================")
 
     for file1, file2 in test_pairs:
-        similarity = weighted_filename_similarity(file1, file2)
-        print(f"'{file1}' <-> '{file2}': {similarity:.4f}")
+        weighted_filename_similarity(file1, file2)
 
-    print("\nMulti-Attribute Identity Resolution Tests:")
-    print("=======================================")
 
     # Test with different attribute combinations
     test_files = [
@@ -448,10 +438,8 @@ def main():
 
     for file1_attrs, file2_attrs in test_files:
         is_same, score = multi_attribute_identity_resolution(file1_attrs, file2_attrs)
-        file1_name = file1_attrs.get("filename", "unknown")
-        file2_name = file2_attrs.get("filename", "unknown")
-        result = "SAME" if is_same else "DIFFERENT"
-        print(f"'{file1_name}' <-> '{file2_name}': {score:.4f} ({result})")
+        file1_attrs.get("filename", "unknown")
+        file2_attrs.get("filename", "unknown")
 
 
 if __name__ == "__main__":

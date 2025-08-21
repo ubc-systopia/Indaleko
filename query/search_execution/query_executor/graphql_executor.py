@@ -4,9 +4,7 @@ from .executor_base import ExecutorBase
 
 
 class GraphQLExecutor(ExecutorBase):
-    """
-    Executor for GraphQL queries.
-    """
+    """Executor for GraphQL queries."""
 
     def execute(self, query: str, data_connector: Any) -> list[dict[str, Any]]:
         """

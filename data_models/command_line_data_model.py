@@ -24,11 +24,13 @@ import logging
 import os
 import platform
 import sys
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, TypeVar
 
 import psutil
+
 from icecream import ic
 from pydantic import (
     AwareDatetime,
@@ -39,6 +41,7 @@ from pydantic import (
     FieldValidationInfo,
     field_validator,
 )
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +61,7 @@ from utils.misc.directory_management import (
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import generate_file_name  # noqa: E402
+
 
 # pylint: enable=wrong-import-position
 
@@ -114,21 +118,21 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     OutputFile: str | None = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Initialize the object."""
         super().__init__(*args, **kwargs)
 
     @field_validator("Timestamp", mode="before")
     @classmethod
     def validate_timestamp(
-        cls: type[T],
+        cls,
         value: AwareDatetime,
         info: FieldValidationInfo,
     ) -> AwareDatetime:
         """Validate the timestamp."""
         if value is None:
             value = datetime.now(UTC)
-        if isinstance(value, AwareDatetime) or isinstance(value, datetime):
+        if isinstance(value, (AwareDatetime, datetime)):
             return value
         ts = datetime.fromisoformat(value)
         if not isinstance(ts, AwareDatetime):
@@ -137,7 +141,7 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @field_validator("ConfigurationDir", "DataDir", "LogDir", mode="before")
     @classmethod
-    def validate_dir(cls: type[T], value: str, info: FieldValidationInfo) -> str:
+    def validate_dir(cls, value: str, info: FieldValidationInfo) -> str:
         """Validate the directory."""
         if not os.path.exists(value):
             raise ValueError(f"Directory {value} does not exist.")
@@ -151,7 +155,7 @@ class IndalekoCommandLineDataModel(BaseModel):
     )
     @classmethod
     def validate_configuration_file(
-        cls: type[T],
+        cls,
         value: str,
         info: FieldValidationInfo,
     ) -> str:
@@ -165,9 +169,11 @@ class IndalekoCommandLineDataModel(BaseModel):
     @staticmethod
     def find_relevant_files(
         directory: str,
-        substrings: list[str] = ["indaleko", "jsonl"],
+        substrings: list[str] | None = None,
     ) -> list[str]:
         """Find files in the directory with the given suffix."""
+        if substrings is None:
+            substrings = ["indaleko", "jsonl"]
         directory_path = Path(directory)
         return [
             str(file_path)
@@ -275,7 +281,7 @@ class IndalekoCommandLineDataModel(BaseModel):
         return pre_args, pre_parser, cmd_data
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoCommandLineDataModel.parse_command_line()
 

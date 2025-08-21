@@ -6,10 +6,13 @@ Project Indaleko
 
 import os
 import sys
+
 from typing import Any
 
 import requests
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -26,24 +29,21 @@ from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
     SmartThermostatCollector,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class NestSmartThermostatCollector(SmartThermostatCollector):
-    """
-    This class provides a utility for acquiring Nest data.
-    """
+    """This class provides a utility for acquiring Nest data."""
 
-    def __init__(self, access_token: str, **kwargs):
+    def __init__(self, access_token: str, **kwargs) -> None:
         """Initialize the object."""
         super().__init__(**kwargs)
         self.data = NestAmbientDataModel()
         self.access_token = access_token
 
     def collect_data(self) -> None:
-        """
-        Collect Nest data.
-        """
+        """Collect Nest data."""
         ic("Collecting Nest data")
         headers = {
             "Authorization": f"Bearer {self.access_token}",
@@ -74,25 +74,18 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
                     self.data = NestAmbientDataModel(**raw_data)
 
     def process_data(self, data: Any) -> dict[str, Any]:
-        """
-        Process the collected data.
-        """
+        """Process the collected data."""
         ic("Processing Nest data")
         # Example: Convert processed data to a dictionary
         return self.data.dict()
 
     def store_data(self, data: dict[str, Any]) -> None:
-        """
-        Store the processed data.
-        """
+        """Store the processed data."""
         ic("Storing Nest data")
         # Example: Print data to simulate storing
-        print("Storing data:", data)
 
     def get_latest_db_update(self) -> dict[str, Any]:
-        """
-        Get the latest data update from the database.
-        """
+        """Get the latest data update from the database."""
         ic("Getting latest Nest data update from the database")
         # Example: Simulate fetching the latest data
         return {
@@ -107,16 +100,14 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
         }
 
     def update_data(self) -> None:
-        """
-        Update the data in the database.
-        """
+        """Update the data in the database."""
         ic("Updating Nest data in the database")
         # Example: Simulate updating data
         latest_data = self.get_latest_db_update()
         self.store_data(latest_data)
 
 
-def main():
+def main() -> None:
     """Main entry point for the Nest Smart Thermostat Collector."""
     ic("Starting Nest Smart Thermostat Collector")
     access_token = "YOUR_NEST_ACCESS_TOKEN"

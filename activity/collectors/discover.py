@@ -22,9 +22,11 @@ import argparse
 import logging
 import os
 import sys
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,11 +35,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
-
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from utils import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 
@@ -56,8 +58,8 @@ class IndalekoActivityDataProviderCollectorDiscovery:
         Path(os.environ["INDALEKO_ROOT"]) / "activity" / "collectors",
     )
 
-    def __init__(self, **kwargs):
-        """Initialize the data provider discovery mechanism"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the data provider discovery mechanism."""
         for dir_name in ["config_dir", "data_dir", "log_dir"]:
             if dir_name in kwargs:
                 setattr(self, dir_name, kwargs[dir_name])
@@ -94,7 +96,7 @@ class IndalekoActivityDataProviderCollectorDiscovery:
 
     @staticmethod
     def find_data_providers(provider_dir: str) -> list:
-        """Find the data providers in the specified directory"""
+        """Find the data providers in the specified directory."""
         data_providers = []
 
         # Step 1: Build a list of subdirectories
@@ -117,23 +119,23 @@ class IndalekoActivityDataProviderCollectorDiscovery:
 
     @staticmethod
     def initialize_project() -> bool:
-        """Initialize the project"""
+        """Initialize the project."""
         ic("Initialize project")
 
     @staticmethod
-    def list_data_providers(args: argparse.Namespace):
-        """List the data providers available"""
+    def list_data_providers(args: argparse.Namespace) -> None:
+        """List the data providers available."""
         discovery = IndalekoActivityDataProviderCollectorDiscovery()
         for provider in discovery.data_providers:
             ic(provider)
 
     @staticmethod
-    def show_registrations(args: argparse.Namespace):
-        """Show the existing registrations for the data providers"""
+    def show_registrations(args: argparse.Namespace) -> None:
+        """Show the existing registrations for the data providers."""
         ic(f"Show registrations: {args}")
 
 
-def main():
+def main() -> None:
     """
     This is the interactive interface to the activity data provider discovery
     mechanism.

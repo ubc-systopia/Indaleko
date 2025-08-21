@@ -36,6 +36,7 @@ import os
 import platform
 import time
 import traceback
+
 from typing import Any
 
 import psutil
@@ -47,6 +48,7 @@ from semantic.collectors.checksum.checksum import IndalekoSemanticChecksums
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 from semantic.recorders.checksum.recorder import ChecksumRecorder
 from semantic.recorders.mime.recorder import MimeTypeRecorder
+
 
 # Set up logging
 logging.basicConfig(
@@ -110,7 +112,7 @@ def load_config(config_path: str | None = None) -> dict[str, Any]:
 
             logger.info(f"Loaded configuration from {config_path}")
         except Exception as e:
-            logger.error(f"Error loading configuration from {config_path}: {e}")
+            logger.exception(f"Error loading configuration from {config_path}: {e}")
             logger.info("Using default configuration")
     else:
         logger.info(
@@ -124,7 +126,7 @@ def load_config(config_path: str | None = None) -> dict[str, Any]:
                 json.dump(DEFAULT_CONFIG, f, indent=2)
             logger.info(f"Created default configuration file at {config_path}")
         except Exception as e:
-            logger.error(f"Could not create default configuration file: {e}")
+            logger.exception(f"Could not create default configuration file: {e}")
 
     return config
 
@@ -136,7 +138,7 @@ def load_state(state_file: str) -> dict[str, Any]:
             with open(state_file) as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Error loading state file {state_file}: {e}")
+            logger.exception(f"Error loading state file {state_file}: {e}")
 
     # Return default state if file doesn't exist or error occurred
     return {
@@ -172,7 +174,7 @@ def save_state(state: dict[str, Any], state_file: str) -> None:
             json.dump(state, f, indent=2)
         logger.debug(f"Saved state to {state_file}")
     except Exception as e:
-        logger.error(f"Error saving state to {state_file}: {e}")
+        logger.exception(f"Error saving state to {state_file}: {e}")
 
 
 def set_process_priority() -> None:
@@ -252,7 +254,7 @@ def process_mime_batch(
     state: dict[str, Any],
 ) -> dict[str, int]:
     """Process a batch of files with the MIME type extractor."""
-    collector = IndalekoSemanticMimeType()
+    IndalekoSemanticMimeType()
     recorder = MimeTypeRecorder()
 
     results = {"processed": 0, "skipped": 0, "errors": 0}
@@ -283,7 +285,7 @@ def process_mime_batch(
                 results["skipped"] += 1
 
         except Exception as e:
-            logger.error(f"Error processing MIME type for {file_path}: {e}")
+            logger.exception(f"Error processing MIME type for {file_path}: {e}")
             results["errors"] += 1
 
     # Update state
@@ -303,7 +305,7 @@ def process_checksum_batch(
     state: dict[str, Any],
 ) -> dict[str, int]:
     """Process a batch of files with the Checksum extractor."""
-    collector = IndalekoSemanticChecksums()
+    IndalekoSemanticChecksums()
     recorder = ChecksumRecorder()
 
     results = {"processed": 0, "skipped": 0, "errors": 0}
@@ -334,7 +336,7 @@ def process_checksum_batch(
                 results["skipped"] += 1
 
         except Exception as e:
-            logger.error(f"Error processing checksums for {file_path}: {e}")
+            logger.exception(f"Error processing checksums for {file_path}: {e}")
             results["errors"] += 1
 
     # Update state
@@ -505,7 +507,7 @@ def run_scheduled_extraction(args: argparse.Namespace) -> None:
     except KeyboardInterrupt:
         logger.info("Processing interrupted by user")
     except Exception as e:
-        logger.error(f"Error during processing: {e}")
+        logger.exception(f"Error during processing: {e}")
         logger.debug(traceback.format_exc())
     finally:
         # Update last run time
@@ -524,7 +526,7 @@ def run_scheduled_extraction(args: argparse.Namespace) -> None:
             )
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Scheduled semantic metadata extraction for Indaleko",
@@ -582,8 +584,7 @@ def main():
     if args.status:
         # Just show status and exit
         config = load_config(args.config)
-        state = load_state(config["processing"]["state_file"])
-        print(json.dumps(state, indent=2))
+        load_state(config["processing"]["state_file"])
         return
 
     if args.test:

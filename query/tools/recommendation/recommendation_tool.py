@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +41,7 @@ from query.tools.base import (
     ToolOutput,
     ToolParameter,
 )
+
 
 # Import recommendation integration if available
 try:
@@ -59,7 +62,7 @@ class RecommendationTool(BaseTool):
     query suggestions within the Assistant framework.
     """
 
-    def __init__(self, recommendation_engine=None, archivist_integration=None):
+    def __init__(self, recommendation_engine=None, archivist_integration=None) -> None:
         """
         Initialize the recommendation tool.
 
@@ -144,21 +147,20 @@ class RecommendationTool(BaseTool):
                 max_results,
                 tool_input.conversation_id,
             )
-        elif action == "provide_feedback":
+        if action == "provide_feedback":
             return self._provide_feedback(
                 suggestion_id,
                 feedback_type,
                 tool_input.conversation_id,
             )
-        elif action == "get_stats":
+        if action == "get_stats":
             return self._get_stats()
-        else:
-            return ToolOutput(
-                success=False,
-                result=None,
-                error=f"Unknown action: {action}",
-                tool_name=self.definition.name,
-            )
+        return ToolOutput(
+            success=False,
+            result=None,
+            error=f"Unknown action: {action}",
+            tool_name=self.definition.name,
+        )
 
     def _get_recommendations(
         self,
@@ -283,14 +285,7 @@ class RecommendationTool(BaseTool):
                 feedback_value = 1.0 if feedback in [FeedbackType.ACCEPTED, FeedbackType.HELPFUL] else -1.0
 
                 # Convert to suggestion format expected by Archivist integration
-                source_to_type = {
-                    "query_history": "QUERY",
-                    "activity_context": "QUERY",
-                    "entity_relationship": "RELATED_CONTENT",
-                    "temporal_pattern": "REMINDER",
-                }
 
-                suggestion = None
                 for rec in self.recommendation_engine.recent_suggestions.values():
                     if rec.suggestion_id == uuid_suggestion_id:
                         # Try to get the suggestion from Archivist to provide feedback
@@ -363,7 +358,7 @@ class RecommendationAssistantIntegration:
         assistant,
         recommendation_engine=None,
         archivist_integration=None,
-    ):
+    ) -> None:
         """
         Initialize the integration.
 

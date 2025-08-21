@@ -23,9 +23,11 @@ import datetime
 import json
 import os
 import sys
+
 from uuid import UUID
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,9 +38,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 import semantic.collectors.semantic_attributes as known_semantic_attributes
+
+from Indaleko import Indaleko
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from Indaleko import Indaleko
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 from utils.misc.data_management import encode_binary_data
 
@@ -72,9 +75,7 @@ class UnstructuredRecorder:
                 self.attributes_by_label[label] = value
 
     def create_semantic_record(self, unstructured_obj_line) -> IndalekoRecordDataModel:
-        """
-        Creates a Record for the current
-        """
+        """Creates a Record for the current."""
         return IndalekoRecordDataModel(
             SourceIdentifier={
                 "Identifier": self.semantic_recorder_uuid,
@@ -97,9 +98,7 @@ class UnstructuredRecorder:
         self,
         elements,
     ) -> IndalekoSemanticAttributeDataModel:
-        """
-        Extracts the filetype attribute from the first Element's metadata
-        """
+        """Extracts the filetype attribute from the first Element's metadata."""
         first_element = elements[0]
         filetype = first_element["metadata"]["filetype"]
 
@@ -112,9 +111,7 @@ class UnstructuredRecorder:
         self,
         elements,
     ) -> IndalekoSemanticAttributeDataModel:
-        """
-        Extracts the filename attribute from the first Element's metadata
-        """
+        """Extracts the filename attribute from the first Element's metadata."""
         first_element = elements[0]
         filename = first_element["metadata"]["filename"]
 
@@ -130,7 +127,7 @@ class UnstructuredRecorder:
         """
         Takes in a Set of all languages detected in the file.
         Returns a list of SemanticAttributes where one object
-        references one language only
+        references one language only.
         """
         language_list = []
         for language in languages:
@@ -245,7 +242,7 @@ class UnstructuredRecorder:
                     jsonl_output.write(i_semantic_attribute.model_dump_json() + "\n")
 
 
-def main():
+def main() -> None:
     ic("Unstructured Data Recorder")
     unstructured_recorder = UnstructuredRecorder()
     ic("Normalizing Unstructured metadata")

@@ -12,7 +12,9 @@ All other direct create_collection calls are unauthorized.
 import argparse
 import re
 import sys
+
 from collections.abc import Sequence
+
 
 # List of files/directories allowed to use create_collection
 AUTHORIZED_FILES = [
@@ -46,11 +48,7 @@ def is_authorized_file(filepath: str) -> bool:
             return True
 
     # Check if this file is in a directory that should be skipped
-    for skip_dir in SKIP_DIRS:
-        if skip_dir in filepath:
-            return True
-
-    return False
+    return any(skip_dir in filepath for skip_dir in SKIP_DIRS)
 
 
 def check_file(filename: str) -> list[str]:
@@ -90,7 +88,7 @@ def check_file(filename: str) -> list[str]:
     return errors
 
 
-def main(argv: Sequence[str] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Run the pre-commit hook.
 
     Args:
@@ -108,15 +106,8 @@ def main(argv: Sequence[str] = None) -> int:
         errors.extend(check_file(filename))
 
     if errors:
-        for error in errors:
-            print(error, file=sys.stderr)
-        print(
-            "\nDirect create_collection calls are only allowed in:\n"
-            "1. db/db_collections.py - For static collections\n"
-            "2. utils/registration_service.py - For dynamic collections\n\n"
-            "For other cases, use IndalekoCollections.get_collection() or the registration service.\n",
-            file=sys.stderr,
-        )
+        for _error in errors:
+            pass
         return 1
 
     return 0

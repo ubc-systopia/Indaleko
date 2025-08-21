@@ -22,10 +22,12 @@ import json
 import os
 import sys
 import uuid
+
 from datetime import datetime
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -77,7 +79,7 @@ in the archivist memory system.
         model: str = "gpt-4o",
         archivist_memory=None,
         db_config=None,
-    ):
+    ) -> None:
         """
         Initialize the conversation manager.
 
@@ -239,7 +241,7 @@ in the archivist memory system.
 
             # Ensure cursor objects are fully consumed
             # This prevents JSON serialization errors
-            if result and hasattr(result, 'result') and isinstance(result.result, dict):
+            if result and hasattr(result, "result") and isinstance(result.result, dict):
                 for key, value in result.result.items():
                     from arango.cursor import Cursor
                     # Check if any values are ArangoDB cursor objects
@@ -262,7 +264,7 @@ in the archivist memory system.
             return result
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            ic(f"Error executing tool {tool_name}: {str(e)}")
+            ic(f"Error executing tool {tool_name}: {e!s}")
             import traceback
             ic(traceback.format_exc())
             # Return error result
@@ -270,7 +272,7 @@ in the archivist memory system.
             return ToolOutput(
                 tool_name=tool_name,
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
+                error=f"Tool execution failed: {e!s}",
                 elapsed_time=0.0,
             )
 
@@ -278,7 +280,7 @@ in the archivist memory system.
         self,
         conversation_id: str,
         message: str,
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Process a user message and generate a response with enhanced context management.
@@ -349,17 +351,13 @@ in the archivist memory system.
             conversation.start_topic_segment("general")
         else:
             # Check if we need to switch topics based on message content
-            current_topic = None
             for segment in conversation.topic_segments:
                 if segment.segment_id == conversation.active_topic_segment:
-                    current_topic = segment.topic
                     break
 
             # Topic change detection would go here
             # For now, we'll use a simple approach
-            if message.startswith("Let's talk about ") or message.startswith(
-                "Can we discuss ",
-            ):
+            if message.startswith(("Let's talk about ", "Can we discuss ")):
                 # Extract topic
                 topic = message.replace("Let's talk about ", "").replace("Can we discuss ", "").split("?")[0].strip()
 
@@ -428,7 +426,7 @@ in the archivist memory system.
 
         return response
 
-    def _generate_contextual_response(self, conversation, message, referenced_memories):
+    def _generate_contextual_response(self, conversation, message, referenced_memories) -> str:
         """Generate a contextual response based on conversation state and referenced memories."""
         # This is a placeholder for integration with an actual LLM
         # In a real implementation, this would use OpenAI's API or similar
@@ -440,20 +438,18 @@ in the archivist memory system.
         # Simple context-aware response generation
         if "search" in message.lower() or "find" in message.lower():
             return "I can help you search for that. What specific criteria should I use?"
-        elif "remember" in message.lower() or "recall" in message.lower():
+        if "remember" in message.lower() or "recall" in message.lower():
             if referenced_memories:
                 memory = referenced_memories[0]
                 return f"Yes, I remember {memory.summary or 'that'}. We can continue where we left off."
-            else:
-                return "I don't have specific memories about that. Can you provide more details?"
-        elif len(recent_messages) > 3 and all(m.role == "user" for m in recent_messages[-3:]):
+            return "I don't have specific memories about that. Can you provide more details?"
+        if len(recent_messages) > 3 and all(m.role == "user" for m in recent_messages[-3:]):
             return "I notice you've sent several messages. Let me address all of them together."
-        elif topic != "general":
+        if topic != "general":
             return f"Regarding {topic}, I can provide more specific information if you'd like."
-        else:
-            return (
-                f"I understand you're asking about {message.split()[0] if message else 'this'}. How can I help further?"
-            )
+        return (
+            f"I understand you're asking about {message.split()[0] if message else 'this'}. How can I help further?"
+        )
 
     def _get_active_topic(self, conversation):
         """Get the active topic from the conversation."""
@@ -466,7 +462,7 @@ in the archivist memory system.
 
         return "general"
 
-    def _update_conversation_summary(self, conversation):
+    def _update_conversation_summary(self, conversation) -> None:
         """Update the conversation summary."""
         # In a real implementation, this would use an LLM to generate a summary
         # For now, we'll create a simple summary
@@ -487,7 +483,7 @@ in the archivist memory system.
 
         conversation.update_conversation_summary(summary)
 
-    def _extract_key_takeaways(self, conversation):
+    def _extract_key_takeaways(self, conversation) -> None:
         """Extract key takeaways from the conversation."""
         # In a real implementation, this would use an LLM to extract key points
         # For now, we'll use a simple approach
@@ -505,7 +501,7 @@ in the archivist memory system.
                     if len(takeaway) > 20:  # Only reasonably substantive takeaways
                         conversation.add_key_takeaway(takeaway)
 
-    def _update_importance_score(self, conversation):
+    def _update_importance_score(self, conversation) -> None:
         """Update the conversation importance score."""
         # Calculate importance based on multiple factors
         score = 0.5  # Default score
@@ -533,7 +529,7 @@ in the archivist memory system.
 
         conversation.set_importance_score(score)
 
-    def _persist_conversation_state(self, conversation):
+    def _persist_conversation_state(self, conversation) -> None:
         """Save conversation state to archivist memory for persistence."""
         if not self.archivist_memory:
             return

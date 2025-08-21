@@ -26,10 +26,12 @@ import json
 import os
 import sys
 import uuid
+
 from typing import Any
 
 import msal
 import requests
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -66,7 +68,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
     # Microsoft Graph API endpoint
     GRAPH_API_ENDPOINT = "https://graph.microsoft.com/v1.0"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the Outlook Calendar collector.
 
         Args:
@@ -138,7 +140,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 with open(self.config_path) as f:
                     return json.load(f)
             except Exception as e:
-                self.logger.error(f"Error loading config: {e}")
+                self.logger.exception(f"Error loading config: {e}")
 
         return {}
 
@@ -152,7 +154,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             with open(self.config_path, "w") as f:
                 json.dump(config, f, indent=2)
         except Exception as e:
-            self.logger.error(f"Error saving config: {e}")
+            self.logger.exception(f"Error saving config: {e}")
 
     def _load_token_cache(self) -> None:
         """Load token cache from file."""
@@ -161,7 +163,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 with open(self.token_path) as f:
                     self.token_cache.deserialize(f.read())
             except Exception as e:
-                self.logger.error(f"Error loading token cache: {e}")
+                self.logger.exception(f"Error loading token cache: {e}")
 
     def _save_token_cache(self) -> None:
         """Save token cache to file."""
@@ -170,7 +172,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 with open(self.token_path, "w") as f:
                     f.write(self.token_cache.serialize())
             except Exception as e:
-                self.logger.error(f"Error saving token cache: {e}")
+                self.logger.exception(f"Error saving token cache: {e}")
 
     def get_collector_name(self) -> str:
         """Get the name of the collector.
@@ -221,16 +223,11 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             # If silent acquisition fails, do interactive authentication
             if not result:
                 # Generate auth URL
-                auth_url = self.app.get_authorization_request_url(
+                self.app.get_authorization_request_url(
                     scopes=self.SCOPES,
                     redirect_uri=self.redirect_uri,
                 )
 
-                print("\nPlease open the following URL in your browser:")
-                print(auth_url)
-                print(
-                    "\nAfter authenticating, copy the redirect URL containing the code parameter.",
-                )
 
                 auth_code = input("\nPaste the full redirect URL: ")
 
@@ -263,7 +260,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return True
 
         except Exception as e:
-            self.logger.error(f"Authentication error: {e}")
+            self.logger.exception(f"Authentication error: {e}")
             return False
 
     def _get_user_info(self, token: str) -> dict[str, Any]:
@@ -285,14 +282,13 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
             if response.status_code == 200:
                 return response.json()
-            else:
-                self.logger.error(
-                    f"Error getting user info: {response.status_code} - {response.text}",
-                )
-                return {}
+            self.logger.error(
+                f"Error getting user info: {response.status_code} - {response.text}",
+            )
+            return {}
 
         except Exception as e:
-            self.logger.error(f"Error getting user info: {e}")
+            self.logger.exception(f"Error getting user info: {e}")
             return {}
 
     def _get_access_token(self) -> str | None:
@@ -324,7 +320,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return None
 
         except Exception as e:
-            self.logger.error(f"Error getting access token: {e}")
+            self.logger.exception(f"Error getting access token: {e}")
             return None
 
     def get_calendars(self) -> list[dict[str, Any]]:
@@ -385,7 +381,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return result
 
         except Exception as e:
-            self.logger.error(f"Error retrieving calendars: {e}")
+            self.logger.exception(f"Error retrieving calendars: {e}")
             return []
 
     def get_events(
@@ -504,7 +500,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return events_data
 
         except Exception as e:
-            self.logger.error(f"Error retrieving events: {e}")
+            self.logger.exception(f"Error retrieving events: {e}")
             return []
 
     def get_event_details(self, calendar_id: str, event_id: str) -> dict[str, Any]:
@@ -577,7 +573,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return event_data
 
         except Exception as e:
-            self.logger.error(f"Error retrieving event details: {e}")
+            self.logger.exception(f"Error retrieving event details: {e}")
             return {}
 
     def convert_to_calendar_event(
@@ -597,7 +593,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
         try:
             # Get calendar info (if available)
             calendar_info = self._calendars_cache.get(calendar_id, {})
-            calendar_name = calendar_info.get("name", "Unknown Calendar")
+            calendar_info.get("name", "Unknown Calendar")
 
             # Extract basic event details
             event_id = event_data.get("id", "")
@@ -614,10 +610,10 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
             # Parse times
             start_time_str = start_data.get("dateTime", "")
-            start_timezone = start_data.get("timeZone", "UTC")
+            start_data.get("timeZone", "UTC")
 
             end_time_str = end_data.get("dateTime", "")
-            end_timezone = end_data.get("timeZone", "UTC")
+            end_data.get("timeZone", "UTC")
 
             # Convert to datetime objects
             start_time = datetime.datetime.fromisoformat(start_time_str)
@@ -897,7 +893,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             categories = event_data.get("categories", [])
 
             # Create CalendarEvent
-            calendar_event = CalendarEvent(
+            return CalendarEvent(
                 # Event identifiers
                 event_id=event_id,
                 provider_name="outlook",
@@ -942,8 +938,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 occurrence_time=start_time,
             )
 
-            return calendar_event
 
         except Exception as e:
-            self.logger.error(f"Error converting event: {e}")
+            self.logger.exception(f"Error converting event: {e}")
             return None

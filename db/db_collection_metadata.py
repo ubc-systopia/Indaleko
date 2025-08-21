@@ -25,6 +25,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -49,6 +50,7 @@ from storage.relationship_metadata import RelationshipCollectionMetadata
 from utils import IndalekoSingleton
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -211,7 +213,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
 
     service_name = "IndalekoCollectorMetadataCLI"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Create an instance of the IndalekoCollectorMetadataCLI class."""
         cli_data = IndalekoBaseCliDataModel()
         handler_mixin = IndalekoBaseCLI.default_handler_mixin
@@ -233,17 +235,17 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         self.db_config = IndalekoDBConfig(config_file=config_file_path, start=True)
         self.collections_metadata = IndalekoDBCollectionsMetadata()
 
-    def get_db_collections_metadata(self, collection_name: str):
+    def get_db_collections_metadata(self, collection_name: str) -> None:
         """Get the metadata for the specified collection."""
 
-    def run(self):
+    def run(self) -> None:
         """Run the command-line interface."""
         ic("Running the IndalekoCollectorMetadataCLI")
         ic(self.collections_metadata.collections_metadata)
         ic(self.collections_metadata.collections_additional_data)
 
 
-def main():
+def main() -> None:
     """'Main entry point for the program."""
     IndalekoCollectorMetadataCLI().run()
 

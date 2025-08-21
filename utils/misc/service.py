@@ -25,6 +25,7 @@ import json
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -45,6 +46,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from utils.singleton import IndalekoSingleton
 from data_models import IndalekoRecordDataModel, IndalekoServiceDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -57,7 +59,7 @@ class IndalekoService:
     indaleko_service_uuid_str = "951724c8-9957-4455-8132-d786b7383b47"
     indaleko_service_version = "1.0"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         This class takes the following optional arguments:
         * service_collection -the collection to use for service
@@ -76,13 +78,13 @@ class IndalekoService:
         the other is from the database, that's why we check two different
         values.  Ugly, but it is what it is.
         """
-        self.record = kwargs.get("Record", kwargs.get("record", None))
-        self.service_type = kwargs.get("service_type", kwargs.get("ServiceType", None))
+        self.record = kwargs.get("Record", kwargs.get("record"))
+        self.service_type = kwargs.get("service_type", kwargs.get("ServiceType"))
         self.service_identifier = kwargs.get(
             "service_identifier",
-            kwargs.get("Identifier", None),
+            kwargs.get("Identifier"),
         )
-        self.service_name = kwargs.get("service_name", kwargs.get("Name", None))
+        self.service_name = kwargs.get("service_name", kwargs.get("Name"))
         self.service_description = kwargs.get(
             "service_description",
             kwargs.get("Description", "Unknown Service"),
@@ -138,9 +140,8 @@ class IndalekoService:
         return json.dumps(self.to_dict(), indent=indent)
 
 
-def main():
-    """Test code for IndalekoService"""
-    print("No tests defined for IndalekoService yet.")
+def main() -> None:
+    """Test code for IndalekoService."""
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """
-Configuration services for Indaleko Streamlit GUI
+Configuration services for Indaleko Streamlit GUI.
 
 These services handle configuration management.
 
@@ -24,7 +24,7 @@ import os
 
 def get_config_files():
     """
-    Get a list of available database configuration files
+    Get a list of available database configuration files.
 
     Returns:
         list: Available configuration file names

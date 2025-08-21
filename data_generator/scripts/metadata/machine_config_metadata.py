@@ -1,4 +1,5 @@
 """Generate Machine Configuration Metadata."""
+
 import uuid
 
 from datetime import UTC, datetime

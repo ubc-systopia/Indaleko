@@ -93,8 +93,9 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
             value = value.replace(tzinfo=UTC)
         return value
 
-    class Config: # type: ignore  # noqa: PGH003
+    class Config:  # type: ignore  # noqa: PGH003
         """Sample configuration for the data model."""
+
         frozen = True  # Make the model immutable
 
         @staticmethod
@@ -106,11 +107,7 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
             example["point"] = "POINT(49.2827 -123.1207)"
             example["position_source"] = "GPS"
             example["position_source_timestamp"] = "2023-09-21T10:31:00Z"
-            example[
-                "satellite_data"
-                ] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra[
-                    "example"
-                ]
+            example["satellite_data"] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra["example"]
             example["civic_address"] = None
             example["venue_data"] = None
             return example

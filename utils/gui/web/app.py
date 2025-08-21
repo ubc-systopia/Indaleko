@@ -3,6 +3,7 @@ import subprocess
 
 from flask import Flask, render_template, request
 
+
 app = Flask(__name__)
 
 
@@ -19,7 +20,7 @@ def configure():
             setup_local_arango()
             return "Local ArangoDB instance set up successfully!"
 
-        elif "remote_setup" in request.form:
+        if "remote_setup" in request.form:
             # Capture form data for remote setup
             database = request.form.get("database")
             host = request.form.get("host")
@@ -44,7 +45,7 @@ def configure():
     return render_template("configure.html")
 
 
-def setup_local_arango():
+def setup_local_arango() -> None:
     try:
         subprocess.run(["bash", "./setup_arangodb.sh"], check=True)
     except subprocess.CalledProcessError as e:

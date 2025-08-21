@@ -28,9 +28,11 @@ import os
 import socket
 import sys
 import uuid
+
 from abc import abstractmethod
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +53,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from data_models.timestamp import IndalekoTimestampDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -63,7 +66,7 @@ class StorageActivityCollector(CollectorBase):
     class and implement the provider-specific logic.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the storage activity collector.
 
@@ -89,16 +92,16 @@ class StorageActivityCollector(CollectorBase):
 
         # Configuration
         self._max_history_days = kwargs.get("max_history_days", 30)
-        self._user_id = kwargs.get("user_id", None)
+        self._user_id = kwargs.get("user_id")
         self._debug = kwargs.get("debug", False)
         self._machine_name = kwargs.get("machine_name", socket.gethostname())
 
         # Data structures
         self._activities = []
-        self._storage_location = kwargs.get("storage_location", None)
+        self._storage_location = kwargs.get("storage_location")
 
         # Output path for storing collected data
-        self._output_path = kwargs.get("output_path", None)
+        self._output_path = kwargs.get("output_path")
 
         # Metadata
         self._metadata = StorageActivityMetadata(
@@ -115,7 +118,7 @@ class StorageActivityCollector(CollectorBase):
         self._activity_handlers = {}
 
     def generate_collector_file_name(self: "StorageActivityCollector", **kwargs) -> str:
-        """Generate a file name for the storage activity data collector"""
+        """Generate a file name for the storage activity data collector."""
         if "platform" not in kwargs:
             kwargs["platform"] = self.collector_data.PlatformName
         if "collector_name" not in kwargs:
@@ -144,7 +147,7 @@ class StorageActivityCollector(CollectorBase):
         )
         if not isinstance(collector_name, str):
             raise ValueError("collector_name must be a string")
-        machine_id = kwargs.get("machine_id", None)
+        machine_id = kwargs.get("machine_id")
         storage_description = None
         if "storage_description" in kwargs:
             storage_description = str(uuid.UUID(kwargs["storage_description"]).hex)
@@ -415,7 +418,7 @@ class StorageActivityCollector(CollectorBase):
             )
             return self._output_path
         except Exception as e:
-            self._logger.error(f"Error saving activities to file: {e}")
+            self._logger.exception(f"Error saving activities to file: {e}")
             return None
 
 
@@ -427,7 +430,7 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
     functionality, such as volume GUID mapping and Windows API access.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the Windows storage activity collector.
 
@@ -438,7 +441,7 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
         super().__init__(**kwargs)
 
         # Windows-specific configuration
-        self._machine_config = kwargs.get("machine_config", None)
+        self._machine_config = kwargs.get("machine_config")
         self._use_volume_guids = kwargs.get("use_volume_guids", True)
 
         # Check for Windows machine config
@@ -464,10 +467,7 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
             return volume
 
         # Extract drive letter
-        if ":" in volume:
-            drive_letter = volume[0].upper()
-        else:
-            drive_letter = volume.upper()
+        drive_letter = volume[0].upper() if ":" in volume else volume.upper()
 
         # Use machine config to get GUID if available
         if self._machine_config and hasattr(
@@ -482,12 +482,11 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
                         f"Mapped drive {drive_letter}: to volume GUID path: {guid_path}",
                     )
                     return guid_path
-                else:
-                    self._logger.warning(
-                        f"Could not map drive {drive_letter}: to a volume GUID",
-                    )
+                self._logger.warning(
+                    f"Could not map drive {drive_letter}: to a volume GUID",
+                )
             except Exception as e:
-                self._logger.error(f"Error mapping drive to GUID: {e}")
+                self._logger.exception(f"Error mapping drive to GUID: {e}")
 
         # Fall back to standard path
         std_path = f"\\\\?\\{volume}\\"
@@ -541,11 +540,10 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
                     )
 
                 return guid
-            else:
-                self._logger.error(
-                    "Machine config does not have map_drive_letter_to_volume_guid method",
-                )
+            self._logger.error(
+                "Machine config does not have map_drive_letter_to_volume_guid method",
+            )
         except Exception as e:
-            self._logger.error(f"Error mapping drive letter to GUID: {e}")
+            self._logger.exception(f"Error mapping drive letter to GUID: {e}")
 
         return None

@@ -40,11 +40,13 @@ import socket
 import sys
 import time
 import uuid
+
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 import psutil
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -61,6 +63,7 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from utils.singleton import IndalekoSingleton as Singleton
+
 
 # pylint: enable=wrong-import-position
 
@@ -185,7 +188,7 @@ class SemanticExtractorPerformance(metaclass=Singleton):
     different parts of the application.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the performance monitor."""
         self._provider_id = kwargs.get(
             "provider_id",
@@ -196,7 +199,7 @@ class SemanticExtractorPerformance(metaclass=Singleton):
         self._perf_recorder = IndalekoPerformanceDataRecorder()
         self._record_to_db = kwargs.get("record_to_db", True)
         self._record_to_file = kwargs.get("record_to_file", False)
-        self._perf_file_name = kwargs.get("perf_file_name", None)
+        self._perf_file_name = kwargs.get("perf_file_name")
 
         if self._record_to_file and not self._perf_file_name:
             self._perf_file_name = os.path.join(
@@ -319,16 +322,15 @@ class SemanticExtractorPerformance(metaclass=Singleton):
             }
 
         # Track MIME type statistics if provided
-        if mime_type:
-            if mime_type not in self._file_type_stats:
-                self._file_type_stats[mime_type] = {
-                    "count": 0,
-                    "total_bytes": 0,
-                    "total_time": 0.0,
-                }
+        if mime_type and mime_type not in self._file_type_stats:
+            self._file_type_stats[mime_type] = {
+                "count": 0,
+                "total_bytes": 0,
+                "total_time": 0.0,
+            }
 
         # Create monitoring context
-        context = {
+        return {
             "enabled": True,
             "start_time": time.time(),
             "extractor_name": extractor_name,
@@ -341,7 +343,6 @@ class SemanticExtractorPerformance(metaclass=Singleton):
             "start_memory_info": psutil.Process().memory_info(),
         }
 
-        return context
 
     def stop_monitoring(
         self,
@@ -580,9 +581,9 @@ def monitor_semantic_extraction(
                         context["mime_type"] = mime_type
 
                 return result
-            except Exception as e:
+            except Exception:
                 success = False
-                raise e
+                raise
             finally:
                 # Stop monitoring and record metrics
                 if context.get("enabled", False):
@@ -634,11 +635,9 @@ if __name__ == "__main__":
 
     # Run the test function
     result = test_mime_detection(test_file)
-    print(f"MIME detection result: {result}")
 
     # Get performance statistics
     stats = monitor.get_stats()
-    print(f"Performance stats: {stats}")
 
     # Clean up
     os.remove(test_file)

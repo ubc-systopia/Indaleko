@@ -1,5 +1,5 @@
 """
-drop_box.py
+drop_box.py.
 
 This script is used to scan the files in the Dropbox folder of the user. It
 will create a JSONL file with the metadata of the files in the Dropbox folder.
@@ -30,12 +30,15 @@ import os
 import sys
 import time
 import uuid
+
 from pathlib import Path
 from urllib.parse import urlencode
 
 import dropbox
 import requests
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +52,7 @@ from db import IndalekoServiceManager
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_config_dir
+
 
 # pylint: enable=wrong-import-position
 
@@ -87,7 +91,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         ServiceDescription=indaleko_dropbox_collector_service_description,
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """This is the constructor for the Dropbox collector."""
         for key, value in self.indaleko_dropbox_collector_service.items():
             if key not in kwargs:
@@ -117,7 +121,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         self.user_info = self.dbx.users_get_current_account()
         super().__init__(**kwargs)
         if hasattr(self, "machine_id") and self.machine_id is not None:
-            assert False
+            raise AssertionError
 
     def get_user_id(self):
         """This method returns the user id."""
@@ -160,12 +164,8 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
             "client_id": self.dropbox_config["app_key"],
             "token_access_type": "offline",
         }
-        auth_request_url = f"{IndalekoDropboxCloudStorageCollector.dropbox_auth_url}?{urlencode(params)}"
+        f"{IndalekoDropboxCloudStorageCollector.dropbox_auth_url}?{urlencode(params)}"
 
-        print(
-            "Please visit the following URL to authorize this application:",
-            auth_request_url,
-        )
         auth_code = input("Enter the authorization code here: ").strip()
         data = {
             "code": auth_code,
@@ -194,9 +194,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         return self
 
     def get_dropbox_credentials(self, refresh: bool = False):
-        """
-        This method retrieves the Dropbox credentials.
-        """
+        """This method retrieves the Dropbox credentials."""
         if self.dropbox_credentials is None:
             self.load_dropbox_credentials()
         if self.dropbox_credentials is None:
@@ -212,9 +210,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         return data["token"]
 
     def is_token_expired(self) -> bool:
-        """
-        This method checks if the token is expired.
-        """
+        """This method checks if the token is expired."""
         if self.dropbox_credentials is None:
             return True
         if "expires_at" not in self.dropbox_credentials:
@@ -222,9 +218,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         return time.time() > self.dropbox_credentials["expires_at"]
 
     def refresh_access_token(self) -> "IndalekoDropboxCloudStorageCollector":
-        """
-        This method refreshes the access token.
-        """
+        """This method refreshes the access token."""
         logging.debug(
             "Refresh token called with credentials: %s",
             self.dropbox_credentials,
@@ -284,9 +278,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         app_id: str,
         app_secret: str,
     ) -> "IndalekoDropboxCloudStorageCollector":
-        """
-        This method stores the Dropbox configuration.
-        """
+        """This method stores the Dropbox configuration."""
         self.dropbox_config = {"app_key": app_id, "app_secret": app_secret}
         with open(self.dropbox_config_file, "w", encoding="utf-8") as f:
             json.dump(self.dropbox_config, f, indent=4)
@@ -337,7 +329,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         return metadata
 
     def collect(self, recursive=True):
-        """This is the indexer for Dropbox"""
+        """This is the indexer for Dropbox."""
         try:
             metadata_list = []
             cursor = None
@@ -380,7 +372,6 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
                     break
         except dropbox.exceptions.ApiError as e:
             logging.exception("Error enumerating folder, exception %s", e)
-            print(f"Error enumerating folder, exception {e}")
         self.data = metadata_list
         return metadata_list
 
@@ -393,7 +384,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         """This function finds the files to ingest:
         search_dir: path to the search directory
         prefix: prefix of the file to ingest
-        suffix: suffix of the file to ingest (default is .json)
+        suffix: suffix of the file to ingest (default is .json).
         """
         prospects = BaseCloudStorageCollector.find_collector_files(
             search_dir,
@@ -423,7 +414,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
     cli_handler_mixin = dropbox_collector_mixin
 
 
-def main():
+def main() -> None:
     """This is the entry point for using the Dropbox collector."""
     BaseCloudStorageCollector.cloud_collector_runner(
         IndalekoDropboxCloudStorageCollector,

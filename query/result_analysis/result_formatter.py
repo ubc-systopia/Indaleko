@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -145,8 +147,7 @@ def extract_timestamp(result: dict[str, Any]) -> datetime | None:
         # Try modification time first (most common)
         if "st_mtime" in attrs:
             try:
-                timestamp = datetime.fromtimestamp(float(attrs["st_mtime"]))
-                return timestamp
+                return datetime.fromtimestamp(float(attrs["st_mtime"]))
             except (ValueError, TypeError):
                 pass
 
@@ -154,8 +155,7 @@ def extract_timestamp(result: dict[str, Any]) -> datetime | None:
         for field in ["st_ctime", "st_atime", "st_birthtime"]:
             if field in attrs:
                 try:
-                    timestamp = datetime.fromtimestamp(float(attrs[field]))
-                    return timestamp
+                    return datetime.fromtimestamp(float(attrs[field]))
                 except (ValueError, TypeError):
                     pass
 
@@ -167,16 +167,14 @@ def extract_timestamp(result: dict[str, Any]) -> datetime | None:
             # Handle string timestamps
             if isinstance(value, str):
                 try:
-                    timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                    return timestamp
+                    return datetime.fromisoformat(value)
                 except ValueError:
                     pass
 
             # Handle numeric timestamps
             elif isinstance(value, (int, float)):
                 try:
-                    timestamp = datetime.fromtimestamp(value)
-                    return timestamp
+                    return datetime.fromtimestamp(value)
                 except (ValueError, TypeError, OverflowError):
                     pass
 
@@ -604,7 +602,7 @@ def format_results_for_display(
     return "\n".join(display)
 
 
-def main():
+def main() -> None:
     """Test the result formatting functionality with sample data."""
     # Sample results for testing (similar to real Indaleko results)
     sample_results = [
@@ -679,21 +677,12 @@ def main():
     ]
 
     # Test deduplication and grouping
-    print("Testing result deduplication and grouping...")
-    formatted_results = deduplicate_results(sample_results)
+    deduplicate_results(sample_results)
 
     # Display results
-    print("\nFormatted results:")
-    print(format_results_for_display(formatted_results))
 
     # Display statistics
-    print("\nStatistics:")
-    print(f"Original count: {formatted_results.original_count}")
-    print(f"Unique count: {formatted_results.unique_count}")
-    print(f"Suppressed count: {formatted_results.suppressed_count}")
-    print(f"Categories: {formatted_results.categories}")
 
-    print("\nResult formatting and deduplication is working!")
 
 
 if __name__ == "__main__":

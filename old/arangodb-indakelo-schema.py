@@ -1,8 +1,12 @@
+import builtins
+import contextlib
 import json
 import uuid
 
 import jsonschema
+
 from arango import ArangoClient
+
 
 json_relationship_schema = {
     "$schema": "https://json-schema.org/draft/2020-12/schema#",
@@ -53,7 +57,6 @@ relationship_schema = {
 
 # jsonschema.validate(relationship_schema)
 
-print(json.dumps(relationship_schema, indent=4))
 
 # ArangoDB connection settings
 arango_url = "http://localhost:8529"
@@ -86,10 +89,6 @@ relationship = {"uuid1": uuid1, "uuid2": uuid2}
 
 result = collection.insert(json.dumps(relationship))
 
-print(result)
 
-try:
+with contextlib.suppress(builtins.BaseException):
     jsonschema.validators.validate(relationship, relationship_schema)
-    print("document is valid according to schema")
-except:
-    print("invalid document according to schema")

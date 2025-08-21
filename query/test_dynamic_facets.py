@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import datetime, timedelta
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -190,25 +192,16 @@ def create_sample_results():
 
 def print_facet_details(facet):
     """Print details of a facet in a readable format."""
-    print(f"\n{facet.name} ({facet.type}):")
-    print(f"  Field: {facet.field}")
-    print(f"  Coverage: {facet.coverage * 100:.1f}%")
-    print(f"  Distribution entropy: {facet.distribution_entropy:.3f}")
 
-    print("  Values:")
-    for i, value in enumerate(facet.values, 1):
-        print(f"    {i}. {value.value} ({value.count} results)")
-        print(f"       Query: {value.query_refinement}")
+    for _i, _value in enumerate(facet.values, 1):
+        pass
 
 
 def main():
     """Test the dynamic facets functionality."""
-    print("Testing Indaleko Dynamic Facets")
-    print("==============================\n")
 
     # Create sample results
     sample_results = create_sample_results()
-    print(f"Sample results: {len(sample_results)} items")
 
     # Test with different facet generator configurations
     test_cases = [
@@ -251,7 +244,6 @@ def main():
     ]
 
     for test_case in test_cases:
-        print(f"\n===== {test_case['name']} =====")
 
         # Initialize facet generator with test case parameters
         facet_generator = FacetGenerator(**test_case["params"])
@@ -260,29 +252,24 @@ def main():
         dynamic_facets = facet_generator.generate(sample_results)
 
         # Print facet structure
-        print(f"Generated {len(dynamic_facets.facets)} facets")
 
         # Print each facet
         for facet in dynamic_facets.facets:
             print_facet_details(facet)
 
         # Print suggestions
-        print("\nSuggestions:")
-        for suggestion in dynamic_facets.suggestions:
-            print(f"- {suggestion}")
+        for _suggestion in dynamic_facets.suggestions:
+            pass
 
         # Print conversational hints if available
         if dynamic_facets.conversational_hints:
-            print("\nConversational hints:")
-            for hint in dynamic_facets.conversational_hints:
-                print(f"- {hint}")
+            for _hint in dynamic_facets.conversational_hints:
+                pass
 
         # Print statistics
-        print("\nStatistics:")
-        for key, value in dynamic_facets.facet_statistics.items():
-            print(f"- {key}: {value}")
+        for _key, _value in dynamic_facets.facet_statistics.items():
+            pass
 
-    print("\nTest completed successfully!")
 
 
 if __name__ == "__main__":

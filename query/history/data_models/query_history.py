@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from textwrap import dedent
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,10 +42,10 @@ from data_models.base import IndalekoBaseModel  # noqa: E402
 from data_models.record import IndalekoRecordDataModel  # noqa: E402
 from query.query_processing.data_models.parser_data import ParserResults  # noqa: E402
 from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
-from query.query_processing.data_models.translator_response import (    # noqa: E402
+from query.query_processing.data_models.translator_response import (  # noqa: E402
     TranslatorOutput,
 )
-from query.result_analysis.data_models.facet_data_model import DynamicFacets  # noqa: E402
+
 
 # pylint: enable=wrong-import-position
 
@@ -143,7 +145,7 @@ class QueryHistoryData(BaseModel):
 
     @staticmethod
     def validate_timestamp(ts: str | datetime) -> datetime:
-        """Ensure that the timestamp is in UTC"""
+        """Ensure that the timestamp is in UTC."""
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts)
         if ts.tzinfo is None:
@@ -163,7 +165,7 @@ class QueryHistoryData(BaseModel):
     @field_validator("ElapsedTime", mode="before")
     @classmethod
     def calculate_elapsed_time(
-        cls: type[T],
+        cls,
         value: float | None = None,
         values: dict[str, Any] | None = None,
     ) -> float:
@@ -228,9 +230,7 @@ class QueryHistoryData(BaseModel):
 
 
 class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the Indaleko query history.
-    """
+    """This class defines the data model for the Indaleko query history."""
 
     Record: IndalekoRecordDataModel = Field(
         ...,
@@ -262,7 +262,7 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoQueryHistoryDataModel.test_model_main()
 

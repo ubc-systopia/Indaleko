@@ -22,8 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from abc import ABC, abstractmethod
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,13 +36,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+
+
 # pylint: enable=wrong-import-position
 
 
 class LLMBase(ABC):
-    """
-    Abstract base class for LLM connectors.
-    """
+    """Abstract base class for LLM connectors."""
 
     @abstractmethod
     def generate_query(self, prompt: str) -> str:

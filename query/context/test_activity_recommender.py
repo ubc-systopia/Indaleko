@@ -12,8 +12,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -62,7 +64,7 @@ class ActivityRecommender:
             self.db = IndalekoDBConfig.get_db()
             self.logger.info("Connected to database")
         except Exception as e:
-            self.logger.error(f"Error connecting to database: {e}")
+            self.logger.exception(f"Error connecting to database: {e}")
             self.db = None
 
         # Template success tracking
@@ -92,7 +94,7 @@ class ActivityRecommender:
             """
 
             cursor = self.db.aql.execute(query)
-            file_docs = [doc for doc in cursor]
+            file_docs = list(cursor)
 
             for doc in file_docs:
                 activity_type = "file_default"
@@ -141,7 +143,7 @@ class ActivityRecommender:
             return activities
 
         except Exception as e:
-            self.logger.error(f"Error retrieving activities: {e}")
+            self.logger.exception(f"Error retrieving activities: {e}")
             return self._get_fallback_activities()
 
     def _get_fallback_activities(self) -> list[dict[str, Any]]:
@@ -274,14 +276,13 @@ class ActivityRecommender:
             # Score based on age (1.0 for now, decreasing as age increases)
             if age_hours < 1:
                 return 1.0  # Less than an hour old
-            elif age_hours < 4:
+            if age_hours < 4:
                 return 0.9  # Less than 4 hours old
-            elif age_hours < 24:
+            if age_hours < 24:
                 return 0.8  # Less than a day old
-            elif age_hours < 72:
+            if age_hours < 72:
                 return 0.7  # Less than 3 days old
-            else:
-                return 0.5  # Older
+            return 0.5  # Older
 
         except (ValueError, TypeError):
             return 0.5  # Default if timestamp is invalid
@@ -313,38 +314,24 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    print("=" * 80)
-    print("Testing ActivityRecommender with database connection")
-    print("=" * 80)
 
     # Create recommender
     recommender = ActivityRecommender(debug=True)
 
     # Get activities
     activities = recommender.get_recent_activities()
-    print(f"\nRetrieved {len(activities)} activities from database:")
-    for i, activity in enumerate(activities[:3]):  # Show first 3
-        print(f"  {i+1}. Type: {activity['type']}")
-        for key, value in activity["attributes"].items():
-            print(f"     {key}: {value}")
-        print()
+    for _i, activity in enumerate(activities[:3]):  # Show first 3
+        for _key, _value in activity["attributes"].items():
+            pass
 
     # Generate suggestions
     suggestions = recommender.generate_query_suggestions(max_suggestions=5)
-    print(f"\nGenerated {len(suggestions)} query suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"  {i+1}. {suggestion['query_text']} (confidence: {suggestion['confidence']:.2f})",
-        )
-        print(f"     Rationale: {suggestion['rationale']}")
-        print(f"     Activity type: {suggestion['activity_type']}")
-        print(f"     Template: {suggestion['template']}")
-        print()
+    for _i, suggestion in enumerate(suggestions):
+        pass
 
     # Test feedback
     if suggestions:
         suggestion = suggestions[0]
-        print("\nRecording positive feedback for first suggestion...")
         recommender.record_feedback(
             suggestion_id=suggestion["id"],
             feedback=FeedbackType.ACCEPTED,
@@ -352,11 +339,10 @@ def main():
         )
 
         # Show tracking
-        print("\nTemplate success tracking:")
-        for template, count in recommender.successful_templates.items():
-            print(f"  Success - {template}: {count}")
-        for template, count in recommender.failed_templates.items():
-            print(f"  Failure - {template}: {count}")
+        for _template, _count in recommender.successful_templates.items():
+            pass
+        for _template, _count in recommender.failed_templates.items():
+            pass
 
 
 if __name__ == "__main__":

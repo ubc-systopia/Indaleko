@@ -1,8 +1,9 @@
-"""initializtion logic for the platform components"""
+"""initializtion logic for the platform components."""
 
 import importlib
 import os
 import sys
+
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -14,6 +15,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+
 
 __version__ = "0.1.0"
 

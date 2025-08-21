@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import math
 import os
 import sys
+
 from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,9 +47,7 @@ from query.result_analysis.result_formatter import (
 
 
 class FacetGenerator:
-    """
-    Generates dynamic facets for query refinement based on search results.
-    """
+    """Generates dynamic facets for query refinement based on search results."""
 
     def __init__(
         self,
@@ -55,7 +55,7 @@ class FacetGenerator:
         min_facet_coverage: float = 0.2,
         min_value_count: int = 2,
         conversational: bool = True,
-    ):
+    ) -> None:
         """
         Initialize the FacetGenerator.
 
@@ -147,7 +147,7 @@ class FacetGenerator:
         )
 
         # Build the DynamicFacets object
-        dynamic_facets = DynamicFacets(
+        return DynamicFacets(
             facets=selected_facets,
             suggestions=suggestions,
             original_count=len(analyzed_results),
@@ -155,7 +155,6 @@ class FacetGenerator:
             conversational_hints=conversational_hints,
         )
 
-        return dynamic_facets
 
     def _extract_file_types(self, results: list[dict[str, Any]]) -> dict[str, int]:
         """
@@ -602,7 +601,7 @@ class FacetGenerator:
             value = FacetValue(
                 value=bin_name,
                 count=count,
-                query_refinement=refinement
+                query_refinement=refinement,
             )
             values.append(value)
 

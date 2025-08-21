@@ -23,7 +23,9 @@ import datetime
 import json
 import os
 import sys
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -75,10 +77,7 @@ def test_nl_parser(query: str, debug: bool = False) -> ToolOutput:
     # Print the result if debug is enabled
     if debug:
         # Convert to dict and handle datetime objects
-        result_dict = result.model_dump()
-        print(
-            f"NL Parser Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
-        )
+        result.model_dump()
 
     return result
 
@@ -114,17 +113,14 @@ def test_aql_translator(
 
     # Print the result if debug is enabled
     if debug:
-        result_dict = result.model_dump()
-        print(
-            f"AQL Translator Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
-        )
+        result.model_dump()
 
     return result
 
 
 def test_query_executor(
     query: str,
-    bind_vars: dict[str, Any] = None,
+    bind_vars: dict[str, Any] | None = None,
     debug: bool = False,
 ) -> ToolOutput:
     """
@@ -168,10 +164,7 @@ def test_query_executor(
 
     # Print the result if debug is enabled
     if debug:
-        result_dict = result.model_dump()
-        print(
-            f"Query Executor Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
-        )
+        result.model_dump()
 
     return result
 
@@ -191,7 +184,6 @@ def test_full_pipeline(query: str, debug: bool = False) -> dict[str, Any]:
     nl_result = test_nl_parser(query, debug)
 
     if not nl_result.success:
-        print(f"Error parsing query: {nl_result.error}")
         return {"error": nl_result.error}
 
     # Step 2: Translate to AQL
@@ -233,7 +225,6 @@ def test_full_pipeline(query: str, debug: bool = False) -> dict[str, Any]:
     aql_result = test_aql_translator(structured_query, debug)
 
     if not aql_result.success:
-        print(f"Error translating query: {aql_result.error}")
         return {"error": aql_result.error}
 
     # Step 3: Execute the query
@@ -243,7 +234,6 @@ def test_full_pipeline(query: str, debug: bool = False) -> dict[str, Any]:
     executor_result = test_query_executor(aql_query, bind_vars, debug)
 
     if not executor_result.success:
-        print(f"Error executing query: {executor_result.error}")
         return {"error": executor_result.error}
 
     # Combine results
@@ -295,12 +285,10 @@ def main():
                 if not query or query.startswith("#"):
                     continue
 
-                print(f"Testing query: {query}")
                 result = test_full_pipeline(query, args.debug)
                 results.append(result)
 
         except FileNotFoundError:
-            print(f"Error: Batch file not found: {args.batch}")
             return
 
     else:
@@ -315,7 +303,6 @@ def main():
         ]
 
         for query in default_queries:
-            print(f"Testing query: {query}")
             result = test_full_pipeline(query, args.debug)
             results.append(result)
 
@@ -324,18 +311,14 @@ def main():
         with open(args.output, "w") as f:
             json.dump(results, f, indent=2)
 
-    print(f"Tested {len(results)} queries.")
 
     # Print summary of results
     success_count = sum(1 for r in results if "error" not in r)
-    print(f"Success: {success_count}/{len(results)}")
 
     if success_count < len(results):
-        print("Errors:")
         for i, result in enumerate(results):
             if "error" in result:
                 query = result.get("query", f"Query {i+1}")
-                print(f"  {query}: {result['error']}")
 
 
 if __name__ == "__main__":

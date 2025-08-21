@@ -38,9 +38,11 @@ import os
 import sys
 import textwrap
 import time
+
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -195,7 +197,7 @@ def analyze_jsonl_file(file_path: str) -> dict[str, Any]:
                             timestamp = activity["timestamp"]
                             if isinstance(timestamp, str):
                                 dt = datetime.fromisoformat(
-                                    timestamp.replace("Z", "+00:00"),
+                                    timestamp,
                                 )
                                 if earliest_time is None or dt < earliest_time:
                                     earliest_time = dt
@@ -252,8 +254,8 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, int]:
                     activity_types[activity_type] += 1
                 except json.JSONDecodeError:
                     pass
-    except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+    except Exception:
+        pass
 
     return {"total_lines": line_count, "activity_counts": dict(activity_types)}
 
@@ -275,13 +277,11 @@ def setup_database(
         IndalekoDBConfig instance connected to the database or None if simulated
     """
     if simulate:
-        print("Database connection simulation mode enabled (no actual connection)")
         return None
 
     if dry_run:
-        print("Dry run mode - performing database setup but will not load data")
+        pass
 
-    print("Setting up database connection...")
 
     try:
         # Create database configuration - the framework handles config file discovery
@@ -290,15 +290,11 @@ def setup_database(
         # Start the database connection
         db_config.start()
 
-        print(f"Connected to database: {db_config.database}")
         return db_config
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
+    except Exception:
         if dry_run:
-            print("Continuing with dry run despite database connection error")
             return None
-        else:
-            raise
+        raise
 
 
 def create_hot_tier_recorder(
@@ -323,8 +319,6 @@ def create_hot_tier_recorder(
     Returns:
         NtfsHotTierRecorder instance
     """
-    print(f"Creating hot tier recorder (TTL: {ttl_days} days)...")
-
     # Create recorder with database connection
     kwargs = {
         "ttl_days": ttl_days,
@@ -341,12 +335,9 @@ def create_hot_tier_recorder(
 
     # Create recorder with database connection
     try:
-        recorder = NtfsHotTierRecorder(**kwargs)
-        return recorder
-    except Exception as e:
+        return NtfsHotTierRecorder(**kwargs)
+    except Exception:
         if simulate or dry_run:
-            print(f"Error creating recorder in simulation mode: {e}")
-            print("Using basic recorder for simulation...")
             # Create with absolute minimum options for dry run
             return NtfsHotTierRecorder(
                 no_db=True,
@@ -354,8 +345,7 @@ def create_hot_tier_recorder(
                 ttl_days=ttl_days,
                 debug=debug,
             )
-        else:
-            raise
+        raise
 
 
 def load_activities_to_database(
@@ -374,24 +364,20 @@ def load_activities_to_database(
     Returns:
         Dictionary with processing statistics
     """
-    file_name = os.path.basename(file_path)
-    print(f"Processing {file_name}...")
+    os.path.basename(file_path)
 
     # Get activity counts from file
     activity_counts = count_activities_in_jsonl(file_path)
-    print(f"File contains {activity_counts['total_lines']} activities")
 
     # Print activity types
-    print("Activity types:")
-    for activity_type, count in activity_counts["activity_counts"].items():
-        print(f"  {activity_type}: {count}")
+    for _activity_type, _count in activity_counts["activity_counts"].items():
+        pass
 
     # Track processing time
     start_time = time.time()
 
     # Handle dry run mode
     if dry_run:
-        print("\nDRY RUN: Not loading activities to database")
         return {
             "file_path": file_path,
             "total_activities": activity_counts["total_lines"],
@@ -401,9 +387,6 @@ def load_activities_to_database(
 
     # Handle simulation mode (no database connection) or if the recorder is set up for no_db
     if getattr(recorder, "_no_db", False) or not hasattr(recorder, "_db") or recorder._db is None:
-        print(
-            f"Simulation mode: Would have processed {activity_counts['total_lines']} activities",
-        )
         success = activity_counts["total_lines"]
         # Generate some fake IDs
         activity_ids = []
@@ -415,13 +398,8 @@ def load_activities_to_database(
         end_time = time.time()
         processing_time = end_time - start_time
 
-        print(
-            f"Simulated loading {success} activities in {processing_time:.2f} seconds",
-        )
         if processing_time > 0:
-            print(
-                f"Simulated processing rate: {success / processing_time:.2f} activities/second",
-            )
+            pass
 
         return {
             "file_path": file_path,
@@ -442,11 +420,8 @@ def load_activities_to_database(
         end_time = time.time()
         processing_time = end_time - start_time
 
-        print(
-            f"Successfully loaded {success} activities in {processing_time:.2f} seconds",
-        )
         if processing_time > 0:
-            print(f"Processing rate: {success / processing_time:.2f} activities/second")
+            pass
 
         return {
             "file_path": file_path,
@@ -457,7 +432,6 @@ def load_activities_to_database(
             "activity_counts": activity_counts["activity_counts"],
         }
     except Exception as e:
-        print(f"Error processing file: {e}")
         import traceback
 
         traceback.print_exc()
@@ -473,7 +447,7 @@ def load_activities_to_database(
 
 def run_test_queries(
     recorder: NtfsHotTierRecorder,
-    query_types: list[str] = None,
+    query_types: list[str] | None = None,
     verbose: bool = False,
 ) -> dict[str, Any]:
     """
@@ -487,7 +461,6 @@ def run_test_queries(
     Returns:
         Dictionary with query results
     """
-    print("\nRunning test queries...")
     results = {}
 
     if query_types is None:
@@ -503,36 +476,30 @@ def run_test_queries(
     # Get statistics
     if "statistics" in query_types:
         try:
-            print("\nActivity Statistics:")
             stats = recorder.get_hot_tier_statistics()
             results["statistics"] = stats
 
             if "total_count" in stats:
-                print(f"  Total activities: {stats['total_count']:,}")
+                pass
 
             if "by_type" in stats:
-                print("  Activities by type:")
-                for activity_type, count in stats.get("by_type", {}).items():
-                    print(f"    {activity_type}: {count:,}")
+                for _activity_type, _count in stats.get("by_type", {}).items():
+                    pass
 
             if "by_importance" in stats and verbose:
-                print("  Activities by importance score range:")
-                for score_range, count in stats.get("by_importance", {}).items():
-                    print(f"    {score_range}: {count:,}")
+                for _score_range, _count in stats.get("by_importance", {}).items():
+                    pass
 
             if "by_time" in stats:
-                print("  Activities by time:")
-                for time_range, count in stats.get("by_time", {}).items():
-                    print(f"    {time_range}: {count:,}")
+                for _time_range, _count in stats.get("by_time", {}).items():
+                    pass
 
         except Exception as e:
-            print(f"Error getting statistics: {e}")
             results["statistics_error"] = str(e)
 
     # Get recent activities
     if "recent" in query_types:
         try:
-            print("\nRecent activities (last 24 hours):")
             recent = recorder.get_recent_activities(hours=24, limit=5)
             results["recent_activities"] = [
                 {
@@ -546,29 +513,20 @@ def run_test_queries(
                 for activity in recent
             ]
 
-            for i, activity in enumerate(recent):
+            for _i, activity in enumerate(recent):
                 data = activity.get("Record", {}).get("Data", {})
-                print(f"  Activity {i+1}:")
-                print(f"    Type: {data.get('activity_type', 'Unknown')}")
-                print(f"    File: {data.get('file_name', 'Unknown')}")
                 path = data.get("file_path", "Unknown")
                 # Truncate long paths
                 if len(path) > 60 and not verbose:
                     path = "..." + path[-57:]
-                print(f"    Path: {path}")
-                print(f"    Time: {data.get('timestamp', 'Unknown')}")
-                print(f"    Importance: {data.get('importance_score', 'Unknown')}")
                 if verbose:
-                    print(f"    Entity ID: {data.get('entity_id', 'Unknown')}")
-                print()
+                    pass
         except Exception as e:
-            print(f"Error getting recent activities: {e}")
             results["recent_activities_error"] = str(e)
 
     # Get activities by type
     if "creates" in query_types:
         try:
-            print("\nCreate activities (top 3):")
             creates = recorder.get_activities_by_type("create", limit=3)
             results["create_activities"] = [
                 {
@@ -580,19 +538,14 @@ def run_test_queries(
                 for activity in creates
             ]
 
-            for i, activity in enumerate(creates):
+            for _i, activity in enumerate(creates):
                 data = activity.get("Record", {}).get("Data", {})
-                print(
-                    f"  Create {i+1}: {data.get('file_name', 'Unknown')} at {data.get('timestamp', 'Unknown')}",
-                )
         except Exception as e:
-            print(f"Error getting create activities: {e}")
             results["create_activities_error"] = str(e)
 
     # Get rename activities
     if "renames" in query_types:
         try:
-            print("\nRename activities (top 3):")
             renames = recorder.get_rename_activities(hours=72, limit=3)
             results["rename_activities"] = [
                 {
@@ -604,13 +557,9 @@ def run_test_queries(
                 for activity in renames
             ]
 
-            for i, activity in enumerate(renames):
+            for _i, activity in enumerate(renames):
                 data = activity.get("Record", {}).get("Data", {})
-                print(
-                    f"  Rename {i+1}: {data.get('file_name', 'Unknown')} at {data.get('timestamp', 'Unknown')}",
-                )
         except Exception as e:
-            print(f"Error getting rename activities: {e}")
             results["rename_activities_error"] = str(e)
 
     # Get entity activities
@@ -618,7 +567,6 @@ def run_test_queries(
         try:
             entity_id = recent[0].get("Record", {}).get("Data", {}).get("entity_id")
             if entity_id:
-                print(f"\nAll activities for entity {entity_id} (top 3):")
                 entity_activities = recorder.get_activities_by_entity(
                     uuid.UUID(entity_id),
                     limit=3,
@@ -633,19 +581,14 @@ def run_test_queries(
                     for activity in entity_activities
                 ]
 
-                for i, activity in enumerate(entity_activities):
+                for _i, activity in enumerate(entity_activities):
                     data = activity.get("Record", {}).get("Data", {})
-                    print(
-                        f"  Activity {i+1}: {data.get('activity_type', 'Unknown')} on {data.get('file_name', 'Unknown')} at {data.get('timestamp', 'Unknown')}",
-                    )
         except Exception as e:
-            print(f"Error getting entity activities: {e}")
             results["entity_activities_error"] = str(e)
 
     # Get high importance activities
     if "popular" in query_types:
         try:
-            print("\nHigh importance activities (top 3):")
             # Use AQL to query by importance score
             if hasattr(recorder, "_db") and recorder._db:
                 query = """
@@ -673,13 +616,9 @@ def run_test_queries(
                     for activity in high_importance
                 ]
 
-                for i, activity in enumerate(high_importance):
+                for _i, activity in enumerate(high_importance):
                     data = activity.get("Record", {}).get("Data", {})
-                    print(
-                        f"  Important {i+1}: {data.get('activity_type', 'Unknown')} on {data.get('file_name', 'Unknown')} (score: {data.get('importance_score', 0):.2f})",
-                    )
         except Exception as e:
-            print(f"Error getting high importance activities: {e}")
             results["high_importance_activities_error"] = str(e)
 
     return results
@@ -812,25 +751,11 @@ def save_report_to_file(report: str, output_path: str | None = None) -> str:
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
 
-    print(f"Report saved to {output_path}")
     return output_path
 
 
-def show_welcome_message():
+def show_welcome_message() -> None:
     """Display a welcome message with program description."""
-    welcome = """
-    ╔════════════════════════════════════════════════════════════╗
-    ║               NTFS Hot Tier Recorder Loader                ║
-    ╠════════════════════════════════════════════════════════════╣
-    ║ This tool loads real NTFS activity data into ArangoDB's    ║
-    ║ hot tier, allowing you to see your actual file system      ║
-    ║ activities in the database.                               ║
-    ║                                                            ║
-    ║ The hot tier represents recent, high-fidelity activity     ║
-    ║ data before it transitions to warm/cool tiers.             ║
-    ╚════════════════════════════════════════════════════════════╝
-    """
-    print(welcome)
 
 
 def parse_arguments():
@@ -965,7 +890,7 @@ def parse_arguments():
     return args
 
 
-def main():
+def main() -> None:
     """Main function."""
     # Parse arguments
     args = parse_arguments()
@@ -989,40 +914,25 @@ def main():
 
         # List files and exit if requested
         if args.list_files:
-            print(f"Found {len(all_files)} NTFS JSONL files:")
-            for i, file_path in enumerate(all_files):
+            for _i, file_path in enumerate(all_files):
                 file_stats = os.stat(file_path)
-                file_size = file_stats.st_size
-                mod_time = datetime.fromtimestamp(file_stats.st_mtime).strftime(
+                datetime.fromtimestamp(file_stats.st_mtime).strftime(
                     "%Y-%m-%d %H:%M:%S",
                 )
-                print(f"{i+1}. {os.path.basename(file_path)}")
-                print(f"   Path: {file_path}")
-                print(f"   Size: {file_size:,} bytes")
-                print(f"   Modified: {mod_time}")
 
                 if args.verbose:
                     # Show quick analysis
                     try:
                         metadata = analyze_jsonl_file(file_path)
-                        print(f"   Activities: {metadata.get('line_count', 'Unknown')}")
                         if "activity_types" in metadata:
-                            types_str = ", ".join(f"{t}: {c}" for t, c in metadata["activity_types"].items())
-                            print(f"   Types: {types_str}")
+                            ", ".join(f"{t}: {c}" for t, c in metadata["activity_types"].items())
                         if metadata.get("earliest_time") and metadata.get(
                             "latest_time",
-                        ):
-                            print(
-                                f"   Time span: {metadata.get('earliest_time')} to {metadata.get('latest_time')}",
-                            )
-                            if metadata.get("time_span_hours"):
-                                print(
-                                    f"   Duration: {metadata.get('time_span_hours'):.1f} hours",
-                                )
-                    except Exception as e:
-                        print(f"   Error analyzing file: {e}")
+                        ) and metadata.get("time_span_hours"):
+                            pass
+                    except Exception:
+                        pass
 
-                print()
             return
 
         # Filter files based on args
@@ -1030,7 +940,6 @@ def main():
 
         if args.file:
             if not os.path.exists(args.file):
-                print(f"File not found: {args.file}")
                 return
             files_to_process = [args.file]
         else:
@@ -1048,10 +957,8 @@ def main():
             files_to_process = filtered_files
 
         if not files_to_process:
-            print("No matching NTFS JSONL files found")
             return
 
-        print(f"Found {len(files_to_process)} files to process")
 
         # Setup database connection
         db_config = setup_database(
@@ -1093,12 +1000,10 @@ def main():
             else:
                 save_report_to_file(report)
                 if args.verbose:
-                    print("\n" + report)
+                    pass
 
-        print("\nDone!")
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except Exception:
         if args.debug:
             import traceback
 

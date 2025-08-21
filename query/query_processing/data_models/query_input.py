@@ -24,6 +24,7 @@ import sys
 
 from pydantic import BaseModel, Field
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -40,6 +41,7 @@ from data_models.collection_metadata_data_model import (
 from data_models.db_index import IndalekoCollectionIndexDataModel
 from data_models.named_entity import NamedEntityCollection
 from query.query_processing.data_models.query_output import LLMIntentTypeEnum
+
 
 # pylint: enable=wrong-import-position
 

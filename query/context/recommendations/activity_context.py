@@ -26,8 +26,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -46,6 +48,7 @@ from query.context.data_models.recommendation import (
 )
 from query.context.recommendations.base import RecommendationProvider
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -59,7 +62,7 @@ class ActivityContextRecommender(RecommendationProvider):
     content to fill in query parameters.
     """
 
-    def __init__(self, db_config=None, debug: bool = False):
+    def __init__(self, db_config=None, debug: bool = False) -> None:
         """
         Initialize the activity context recommender.
 
@@ -79,7 +82,7 @@ class ActivityContextRecommender(RecommendationProvider):
             self._context_service = IndalekoActivityContextService(db_config=db_config)
             self._logger.info("Connected to Activity Context Service")
         except Exception as e:
-            self._logger.error(f"Error connecting to Activity Context Service: {e}")
+            self._logger.exception(f"Error connecting to Activity Context Service: {e}")
             self._context_service = None
 
         # Initialize activity-to-query mappings
@@ -266,7 +269,7 @@ class ActivityContextRecommender(RecommendationProvider):
             return suggestions[:max_suggestions]
 
         except Exception as e:
-            self._logger.error(f"Error generating activity-based recommendations: {e}")
+            self._logger.exception(f"Error generating activity-based recommendations: {e}")
             return self._generate_default_suggestions(max_suggestions // 2)
 
     def _get_recent_activities(
@@ -295,6 +298,7 @@ class ActivityContextRecommender(RecommendationProvider):
                 """
 
                 import Indaleko
+
                 from db.db_config import IndalekoDBConfig
 
                 bind_vars = {
@@ -306,7 +310,7 @@ class ActivityContextRecommender(RecommendationProvider):
                 try:
                     db = IndalekoDBConfig.get_db()
                     results = db.aql.execute(query, bind_vars=bind_vars)
-                    context_docs = [doc for doc in results]
+                    context_docs = list(results)
 
                     if context_docs:
                         context_doc = context_docs[0]
@@ -333,7 +337,7 @@ class ActivityContextRecommender(RecommendationProvider):
                         f"Retrieved {len(activities)} activities from context document",
                     )
                 except Exception as e:
-                    self._logger.error(f"Error querying context document: {e}")
+                    self._logger.exception(f"Error querying context document: {e}")
 
             # Query file activities from NTFS collection
             try:
@@ -346,7 +350,7 @@ class ActivityContextRecommender(RecommendationProvider):
                 """
 
                 results = db.aql.execute(file_query)
-                file_docs = [doc for doc in results]
+                file_docs = list(results)
 
                 for doc in file_docs:
                     activity_type = "file_default"
@@ -389,7 +393,7 @@ class ActivityContextRecommender(RecommendationProvider):
                     f"Retrieved {len(file_docs)} file activities from database",
                 )
             except Exception as e:
-                self._logger.error(f"Error querying file activities: {e}")
+                self._logger.exception(f"Error querying file activities: {e}")
 
             # If no activities found, return fallback simulated activities
             if not activities:
@@ -401,7 +405,7 @@ class ActivityContextRecommender(RecommendationProvider):
             return activities
 
         except Exception as e:
-            self._logger.error(f"Error retrieving activities: {e}")
+            self._logger.exception(f"Error retrieving activities: {e}")
             return self._get_fallback_activities()
 
     def _detect_provider_type(self, provider_id: str) -> str:
@@ -714,14 +718,13 @@ class ActivityContextRecommender(RecommendationProvider):
             # Score based on age (1.0 for now, decreasing as age increases)
             if age_hours < 1:
                 return 1.0  # Less than an hour old
-            elif age_hours < 4:
+            if age_hours < 4:
                 return 0.9  # Less than 4 hours old
-            elif age_hours < 24:
+            if age_hours < 24:
                 return 0.8  # Less than a day old
-            elif age_hours < 72:
+            if age_hours < 72:
                 return 0.7  # Less than 3 days old
-            else:
-                return 0.5  # Older
+            return 0.5  # Older
 
         except (ValueError, TypeError):
             return 0.5  # Default if timestamp is invalid
@@ -830,52 +833,36 @@ class ActivityContextRecommender(RecommendationProvider):
         )
 
 
-def main():
+def main() -> None:
     """Test the ActivityContextRecommender with actual database."""
     logging.basicConfig(level=logging.DEBUG)
 
-    print("Testing ActivityContextRecommender with actual database connection")
-    print("=" * 80)
 
     # Set up database connection
     try:
         from db.db_config import IndalekoDBConfig
 
         db_config = IndalekoDBConfig()
-        print("Database connection established")
-    except Exception as e:
-        print(f"Failed to establish database connection: {e}")
-        print("Continuing with mock data...")
+    except Exception:
         db_config = None
 
     # Create recommender with actual database
     recommender = ActivityContextRecommender(db_config=db_config, debug=True)
 
     # Generate suggestions
-    print("\nGenerating activity-based suggestions...")
     suggestions = recommender.generate_suggestions(max_suggestions=5)
 
     # Print suggestions
-    print(f"\nGenerated {len(suggestions)} suggestions:")
-    for i, suggestion in enumerate(suggestions):
-        print(
-            f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-        )
-        print(f"   Rationale: {suggestion.rationale}")
-        source_type = suggestion.source_context.get("activity_type", "unknown")
-        print(f"   Activity type: {source_type}")
-        print(f"   Tags: {suggestion.tags}")
+    for _i, suggestion in enumerate(suggestions):
+        suggestion.source_context.get("activity_type", "unknown")
 
         # Show relevance factors
         if suggestion.relevance_factors:
-            print("   Relevance factors:")
-            for factor, value in suggestion.relevance_factors.items():
-                print(f"     - {factor}: {value:.2f}")
-        print()
+            for _factor, _value in suggestion.relevance_factors.items():
+                pass
 
     # Test feedback
     if suggestions:
-        print("Applying positive feedback to first suggestion...")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
@@ -885,20 +872,14 @@ def main():
         # Generate new suggestions to see the effect
         new_suggestions = recommender.generate_suggestions(max_suggestions=5)
 
-        print("\nAfter feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(new_suggestions):
 
             # Check if this is the same as a previous suggestion to show confidence changes
             for old_suggestion in suggestions:
                 if suggestion.query_text == old_suggestion.query_text:
                     confidence_change = suggestion.confidence - old_suggestion.confidence
                     if abs(confidence_change) > 0.01:
-                        print(f"   Confidence change: {confidence_change:+.2f}")
-            print()
+                        pass
 
 
 if __name__ == "__main__":

@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import datetime
 
 from pydantic import Field
+
 
 # from icecream import ic
 
@@ -38,6 +40,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -89,8 +92,8 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoActivityDataModel.test_model_main()
 
 

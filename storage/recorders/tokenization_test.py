@@ -18,9 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from storage.recorders.tokenization import tokenize_filename
 
 
-def test_tokenize_filename():
+def test_tokenize_filename() -> None:
     """Test the tokenize_filename function."""
     test_cases = [
         # CamelCase
@@ -79,8 +79,6 @@ def test_tokenize_filename():
 
     for filename, expected_partial in test_cases:
         result = tokenize_filename(filename)
-        print(f"\nTest case: {filename}")
-        print(json.dumps(result, indent=2))
 
         # Check that the expected results are in the output
         for key, expected_value in expected_partial.items():
@@ -97,7 +95,6 @@ def test_tokenize_filename():
         if len(name_part) >= 3:
             assert len(result["NgramTokenizedName"]) > 0, "Expected n-grams for name length >= 3"
 
-    print("\nAll tests passed!")
 
 
 if __name__ == "__main__":

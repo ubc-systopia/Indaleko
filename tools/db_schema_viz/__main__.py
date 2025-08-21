@@ -25,7 +25,9 @@ import argparse
 import logging
 import os
 import sys
+
 from pathlib import Path
+
 
 # Add the root directory to the path to ensure imports work correctly
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,14 +38,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-from tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
-from tools.db_schema_viz.schema_analyzer import group_collections, analyze_indexes
-from tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
 from tools.db_schema_viz.config import DEFAULT_GROUPS, load_config, save_config
+from tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
+from tools.db_schema_viz.schema_analyzer import analyze_indexes, group_collections
+from tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
+
+
 # pylint: enable=wrong-import-position
 
 
-def main():
+def main() -> None:
     """
     Main entry point for the schema visualization tool.
 
@@ -51,20 +55,20 @@ def main():
     based on the specified options.
     """
     parser = argparse.ArgumentParser(
-        description="Generate visualization of the Indaleko database schema"
+        description="Generate visualization of the Indaleko database schema",
     )
 
     # Output options
     parser.add_argument(
         "--output", "-o",
         default="schema.pdf",
-        help="Output file path"
+        help="Output file path",
     )
     parser.add_argument(
         "--format", "-f",
         choices=["pdf", "png", "svg"],
         default="pdf",
-        help="Output format"
+        help="Output format",
     )
 
     # Visualization options
@@ -72,40 +76,40 @@ def main():
         "--groups", "-g",
         action="store_true",
         default=True,
-        help="Show collection groupings"
+        help="Show collection groupings",
     )
     parser.add_argument(
         "--indexes", "-i",
         action="store_true",
         default=True,
-        help="Show key indexes (limited to 1-2 per collection)"
+        help="Show key indexes (limited to 1-2 per collection)",
     )
     parser.add_argument(
         "--relationships", "-r",
         action="store_true",
         default=True,
-        help="Show relationships between collections"
+        help="Show relationships between collections",
     )
     parser.add_argument(
         "--orientation",
         choices=["portrait", "landscape"],
         default="landscape",
-        help="Diagram orientation"
+        help="Diagram orientation",
     )
 
     # Configuration options
     parser.add_argument(
         "--config", "-c",
-        help="Path to configuration file"
+        help="Path to configuration file",
     )
     parser.add_argument(
         "--save-config", "-s",
-        help="Save current configuration to file"
+        help="Save current configuration to file",
     )
     parser.add_argument(
         "--verbose", "-v",
         action="store_true",
-        help="Enable verbose logging"
+        help="Enable verbose logging",
     )
 
     args = parser.parse_args()
@@ -114,7 +118,7 @@ def main():
     logging_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=logging_level,
-        format="%(asctime)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     # Load configuration
@@ -141,7 +145,7 @@ def main():
         collections=collections,
         relationships=relationships,
         groups=groups,
-        show_indexes=args.indexes
+        show_indexes=args.indexes,
     )
 
     # Generate output
@@ -150,13 +154,13 @@ def main():
         dot=dot,
         output_path=args.output,
         format=args.format,
-        orientation=args.orientation
+        orientation=args.orientation,
     )
 
     # Save configuration if requested
     if args.save_config:
         config = {
-            "groups": groups
+            "groups": groups,
         }
         save_config(config, args.save_config)
         logging.info(f"Configuration saved to {args.save_config}")

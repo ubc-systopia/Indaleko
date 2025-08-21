@@ -23,10 +23,12 @@ import json
 import os
 import sys
 import uuid
+
 from datetime import datetime, timedelta
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.collectors.ambient.music.spotify import SpotifyMusicCollector
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from activity.collectors.base import CollectorBase
@@ -51,9 +55,6 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig
-
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 
 class SpotifyRecorder(RecorderBase):
@@ -75,7 +76,7 @@ class SpotifyRecorder(RecorderBase):
         KnownSemanticAttributes.ACTIVITY_DATA_AMBIENT_SPOTIFY_DEVICE_TYPE: "device_type",
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
 
         # Boilerplate code. Referenced from windows_gps_location.py recorder. Perhaps future refactoring can be done to reduce duplicate code
         self.db_config = IndalekoDBConfig()
@@ -133,7 +134,7 @@ class SpotifyRecorder(RecorderBase):
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
         """
-        Retrieve the current cursor for this data provider
+        Retrieve the current cursor for this data provider.
 
         Input:
             activity_context: the UUID representing the activity context to
@@ -250,7 +251,7 @@ class SpotifyRecorder(RecorderBase):
         """
         bind_vars = {"@collection": self.collection.name}
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
         if len(entries) == 0:
             return None
         assert len(entries) == 1, f"Too many results {len(entries)}"
@@ -270,7 +271,7 @@ class SpotifyRecorder(RecorderBase):
         data2: SpotifyAmbientData,
     ) -> bool:
         """Check if the song name has changed, or if the time difference
-        between the two records is greater than the duration of the song
+        between the two records is greater than the duration of the song.
 
             Input:
                 data1: the first data object
@@ -288,10 +289,7 @@ class SpotifyRecorder(RecorderBase):
         if data1.track_id != data2.track_id:
             return True
         diff = data2.Timestamp - data1.Timestamp
-        if diff.total_seconds() * 1000 > data1.track_duration_ms:
-            return True
-
-        return False
+        return diff.total_seconds() * 1000 > data1.track_duration_ms
 
     def update_data(self) -> None:
         current_data = self.collector.collect_data()
@@ -325,10 +323,7 @@ class SpotifyRecorder(RecorderBase):
             timestamp = datetime.now().isoformat()
             encoded_data = ""
         else:
-            assert isinstance(spotify_data, SpotifyAmbientData) or isinstance(
-                spotify_data,
-                dict,
-            ), f"location_data is not a BaseLocationDataModel or dict {type(spotify_data)}"
+            assert isinstance(spotify_data, (SpotifyAmbientData, dict)), f"location_data is not a BaseLocationDataModel or dict {type(spotify_data)}"
 
             assert isinstance(
                 semantic_attributes,
@@ -356,11 +351,11 @@ class SpotifyRecorder(RecorderBase):
         )
 
 
-def main():
+def main() -> None:
     ic("Starting Spotify Ambient Music Recorder")
     recorder = SpotifyRecorder()
     recorder.update_data()
-    latest = recorder.get_latest_db_update()
+    recorder.get_latest_db_update()
     # ic(latest)
     ic(recorder.get_description())
     ic("Finished Spotify Ambient Music Recorder")

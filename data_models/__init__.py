@@ -1,7 +1,8 @@
-"""initializtion logic for the activity context system"""
+"""initializtion logic for the activity context system."""
 
 import os
 import sys
+
 
 # from icecream import ic
 
@@ -39,6 +40,7 @@ from data_models.source_identifier import (  # noqa: E402
 from data_models.timestamp import IndalekoTimestampDataModel  # noqa: E402
 from data_models.user_identity import IndalekoUserDataModel  # noqa: E402
 
+
 # pylint: enable=wrong-import-position
 
 __version__ = "0.1.0"
@@ -47,8 +49,8 @@ __all__ = [
     "IndalekoActivityDataRegistrationDataModel",
     "IndalekoCollectionMetadataDataModel",
     "IndalekoIdentityDomainDataModel",
-    "IndalekoObjectDataModel",
     "IndalekoMachineConfigDataModel",
+    "IndalekoObjectDataModel",
     "IndalekoPerformanceDataModel",
     "IndalekoQueryHistoryDataModel",
     "IndalekoRecordDataModel",
@@ -57,6 +59,6 @@ __all__ = [
     "IndalekoServiceDataModel",
     "IndalekoSourceIdentifierDataModel",
     "IndalekoTimestampDataModel",
-    "IndalekoUserDataModel",
     "IndalekoUUIDDataModel",
+    "IndalekoUserDataModel",
 ]

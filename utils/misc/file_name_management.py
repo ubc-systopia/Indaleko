@@ -23,6 +23,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -32,7 +33,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 import utils.misc.timestamp_management
+
 from constants.values import IndalekoConstants
+
 
 # pylint: enable=wrong-import-position
 
@@ -122,8 +125,7 @@ def generate_file_name(**kwargs) -> str:
     if "suffix" in kwargs:
         suffix = kwargs["suffix"]
         del kwargs["suffix"]
-    if suffix.startswith("."):
-        suffix = suffix[1:]  # avoid ".." for suffix
+    suffix = suffix.removeprefix(".")  # avoid ".." for suffix
     if target_platform and "-" in target_platform:
         raise ValueError(
             f"platform must not contain a hyphen (platform={target_platform})",
@@ -144,9 +146,7 @@ def extract_keys_from_file_name(file_name: str) -> dict:
     """
 
     def parse_file_name(file_name: str) -> dict:
-        """
-        Helper function to parse a file name into a dictionary of keys and values.
-        """
+        """Helper function to parse a file name into a dictionary of keys and values."""
         # Extract the base file name (without extension) and split by '-'
         base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
         fields = base_file_name.split("-")
@@ -226,20 +226,12 @@ def find_candidate_files(
 
 def print_candidate_files(candidates: list[tuple[str, str]]) -> None:
     """Print the candidate files in a nice format."""
-    print(candidates)
     if len(candidates) == 0:
-        print("No candidate files found")
         return
     unique_id_label = "Unique identifier"
     unique_id_label_length = len(unique_id_label)
     max_unique_id_length = unique_id_label_length
-    for file, unique_id in candidates:
-        if len(unique_id) > max_unique_id_length:
-            max_unique_id_length = len(unique_id)
-    print(
-        "Unique identifier",
-        (max_unique_id_length - len("Unique identifier")) * " ",
-        "File name",
-    )
-    for file, unique_id in candidates:
-        print(f'{unique_id.strip()} {(max_unique_id_length-len(unique_id))*" "} {file}')
+    for _file, unique_id in candidates:
+        max_unique_id_length = max(max_unique_id_length, len(unique_id))
+    for _file, unique_id in candidates:
+        pass

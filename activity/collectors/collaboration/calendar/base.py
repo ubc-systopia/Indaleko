@@ -26,8 +26,10 @@ import json
 import logging
 import os
 import sys
+
 from abc import abstractmethod
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -53,7 +55,7 @@ class CalendarCollectorBase(CollaborationCollector):
     event retrieval, processing, and data model conversion.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the calendar collector base.
 
         Args:
@@ -72,7 +74,7 @@ class CalendarCollectorBase(CollaborationCollector):
         self.config = kwargs.get("config", {})
 
         # Event count limit (for testing/debugging)
-        self.event_limit = kwargs.get("event_limit", None)
+        self.event_limit = kwargs.get("event_limit")
 
         # Initialize event collection state
         self.collected_events = []
@@ -218,7 +220,7 @@ class CalendarCollectorBase(CollaborationCollector):
                             break
 
                 except Exception as e:
-                    self.logger.error(f"Error processing event: {e}")
+                    self.logger.exception(f"Error processing event: {e}")
                     continue
 
             # Check if we've reached the limit
@@ -291,4 +293,4 @@ class CalendarCollectorBase(CollaborationCollector):
                         last_sync_time,
                     )
             except Exception as e:
-                self.logger.error(f"Error parsing cursor: {e}")
+                self.logger.exception(f"Error parsing cursor: {e}")

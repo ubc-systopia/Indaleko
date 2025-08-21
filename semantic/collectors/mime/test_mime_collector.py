@@ -25,6 +25,7 @@ import tempfile
 import unittest
 import uuid
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,6 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
+
 
 # pylint: enable=wrong-import-position
 
@@ -115,34 +117,27 @@ class TestMimeTypeCollector(unittest.TestCase):
         """Test basic MIME type detection for various file types"""
         # Test text file
         text_mime = self.mime_collector.detect_mime_type(self.text_file)
-        self.assertTrue(text_mime["mime_type"].startswith("text/"))
-        self.assertEqual(text_mime["mime_type_from_extension"], "text/plain")
+        assert text_mime["mime_type"].startswith("text/")
+        assert text_mime["mime_type_from_extension"] == "text/plain"
 
         # Test HTML file
         html_mime = self.mime_collector.detect_mime_type(self.html_file)
-        self.assertTrue(
-            html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain",
-        )
-        self.assertEqual(html_mime["mime_type_from_extension"], "text/html")
+        assert html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain"
+        assert html_mime["mime_type_from_extension"] == "text/html"
 
         # Test JSON file
         json_mime = self.mime_collector.detect_mime_type(self.json_file)
-        self.assertTrue(
-            json_mime["mime_type"].startswith("application/json") or json_mime["mime_type"].startswith("text/"),
-        )
-        self.assertEqual(json_mime["mime_type_from_extension"], "application/json")
+        assert json_mime["mime_type"].startswith("application/json") or json_mime["mime_type"].startswith("text/")
+        assert json_mime["mime_type_from_extension"] == "application/json"
 
         # Test binary file
         bin_mime = self.mime_collector.detect_mime_type(self.bin_file)
-        self.assertIn(
-            bin_mime["mime_type_from_extension"],
-            ["application/octet-stream", None],
-        )
+        assert bin_mime["mime_type_from_extension"] in ["application/octet-stream", None]
 
         # Test Python file
         py_mime = self.mime_collector.detect_mime_type(self.py_file)
-        self.assertTrue(py_mime["mime_type"].startswith("text/"))
-        self.assertEqual(py_mime["mime_type_from_extension"], "text/x-python")
+        assert py_mime["mime_type"].startswith("text/")
+        assert py_mime["mime_type_from_extension"] == "text/x-python"
 
     def test_create_mime_record(self):
         """Test creating a MIME record from a file"""
@@ -153,21 +148,15 @@ class TestMimeTypeCollector(unittest.TestCase):
         record = self.mime_collector.create_mime_record(self.text_file, test_uuid)
 
         # Test record properties
-        self.assertEqual(record.ObjectIdentifier, test_uuid)
-        self.assertEqual(
-            record.mime_type,
-            self.mime_collector.detect_mime_type(self.text_file)["mime_type"],
-        )
-        self.assertGreaterEqual(
-            len(record.SemanticAttributes),
-            3,
-        )  # At least MIME type, confidence, and category
+        assert record.ObjectIdentifier == test_uuid
+        assert record.mime_type == self.mime_collector.detect_mime_type(self.text_file)["mime_type"]
+        assert len(record.SemanticAttributes) >= 3  # At least MIME type, confidence, and category
 
         # Serialize to verify it's valid
         serialized = record.model_dump()
-        self.assertIn("mime_type", serialized)
-        self.assertIn("confidence", serialized)
-        self.assertIn("SemanticAttributes", serialized)
+        assert "mime_type" in serialized
+        assert "confidence" in serialized
+        assert "SemanticAttributes" in serialized
 
     def test_extension_matching(self):
         """Test confidence adjustment based on extension matching"""
@@ -175,14 +164,11 @@ class TestMimeTypeCollector(unittest.TestCase):
         html_result = self.mime_collector.detect_mime_type(self.html_file)
 
         # Test mismatch (binary file with .bin extension)
-        bin_result = self.mime_collector.detect_mime_type(self.bin_file)
+        self.mime_collector.detect_mime_type(self.bin_file)
 
         # If extension and MIME match, confidence should be higher
         if html_result["mime_type"] == "text/html" and html_result["mime_type_from_extension"] == "text/html":
-            self.assertGreater(
-                html_result["confidence"],
-                0.9,
-            )  # High confidence when they match
+            assert html_result["confidence"] > 0.9  # High confidence when they match
 
 
 def main():

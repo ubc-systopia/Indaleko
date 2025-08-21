@@ -30,7 +30,9 @@ from pathlib import Path
 from typing import Any
 
 import psutil
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -48,6 +50,7 @@ from data_models import (
 from perf.source_code_version import IndalekoGitInfo
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -58,7 +61,7 @@ class IndalekoPerformanceDataCollector:
     further analysis.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Initialize the object."""
         self.perf_data: IndalekoPerformanceDataModel = IndalekoPerformanceDataModel(
             **kwargs,
@@ -70,7 +73,7 @@ class IndalekoPerformanceDataCollector:
         source: IndalekoSourceIdentifierDataModel,
         description: str,
         MachineIdentifier: uuid.UUID | None,  # noqa: N803
-        process_results_func: Callable[..., dict[str, int | float | str]] = None,
+        process_results_func: Callable[..., dict[str, int | float | str]] | None = None,
         input_file_name: str | None = None,
         output_file_name: str | None = None,
         *args: object | None,
@@ -115,15 +118,12 @@ class IndalekoPerformanceDataCollector:
             result = None
             end_clock = time.perf_counter()
             elapsed_time = end_clock - start_clock
-            raise e
+            raise
 
         end_time = datetime.now(UTC).isoformat()
         end_user_time = process.cpu_times().user
         end_system_time = process.cpu_times().system
-        if hasattr(process, "io_counters"):
-            end_io_counters = process.io_counters()
-        else:
-            end_io_counters = None
+        end_io_counters = process.io_counters() if hasattr(process, "io_counters") else None
         end_memory = process.memory_info().rss  # Resident Set Size (RSS) memory
         end_thread_count = process.num_threads()
         output_file_size = None
@@ -233,7 +233,7 @@ class IndalekoPerformanceDataCollector:
     }
 
 
-def main():
+def main() -> None:
     """Test code for the IndalekoPerformanceData class."""
     ic("IndalekoPerformanceData test code")
     perf_data: IndalekoPerformanceDataCollector = IndalekoPerformanceDataCollector(

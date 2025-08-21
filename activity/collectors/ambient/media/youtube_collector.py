@@ -22,10 +22,12 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 import requests
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +40,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.characteristics import ActivityCharacteristics
 from activity.collectors.ambient.media.youtube_data_model import YouTubeVideoActivity
 from activity.collectors.base import CollectorBase
+
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +64,7 @@ class YouTubeActivityCollector(CollectorBase):
     to support rich semantic understanding of the user's behavior.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the YouTube activity collector.
 
@@ -218,7 +221,7 @@ class YouTubeActivityCollector(CollectorBase):
                     self._data.append(activity)
 
                 except Exception as e:
-                    logger.error(f"Error processing video: {e}")
+                    logger.exception(f"Error processing video: {e}")
                     continue
 
             # Step 3: Get liked videos if enabled
@@ -246,7 +249,7 @@ class YouTubeActivityCollector(CollectorBase):
             logger.info(f"Collected {len(self._data)} YouTube activities")
 
         except Exception as e:
-            logger.error(f"Error collecting YouTube data: {e}")
+            logger.exception(f"Error collecting YouTube data: {e}")
 
     def process_data(self) -> list[YouTubeVideoActivity]:
         """
@@ -291,7 +294,7 @@ class YouTubeActivityCollector(CollectorBase):
             logger.info(f"Stored {len(processed_data)} YouTube activities")
             return result
         except Exception as e:
-            logger.error(f"Error storing YouTube activity data: {e}")
+            logger.exception(f"Error storing YouTube activity data: {e}")
             return False
 
     def get_activities(self) -> list[YouTubeVideoActivity]:
@@ -364,7 +367,7 @@ class YouTubeActivityCollector(CollectorBase):
             return data["items"][0]
 
         except Exception as e:
-            logger.error(f"Error getting video details for {video_id}: {e}")
+            logger.exception(f"Error getting video details for {video_id}: {e}")
             return None
 
     def _get_liked_videos(self) -> list[dict[str, Any]]:
@@ -405,19 +408,16 @@ class YouTubeActivityCollector(CollectorBase):
         # Example:
         if "videoId" in watch_item:
             return watch_item["videoId"]
-        elif "resourceId" in watch_item and "videoId" in watch_item["resourceId"]:
+        if "resourceId" in watch_item and "videoId" in watch_item["resourceId"]:
             return watch_item["resourceId"]["videoId"]
 
         return None
 
 
-def main():
+def main() -> None:
     """Test the YouTube activity collector."""
     # This is just a simple test
-    collector = YouTubeActivityCollector()
-    print(f"Collector: {collector.get_collector_name()}")
-    print(f"Provider ID: {collector.get_provider_id()}")
-    print(f"Description: {collector.get_description()}")
+    YouTubeActivityCollector()
 
     # Test credentials would be needed for real collection
     # collector.collect_data()

@@ -9,6 +9,7 @@ ArangoDB Views for text search operations.
 import os
 import sys
 
+
 # Set up environment variables
 current_path = os.path.dirname(os.path.abspath(__file__))
 os.environ["INDALEKO_ROOT"] = current_path
@@ -20,7 +21,6 @@ src_path = os.path.join(current_path, "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
-print("Python path:", sys.path)
 
 
 # Extract the content of the system prompt from the AQL translator
@@ -35,7 +35,6 @@ def extract_translator_prompt():
             "aql_translator.py",
         )
 
-        print(f"Looking for translator file at: {translator_file}")
 
         if not os.path.exists(translator_file):
             raise ValueError(f"Translator file not found: {translator_file}")
@@ -59,12 +58,10 @@ def extract_translator_prompt():
             raise ValueError("End marker not found after start marker")
 
         # Extract the prompt template
-        prompt_template = content[start_idx:end_idx]
+        return content[start_idx:end_idx]
 
-        return prompt_template
 
-    except Exception as e:
-        print(f"Error extracting translator prompt: {e!s}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
@@ -79,25 +76,14 @@ def main():
         prompt_template = extract_translator_prompt()
 
         if prompt_template:
-            print("\n=== AQL Translator System Prompt ===\n")
-            print(prompt_template)
 
             # Check if the prompt mentions views and search analyzer
-            view_mentioned = "view" in prompt_template.lower()
-            search_analyzer_mentioned = "search analyzer" in prompt_template.lower()
-            objectstextview_mentioned = "objectstextview" in prompt_template.lower()
+            "view" in prompt_template.lower()
+            "search analyzer" in prompt_template.lower()
+            "objectstextview" in prompt_template.lower()
 
-            print("\n=== Analysis ===\n")
-            print(f"View mentioned: {'Yes' if view_mentioned else 'No'}")
-            print(
-                f"SEARCH ANALYZER mentioned: {'Yes' if search_analyzer_mentioned else 'No'}",
-            )
-            print(
-                f"ObjectsTextView mentioned: {'Yes' if objectstextview_mentioned else 'No'}",
-            )
 
-    except Exception as e:
-        print(f"Error in main: {e!s}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

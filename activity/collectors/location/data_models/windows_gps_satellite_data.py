@@ -24,6 +24,7 @@ import sys
 
 from pydantic import BaseModel, Field
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -71,7 +72,7 @@ class WindowsGPSLocationSatelliteDataModel(BaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     WindowsGPSLocationSatelliteDataModel.test_model_main()
 

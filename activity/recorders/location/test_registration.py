@@ -22,6 +22,7 @@ import logging
 import os
 import sys
 
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -99,10 +100,10 @@ def main():
 
         logger.info("Registration test completed successfully")
     except ImportError as e:
-        logger.error(f"Import error: {e}")
-        logger.error("This module requires specific Python packages.")
+        logger.exception(f"Import error: {e}")
+        logger.exception("This module requires specific Python packages.")
     except Exception as e:
-        logger.error(f"Error testing registration: {e}")
+        logger.exception(f"Error testing registration: {e}")
 
 
 if __name__ == "__main__":

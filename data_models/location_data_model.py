@@ -45,6 +45,7 @@ from data_models.base import IndalekoBaseModel
 
 class LocationDataModel(IndalekoBaseModel):
     """This is the data model for location services."""
+
     latitude: float = Field(..., description="Latitude coordinate of the location")
     longitude: float = Field(..., description="Longitude coordinate of the location")
     altitude: float | None = Field(
@@ -99,7 +100,7 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
             value = value.replace(tzinfo=UTC)
         return value
 
-    class Config: # type: ignore  # noqa: PGH003
+    class Config:  # type: ignore  # noqa: PGH003
         """Sample configuration for the data model."""
 
         frozen = True  # Make the model immutable

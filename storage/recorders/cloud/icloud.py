@@ -1,5 +1,5 @@
 """
-IndalekoiCloudRecorder.py
+IndalekoiCloudRecorder.py.
 
 This script is used to record metadata about the files that have been scanned from iCloud.  It
 will create a JSONL file with the collected metadata suitable for uploading to
@@ -26,9 +26,11 @@ import json
 import os
 import sys
 import uuid
+
 from datetime import datetime
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -51,13 +53,12 @@ from utils.misc.file_name_management import (
     find_candidate_files,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
-    """
-    This class handles processing metadata from the Indaleko iCloud collector.
-    """
+    """This class handles processing metadata from the Indaleko iCloud collector."""
 
     icloud_recorder_uuid = "c2b887b3-2a2f-4fbf-83dd-062743f31477"
     icloud_recorder_service = {
@@ -169,11 +170,11 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
 
         try:
             raw_data = encode_binary_data(bytes(json.dumps(data).encode("utf-8")))
-        except TypeError as e:
+        except TypeError:
             with open(debug_file_path, "a") as debug_file:
                 debug_file.write("Failed to serialize the following data entry:\n")
                 debug_file.write(json.dumps(data, indent=4, default=str) + "\n")
-            raise e
+            raise
 
         kwargs = {
             "source": self.source,
@@ -215,13 +216,13 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
 
         @staticmethod
         def get_platform_name() -> str:
-            """This method is used to get the platform name"""
+            """This method is used to get the platform name."""
             return IndalekoICloudStorageRecorder.icloud_platform
 
     cloud_recorder_mixin = icloud_recorder_mixin
 
 
-def main():
+def main() -> None:
     """This is the main handler for the iCloud recorder."""
     BaseCloudStorageRecorder.cloud_recorder_runner(
         IndalekoICloudStorageCollector,

@@ -19,13 +19,16 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import contextlib
 import datetime
 import os
 import sys
+
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,9 +39,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class PlanNode(BaseModel):
-    """
-    A node in the AQL query execution plan.
-    """
+    """A node in the AQL query execution plan."""
 
     id: int = Field(..., description="The node ID")
     type: str = Field(..., description="The type of operation")
@@ -68,9 +69,7 @@ class PlanNode(BaseModel):
 
 
 class QueryPlan(BaseModel):
-    """
-    An AQL query execution plan.
-    """
+    """An AQL query execution plan."""
 
     nodes: list[PlanNode] = Field(
         default_factory=list,
@@ -92,9 +91,7 @@ class QueryPlan(BaseModel):
 
 
 class QueryAnalysis(BaseModel):
-    """
-    Analysis of an AQL query execution plan.
-    """
+    """Analysis of an AQL query execution plan."""
 
     summary: dict[str, Any] = Field(default_factory=dict, description="Summary metrics")
     warnings: list[str] = Field(
@@ -112,9 +109,7 @@ class QueryAnalysis(BaseModel):
 
 
 class QueryPerformance(BaseModel):
-    """
-    Performance metrics for an executed query.
-    """
+    """Performance metrics for an executed query."""
 
     execution_time_seconds: float = Field(
         0,
@@ -131,9 +126,7 @@ class QueryPerformance(BaseModel):
 
 
 class QueryHintSeverity(str, Enum):
-    """
-    Severity levels for query performance hints.
-    """
+    """Severity levels for query performance hints."""
 
     INFO = "info"  # Informational hint
     WARNING = "warning"  # Warning about potential issues
@@ -142,9 +135,7 @@ class QueryHintSeverity(str, Enum):
 
 
 class QueryPerformanceImpact(str, Enum):
-    """
-    Performance impact levels for query hints.
-    """
+    """Performance impact levels for query hints."""
 
     POSITIVE = "positive"  # Positive impact on performance
     NEUTRAL = "neutral"  # No significant impact
@@ -153,9 +144,7 @@ class QueryPerformanceImpact(str, Enum):
 
 
 class QueryPerformanceHint(BaseModel):
-    """
-    Performance hint for query optimization.
-    """
+    """Performance hint for query optimization."""
 
     hint_type: str = Field(..., description="Type of performance hint")
     description: str = Field(..., description="Description of the performance hint")
@@ -172,9 +161,7 @@ class QueryPerformanceHint(BaseModel):
 
 
 class QueryExecutionPlan(BaseModel):
-    """
-    Comprehensive information about a query's execution plan and performance.
-    """
+    """Comprehensive information about a query's execution plan and performance."""
 
     query_id: str = Field(..., description="Unique identifier for the query")
     query: str = Field(..., description="The AQL query text")
@@ -283,9 +270,9 @@ class QueryExecutionPlan(BaseModel):
         for node_data in plan_data.get("nodes", []):
             try:
                 nodes.append(PlanNode(**node_data))
-            except Exception as e:
+            except Exception:
                 # Skip invalid nodes
-                print(f"Warning: Could not parse plan node: {e}")
+                pass
 
         # Create the main plan
         plan = QueryPlan(
@@ -306,9 +293,9 @@ class QueryExecutionPlan(BaseModel):
             for node_data in alt_plan_data.get("nodes", []):
                 try:
                     alt_nodes.append(PlanNode(**node_data))
-                except Exception as e:
+                except Exception:
                     # Skip invalid nodes
-                    print(f"Warning: Could not parse alternative plan node: {e}")
+                    pass
 
             alternative_plans.append(
                 QueryPlan(
@@ -332,10 +319,8 @@ class QueryExecutionPlan(BaseModel):
         # Extract performance metrics if available
         performance_model = None
         if performance:
-            try:
+            with contextlib.suppress(Exception):
                 performance_model = QueryPerformance(**performance)
-            except Exception as e:
-                print(f"Warning: Could not parse performance data: {e}")
 
         # Create the full execution plan model
         return cls(

@@ -1,18 +1,15 @@
-"""
-Recorder for incremental file system collector that writes JSONL output.
-"""
+"""Recorder for incremental file system collector that writes JSONL output."""
 
 import json
+
 from pathlib import Path
 from typing import Any
 
 
 class FsIncrementalRecorder:
-    """
-    Recorder that appends file metadata events to a JSONL file.
-    """
+    """Recorder that appends file metadata events to a JSONL file."""
 
-    def __init__(self, output_file: str = "data/fs_incremental_records.jsonl"):
+    def __init__(self, output_file: str = "data/fs_incremental_records.jsonl") -> None:
         self.out_path = Path(output_file)
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
 

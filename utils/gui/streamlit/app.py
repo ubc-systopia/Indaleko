@@ -1,5 +1,5 @@
 """
-Indaleko Streamlit GUI Application - Modular Version
+Indaleko Streamlit GUI Application - Modular Version.
 
 This module provides a Streamlit-based GUI for Indaleko using a component-based architecture.
 
@@ -23,6 +23,7 @@ import os
 import sys
 
 import streamlit as st
+
 
 # Set up path to include Indaleko modules
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -87,6 +88,7 @@ from utils.gui.streamlit.components import (
     render_settings,
     render_sidebar,
 )
+
 
 # Initialize session state
 if "using_real_db" not in st.session_state:
@@ -277,7 +279,7 @@ with col3:
     st.markdown("v0.2.0")
 
 
-def main():
+def main() -> None:
     # Main function - app entry point
     pass
 

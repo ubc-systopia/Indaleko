@@ -39,8 +39,10 @@ import logging
 import math
 import os
 import re
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Document types with higher importance
 IMPORTANT_DOCUMENT_EXTENSIONS = {
@@ -131,7 +133,7 @@ class ImportanceScorer:
     based on multiple factors, with configurable weights for each factor.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the importance scorer with configurable weights.
 
@@ -252,7 +254,7 @@ class ImportanceScorer:
 
             # Parse timestamp
             if isinstance(timestamp_str, str):
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                timestamp = datetime.fromisoformat(timestamp_str)
             else:
                 # Assume datetime object
                 timestamp = timestamp_str
@@ -268,12 +270,11 @@ class ImportanceScorer:
             # Exponential decay function: score = exp(-age_days/half_life)
             # Where half_life is the number of days at which the score drops to 0.5
             half_life = 7.0  # Default half-life of 7 days
-            recency_score = math.exp(-age_days / half_life)
+            return math.exp(-age_days / half_life)
 
-            return recency_score
 
         except Exception as e:
-            self._logger.error(f"Error calculating recency score: {e}")
+            self._logger.exception(f"Error calculating recency score: {e}")
             return 0.5  # Default score on error
 
     def _calculate_type_score(self, activity_data: dict[str, Any]) -> float:
@@ -310,7 +311,7 @@ class ImportanceScorer:
             return base_score
 
         # Normalize path separators for consistent matching
-        normalized_path = file_path.replace("\\", "/")
+        file_path.replace("\\", "/")
 
         # Check file extension importance
         _, ext = os.path.splitext(file_path)
@@ -416,7 +417,7 @@ class ImportanceScorer:
             if created_at:
                 try:
                     created_time = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00"),
+                        created_at,
                     )
                     now = datetime.now(UTC)
                     age_days = (now - created_time).total_seconds() / (24 * 60 * 60)
@@ -499,16 +500,13 @@ if __name__ == "__main__":
 
     # Calculate score
     score = scorer.calculate_importance(test_activity, test_entity, search_hits=3)
-    print(f"Importance score: {score:.2f}")
 
     # Test with older activity
     older_activity = test_activity.copy()
     older_activity["timestamp"] = (datetime.now(UTC) - timedelta(days=10)).isoformat()
     score = scorer.calculate_importance(older_activity, test_entity)
-    print(f"Older activity score: {score:.2f}")
 
     # Test with temporary path
     temp_activity = test_activity.copy()
     temp_activity["file_path"] = "C:/Users/Temp/cache/temp_file.txt"
     score = scorer.calculate_importance(temp_activity, test_entity)
-    print(f"Temporary file score: {score:.2f}")

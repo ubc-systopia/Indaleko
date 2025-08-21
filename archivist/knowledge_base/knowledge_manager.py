@@ -22,9 +22,11 @@ import json
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +46,7 @@ from archivist.knowledge_base.data_models import (
 )
 from db import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
+
 
 # pylint: enable=wrong-import-position
 
@@ -65,7 +68,7 @@ class KnowledgeBaseManager:
     4. Applying learned patterns to improve system behavior
     """
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         """
         Initialize the knowledge base manager.
 
@@ -86,7 +89,7 @@ class KnowledgeBaseManager:
         # Load existing data
         self._load_data()
 
-    def _setup_collections(self):
+    def _setup_collections(self) -> None:
         """Set up the necessary collections in the database."""
         # Get collections from central registry using get_collection
         try:
@@ -106,16 +109,16 @@ class KnowledgeBaseManager:
             self.logger.info("Successfully retrieved all Knowledge Base collections")
         except Exception as e:
             # If collections don't exist, log error and raise
-            self.logger.error(f"Error setting up Knowledge Base collections: {e!s}")
-            self.logger.error(
+            self.logger.exception(f"Error setting up Knowledge Base collections: {e!s}")
+            self.logger.exception(
                 "Please add Knowledge Base collections to db_collections.py first",
             )
             raise ValueError(
                 "Knowledge Base collections are not defined in the database. "
-                + "Please add them to db_collections.py first.",
+                 "Please add them to db_collections.py first.",
             ) from e
 
-    def _load_data(self):
+    def _load_data(self) -> None:
         """Load existing knowledge base data from the database."""
         try:
             # Load events
@@ -145,7 +148,7 @@ class KnowledgeBaseManager:
                 f"{len(self._feedback_cache)} feedback records",
             )
         except Exception as e:
-            self.logger.error(f"Error loading data: {e!s}")
+            self.logger.exception(f"Error loading data: {e!s}")
             # Initialize empty caches if loading fails
             self._events_cache = {}
             self._patterns_cache = {}
@@ -908,7 +911,7 @@ class KnowledgeBaseManager:
         self,
         query_text: str,
         intent: str = "",
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Apply knowledge patterns to enhance a query.
@@ -1036,9 +1039,9 @@ class KnowledgeBaseManager:
         # Get contextual information
         current_hour = datetime.now(UTC).hour
         current_day = datetime.now(UTC).weekday()  # 0-6 (Mon-Sun)
-        time_context = context.get("time_context", {})
-        location_context = context.get("location_context", {})
-        entity_context = context.get("entities", [])
+        context.get("time_context", {})
+        context.get("location_context", {})
+        context.get("entities", [])
 
         # Score each pattern based on context
         pattern_scores = []
@@ -1462,7 +1465,7 @@ class KnowledgeBaseManager:
         }
 
 
-def main():
+def main() -> None:
     """Test the knowledge base functionality."""
     # Initialize the knowledge base manager
     kb_manager = KnowledgeBaseManager()
@@ -1482,7 +1485,7 @@ def main():
         confidence=0.9,
     )
 
-    entity_event = kb_manager.record_learning_event(
+    kb_manager.record_learning_event(
         event_type=LearningEventType.entity_discovery,
         source="test",
         content={
@@ -1505,7 +1508,7 @@ def main():
     )
 
     # Record some feedback
-    feedback = kb_manager.record_feedback(
+    kb_manager.record_feedback(
         feedback_type=FeedbackType.explicit_positive,
         feedback_strength=0.9,
         feedback_data={
@@ -1518,20 +1521,17 @@ def main():
     )
 
     # Test applying knowledge
-    enhanced_query = kb_manager.apply_knowledge_to_query(
+    kb_manager.apply_knowledge_to_query(
         "Show me files related to Indaleko",
         intent="document_search",
     )
 
-    print(f"Enhanced Query: {enhanced_query}")
 
     # Get related entities
-    related = kb_manager.get_related_entities("Indaleko", "project")
-    print(f"Related entities: {related}")
+    kb_manager.get_related_entities("Indaleko", "project")
 
     # Get stats
-    stats = kb_manager.get_stats()
-    print(f"Knowledge Base Stats: {stats}")
+    kb_manager.get_stats()
 
 
 if __name__ == "__main__":

@@ -1,17 +1,18 @@
-"""This is a test file for interacting with the OpenAI API"""
+"""This is a test file for interacting with the OpenAI API."""
 
 import configparser
 import os
 
 import openai
+
 from icecream import ic
 
 
 class OpenAITest:
-    """Simple test class for working with the OpenAI API"""
+    """Simple test class for working with the OpenAI API."""
 
     def __init__(self, **kwargs) -> None:
-        """Set up the class"""
+        """Set up the class."""
         self.api_key_file = kwargs.get("api_key_file", "../config/openai-key.ini")
         self.api_key = self.get_api_key()
         self.client = openai.OpenAI(api_key=self.api_key)
@@ -19,7 +20,7 @@ class OpenAITest:
         ic("OpenAITest initialized")
 
     def get_api_key(self) -> str:
-        """Get the API key from the config file"""
+        """Get the API key from the config file."""
         assert os.path.exists(self.api_key_file), "API key file not found"
         config = configparser.ConfigParser()
         config.read(self.api_key_file, encoding="utf-8-sig")
@@ -33,14 +34,14 @@ class OpenAITest:
         return openai_key
 
     def get_openai_models(self) -> list:
-        """Get a list of the available models"""
+        """Get a list of the available models."""
         if not hasattr(self, "models"):
             self.models = [x.id for x in self.client.models.list().data]
         return self.models
 
 
-def main():
-    """Main function for testing the OpenAI API"""
+def main() -> None:
+    """Main function for testing the OpenAI API."""
     # test = OpenAITest()
     # ic(test.get_openai_models())
 

@@ -25,13 +25,16 @@ import os
 import sys
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 
 # third-party imports
 from typing import Any
 
 import magic
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +46,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Indaleko imports
 # pylint: disable=wrong-import-position
 import semantic.recorders.mime.characteristics as MimeDataCharacteristics
+
 from data_models.i_object import IndalekoObjectDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
@@ -52,14 +56,15 @@ from semantic.characteristics import SemanticDataCharacteristics
 from semantic.collectors.mime.data_model import SemanticMimeDataModel
 from semantic.collectors.semantic_collector import SemanticCollector
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoSemanticMimeType(SemanticCollector):
     """This class implements a semantic collector for detecting file MIME types from content."""
 
-    def __init__(self, **kwargs):
-        """Initialize the semantic MIME type detector"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the semantic MIME type detector."""
         self._name = "Content-Based MIME Type Detector"
         self._provider_id = uuid.UUID("8d7c1e9f-6a3b-4f7d-9e2c-5a1b8d6f3c4e")
         self._mime_cache = {}  # Cache of detected MIME types by file_path
@@ -363,7 +368,7 @@ class IndalekoSemanticMimeType(SemanticCollector):
         return mime_model.model_dump()
 
     def get_collector_characteristics(self) -> list[SemanticDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             SemanticDataCharacteristics.SEMANTIC_DATA_FILE_TYPE,
             MimeDataCharacteristics.SEMANTIC_MIME_TYPE,
@@ -381,11 +386,11 @@ class IndalekoSemanticMimeType(SemanticCollector):
         ]
 
     def get_collector_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_collector_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
@@ -406,7 +411,7 @@ class IndalekoSemanticMimeType(SemanticCollector):
         )
 
     def get_collector_description(self) -> str:
-        """Get the description of the collector"""
+        """Get the description of the collector."""
         return """This collector detects MIME types of files based on content analysis:
         - Uses libmagic for content-based detection
         - Compares against extension-based MIME type
@@ -416,7 +421,7 @@ class IndalekoSemanticMimeType(SemanticCollector):
         - Extracts format-specific metadata where possible"""
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the collector"""
+        """Get the JSON schema for the collector."""
         return {
             "type": "object",
             "properties": {
@@ -447,7 +452,7 @@ class IndalekoSemanticMimeType(SemanticCollector):
 
 # Unit tests
 class TestMimeTypeDetector(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         # Create test files of different types
         with open("test_text.txt", "w", encoding="utf-8") as f:
             f.write("This is a plain text file for testing MIME type detection.")
@@ -461,56 +466,43 @@ class TestMimeTypeDetector(unittest.TestCase):
         with open("test_binary.bin", "wb") as f:
             f.write(b"\x00\x01\x02\x03\x04")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         # Clean up test files
         for filename in ["test_text.txt", "test_html.html", "test_binary.bin"]:
             if os.path.exists(filename):
                 os.remove(filename)
 
-    def test_mime_detection(self):
-        """Test MIME type detection"""
+    def test_mime_detection(self) -> None:
+        """Test MIME type detection."""
         detector = IndalekoSemanticMimeType()
 
         # Test text file
         text_mime = detector.detect_mime_type("test_text.txt")
-        self.assertTrue(text_mime["mime_type"].startswith("text/"))
-        self.assertEqual(text_mime["mime_type_from_extension"], "text/plain")
+        assert text_mime["mime_type"].startswith("text/")
+        assert text_mime["mime_type_from_extension"] == "text/plain"
 
         # Test HTML file
         html_mime = detector.detect_mime_type("test_html.html")
-        self.assertTrue(
-            html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain",
-        )  # Some magic implementations detect HTML as plain text
-        self.assertEqual(html_mime["mime_type_from_extension"], "text/html")
+        assert html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain"  # Some magic implementations detect HTML as plain text
+        assert html_mime["mime_type_from_extension"] == "text/html"
 
         # Test binary file
         binary_mime = detector.detect_mime_type("test_binary.bin")
-        self.assertTrue(
-            binary_mime["mime_type"].startswith("application/") or binary_mime["mime_type"] == "text/plain",
-        )  # Small binary files might be detected as text
+        assert binary_mime["mime_type"].startswith("application/") or binary_mime["mime_type"] == "text/plain"  # Small binary files might be detected as text
 
-    def test_collector_initialization(self):
-        """Test collector initialization"""
+    def test_collector_initialization(self) -> None:
+        """Test collector initialization."""
         detector = IndalekoSemanticMimeType()
-        self.assertEqual(
-            detector.get_collector_name(),
-            "Content-Based MIME Type Detector",
-        )
-        self.assertEqual(
-            detector.get_collector_id(),
-            uuid.UUID("8d7c1e9f-6a3b-4f7d-9e2c-5a1b8d6f3c4e"),
-        )
+        assert detector.get_collector_name() == "Content-Based MIME Type Detector"
+        assert detector.get_collector_id() == uuid.UUID("8d7c1e9f-6a3b-4f7d-9e2c-5a1b8d6f3c4e")
 
         # Test with custom name and provider_id
         custom_detector = IndalekoSemanticMimeType(
             name="Custom MIME Detector",
             provider_id=uuid.UUID("22222222-2222-2222-2222-222222222222"),
         )
-        self.assertEqual(custom_detector._name, "Custom MIME Detector")
-        self.assertEqual(
-            custom_detector._provider_id,
-            uuid.UUID("22222222-2222-2222-2222-222222222222"),
-        )
+        assert custom_detector._name == "Custom MIME Detector"
+        assert custom_detector._provider_id == uuid.UUID("22222222-2222-2222-2222-222222222222")
 
 
 if __name__ == "__main__":

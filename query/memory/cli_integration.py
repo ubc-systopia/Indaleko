@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.memory.archivist_memory import ArchivistMemory
+
 
 # Import Query Context Integration components if available
 try:
@@ -46,11 +49,9 @@ except ImportError:
 
 
 class ArchivistCliIntegration:
-    """
-    Integrates Archivist memory capabilities with the Indaleko Query CLI.
-    """
+    """Integrates Archivist memory capabilities with the Indaleko Query CLI."""
 
-    def __init__(self, cli_instance, archivist_memory=None):
+    def __init__(self, cli_instance, archivist_memory=None) -> None:
         """
         Initialize the CLI integration for Archivist memory.
 
@@ -100,7 +101,7 @@ class ArchivistCliIntegration:
             "/query-insights": self.view_query_insights,
         }
 
-    def handle_command(self, command):
+    def handle_command(self, command) -> bool:
         """
         Handle a memory-related command.
 
@@ -120,23 +121,12 @@ class ArchivistCliIntegration:
 
         return False
 
-    def show_memory_help(self, args):
+    def show_memory_help(self, args) -> None:
         """Show help for memory commands."""
-        print("\nArchivist Memory Commands:")
-        print("-------------------------")
-        print("/memory         - Show this help message")
-        print("/forward        - Generate a forward prompt for the next session")
-        print("/load           - Load a forward prompt from a previous session")
-        print("/goals          - Manage long-term goals")
-        print("/insights       - View insights about search patterns")
-        print("/topics         - View topics of interest")
-        print("/strategies     - View effective search strategies")
-        print("/save           - Save the current memory state")
-
         if HAS_QUERY_CONTEXT:
-            print("/query-insights - View insights from Query Context Integration")
+            pass
 
-    def generate_forward_prompt(self, args):
+    def generate_forward_prompt(self, args) -> None:
         """Generate and display a forward prompt."""
         # Update memory with recent query history first
         if hasattr(self.cli, "query_history"):
@@ -147,18 +137,14 @@ class ArchivistCliIntegration:
 
         # Generate and display prompt
         prompt = self.memory.generate_forward_prompt()
-        print("\nGenerated Forward Prompt:")
-        print("=========================")
-        print(prompt)
 
         # Save to file if requested
         if args and args.lower().startswith("save"):
             filename = args.split(maxsplit=1)[1] if len(args.split()) > 1 else "archivist_prompt.txt"
             with open(filename, "w") as f:
                 f.write(prompt)
-            print(f"\nPrompt saved to {filename}")
 
-    def load_forward_prompt(self, args):
+    def load_forward_prompt(self, args) -> None:
         """Load a forward prompt."""
         if args:
             # Load from file
@@ -166,15 +152,11 @@ class ArchivistCliIntegration:
                 with open(args) as f:
                     prompt = f.read()
                 self.memory.update_from_forward_prompt(prompt)
-                print(f"Forward prompt loaded from {args}")
                 self.memory.save_memory()
-            except Exception as e:
-                print(f"Error loading prompt: {e}")
+            except Exception:
+                pass
         else:
             # Interactive load
-            print(
-                "Enter or paste the forward prompt, end with a line containing only '---':",
-            )
             lines = []
             while True:
                 line = input()
@@ -185,10 +167,9 @@ class ArchivistCliIntegration:
             if lines:
                 prompt = "\n".join(lines)
                 self.memory.update_from_forward_prompt(prompt)
-                print("Forward prompt loaded")
                 self.memory.save_memory()
 
-    def manage_goals(self, args):
+    def manage_goals(self, args) -> None:
         """Interface for managing long-term goals."""
         if args:
             # Handle sub-commands
@@ -201,10 +182,9 @@ class ArchivistCliIntegration:
                 if len(goal_parts) == 2:
                     name, description = goal_parts
                     self.memory.add_long_term_goal(name, description)
-                    print(f"Goal '{name}' added")
                     self.memory.save_memory()
                 else:
-                    print("Usage: /goals add NAME - DESCRIPTION")
+                    pass
 
             elif subcmd == "progress" and len(parts) > 1:
                 # Update goal progress
@@ -214,103 +194,68 @@ class ArchivistCliIntegration:
                     try:
                         progress = float(progress_str) / 100.0
                         self.memory.update_goal_progress(name, progress)
-                        print(f"Goal '{name}' progress updated to {progress_str}%")
                         self.memory.save_memory()
                     except ValueError:
-                        print("Progress must be a number between 0 and 100")
+                        pass
                 else:
-                    print("Usage: /goals progress NAME PERCENTAGE")
+                    pass
             else:
-                print(
-                    "Unknown goals command. Use /goals without arguments to view goals.",
-                )
+                pass
         else:
             # Display goals
             goals = self.memory.memory.long_term_goals
             if not goals:
-                print("No long-term goals defined")
-                print("Use '/goals add NAME - DESCRIPTION' to add a goal")
                 return
 
-            print("\nLong-Term Goals:")
-            print("---------------")
-            for i, goal in enumerate(goals, 1):
-                print(f"{i}. {goal.name} - {goal.progress*100:.0f}% complete")
-                print(f"   {goal.description}")
-                print(
-                    f"   Last updated: {goal.last_updated.strftime('%Y-%m-%d %H:%M')}",
-                )
-                print()
+            for _i, _goal in enumerate(goals, 1):
+                pass
 
-            print("\nCommands:")
-            print("  /goals add NAME - DESCRIPTION  # Add a new goal")
-            print("  /goals progress NAME PERCENTAGE # Update goal progress")
 
-    def view_insights(self, args):
+    def view_insights(self, args) -> None:
         """View insights about search patterns."""
         insights = self.memory.memory.insights
         if not insights:
-            print("No insights recorded yet")
             return
 
         insights = sorted(insights, key=lambda x: x.confidence, reverse=True)
 
-        print("\nSearch Insights:")
-        print("--------------")
-        for i, insight in enumerate(insights, 1):
-            print(f"{i}. {insight.insight}")
-            print(
-                f"   Category: {insight.category}, Confidence: {insight.confidence:.2f}, Impact: {insight.impact}",
-            )
+        for _i, insight in enumerate(insights, 1):
             if insight.supporting_evidence:
-                print(f"   Evidence: {', '.join(insight.supporting_evidence[:3])}")
-            print()
+                pass
 
-    def view_topics(self, args):
+    def view_topics(self, args) -> None:
         """View topics of interest."""
         topics = self.memory.memory.semantic_topics
         if not topics:
-            print("No topics of interest recorded yet")
             return
 
-        print("\nTopics of Interest:")
-        print("-----------------")
-        for topic, importance in sorted(
+        for _topic, _importance in sorted(
             topics.items(),
             key=lambda x: x[1],
             reverse=True,
         ):
-            print(f"- {topic}: {importance:.2f}")
+            pass
 
-    def view_strategies(self, args):
+    def view_strategies(self, args) -> None:
         """View effective search strategies."""
         strategies = self.memory.memory.effective_strategies
         if not strategies:
-            print("No effective strategies recorded yet")
             return
 
-        print("\nEffective Search Strategies:")
-        print("---------------------------")
         for strategy in sorted(strategies, key=lambda x: x.success_rate, reverse=True):
-            print(f"- {strategy.strategy_name}: {strategy.description}")
-            print(f"  Success rate: {strategy.success_rate:.2f}")
             if strategy.applicable_contexts:
-                print(f"  Applicable for: {', '.join(strategy.applicable_contexts)}")
-            print()
+                pass
 
-    def save_memory(self, args):
+    def save_memory(self, args) -> None:
         """Save the current memory state."""
         self.memory.save_memory()
-        print("Memory state saved to database")
 
-    def view_query_insights(self, args):
+    def view_query_insights(self, args) -> None:
         """View insights from Query Context Integration."""
         if not HAS_QUERY_CONTEXT:
-            print("Query Context Integration is not available.")
             return
 
         if not self.query_context_provider or not self.query_navigator:
-            print("Query Context Integration components not initialized.")
             return
 
         # Get recent query activities
@@ -318,22 +263,15 @@ class ArchivistCliIntegration:
             limit=10,
         )
         if not recent_activities:
-            print("No query activities found.")
             return
 
         # Display query history summary
-        print("\nRecent Query Activity:")
-        print("--------------------")
-        for i, activity in enumerate(recent_activities, 1):
-            timestamp = activity.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            result_count = "Unknown"
+        for _i, activity in enumerate(recent_activities, 1):
+            activity.timestamp.strftime("%Y-%m-%d %H:%M:%S")
             if activity.result_count is not None:
-                result_count = str(activity.result_count)
+                str(activity.result_count)
 
-            relationship = activity.relationship_type or "initial"
 
-            print(f"{i}. [{timestamp}] {activity.query_text}")
-            print(f"   Results: {result_count}, Relationship: {relationship}")
 
             # If this query has a previous query, show the relationship
             if activity.previous_query_id:
@@ -341,14 +279,11 @@ class ArchivistCliIntegration:
                     activity.previous_query_id,
                 )
                 if prev_activity:
-                    print(f"   Previous query: {prev_activity.query_text}")
+                    pass
 
-            print()
 
         # Check if query paths should be analyzed
         if self.query_navigator and args and "analyze" in args:
-            print("\nQuery Path Analysis:")
-            print("------------------")
 
             # Get the most recent query activity
             latest_activity = recent_activities[0]
@@ -359,15 +294,13 @@ class ArchivistCliIntegration:
                 max_depth=5,
             )
             if path:
-                print("Query exploration path:")
-                for i, step in enumerate(path, 1):
-                    rel = step.get("relationship_type", "initial")
-                    query = step.get("query_text", "Unknown")
-                    timestamp = datetime.fromisoformat(
+                for _i, step in enumerate(path, 1):
+                    step.get("relationship_type", "initial")
+                    step.get("query_text", "Unknown")
+                    datetime.fromisoformat(
                         step.get("timestamp", datetime.now().isoformat()),
                     ).strftime("%H:%M:%S")
 
-                    print(f"{i}. [{timestamp}] {query} ({rel})")
 
                 # Get branches if any
                 if len(path) > 1:
@@ -378,12 +311,9 @@ class ArchivistCliIntegration:
                             max_depth=3,
                         )
                         if len(branches) > 1:  # If there are multiple branches
-                            print("\nAlternative exploration branches:")
-                            for i, branch in enumerate(branches, 1):
+                            for _i, branch in enumerate(branches, 1):
                                 if branch:  # Ensure branch is not empty
-                                    print(
-                                        f"Branch {i}: {' -> '.join([q.get('query_text', 'Unknown') for q in branch[:3]])}",
-                                    )
+                                    pass
 
             # Add query patterns to Archivist memory
             if self.memory:
@@ -406,11 +336,10 @@ class ArchivistCliIntegration:
 
                 # Save memory updates
                 self.memory.save_memory()
-                print("\nQuery patterns have been added to Archivist memory.")
 
         # Show help for analysis options
         if not args:
-            print("\nFor detailed analysis, use: /query-insights analyze")
+            pass
 
     def _add_query_pattern_to_memory(
         self,
@@ -418,7 +347,7 @@ class ArchivistCliIntegration:
         description,
         examples,
         frequency,
-    ):
+    ) -> None:
         """Add a query pattern to the Archivist memory."""
         if not self.memory:
             return
@@ -444,7 +373,7 @@ class ArchivistCliIntegration:
         # Also add as insight
         self.memory.add_insight("query_behavior", description, confidence=0.7)
 
-    def update_from_session(self, query_history):
+    def update_from_session(self, query_history) -> None:
         """
         Update the memory with information from the current session.
 

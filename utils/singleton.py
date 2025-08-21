@@ -31,22 +31,21 @@ class IndalekoSingleton:
         """Create an instance of the IndalekoSingleton class."""
         if cls._instance is None:
             try:
-                cls._instance = super(IndalekoSingleton, cls).__new__(
+                cls._instance = super().__new__(
                     cls,
                     *args,
                     **kwargs,
                 )
             except TypeError:  # in case base class doesn't take any arguments
-                cls._instance = super(IndalekoSingleton, cls).__new__(cls)
+                cls._instance = super().__new__(cls)
         return cls._instance
 
 
-def main():
+def main() -> None:
     """Test the IndalekoSingleton class."""
     instance1 = IndalekoSingleton()
     instance2 = IndalekoSingleton()
     assert instance1 == instance2, "IndalekoSingleton is not a singleton."
-    print("IndalekoSingleton is a singleton.")
 
 
 if __name__ == "__main__":

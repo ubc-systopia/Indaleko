@@ -1,5 +1,5 @@
 """
-IndalekoDropboxRecorder.py
+IndalekoDropboxRecorder.py.
 
 This script is used to ingest the files that have been indexed from Dropbox.  It
 will create a JSONL file with the ingested metadata suitable for uploading to
@@ -29,6 +29,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -52,13 +53,12 @@ from utils.misc.file_name_management import (
     find_candidate_files,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
-    """
-    This class handles ingestion of metadata from the Indaleko Dropbox indexer.
-    """
+    """This class handles ingestion of metadata from the Indaleko Dropbox indexer."""
 
     dropbox_recorder_uuid = "389ce9e0-3924-4cd1-be8d-5dc4b268e668"
     dropbox_recorder_service = {
@@ -177,10 +177,7 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         elif path.endswith(name):
             path = os.path.dirname(path)
             assert len(path) < len(data["path_display"])
-            if len(path) == 1 and path[0] == "/":
-                test_path = path + name
-            else:
-                test_path = path + "/" + name
+            test_path = path + name if len(path) == 1 and path[0] == "/" else path + "/" + name
             assert test_path == data["path_display"], f'test_path: {test_path}, path_display: {data["path_display"]}'
         else:
             # unexpected, so let's dump some data
@@ -227,8 +224,7 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             "PosixFileAttributes": posix_file_attributes,
             "WindowsFileAttributes": windows_file_attributes,
         }
-        obj = IndalekoObject(**kwargs)
-        return obj
+        return IndalekoObject(**kwargs)
 
 
 def main() -> None:

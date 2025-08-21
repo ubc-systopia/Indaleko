@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import datetime, timedelta
 
-from tabulate import tabulate
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,18 +32,19 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from archivist.database_optimizer import DatabaseOptimizer
 from query.memory.archivist_memory import ArchivistMemory
+
 
 # pylint: enable=wrong-import-position
 
 
 class DatabaseOptimizerCliIntegration:
-    """
-    CLI integration for the Archivist database optimizer.
-    """
+    """CLI integration for the Archivist database optimizer."""
 
-    def __init__(self, cli_instance, archivist_memory=None, database_optimizer=None):
+    def __init__(self, cli_instance, archivist_memory=None, database_optimizer=None) -> None:
         """
         Initialize the database optimizer CLI integration.
 
@@ -70,7 +71,7 @@ class DatabaseOptimizerCliIntegration:
             "/impact": self.show_impact,
         }
 
-    def handle_command(self, command):
+    def handle_command(self, command) -> bool:
         """
         Handle a database optimization command.
 
@@ -90,7 +91,7 @@ class DatabaseOptimizerCliIntegration:
 
         return False
 
-    def handle_optimize_command(self, args):
+    def handle_optimize_command(self, args) -> None:
         """
         Handle the main optimize command.
 
@@ -116,24 +117,12 @@ class DatabaseOptimizerCliIntegration:
         elif subcommand == "status":
             self._show_optimization_status()
         else:
-            print(f"Unknown subcommand: {subcommand}")
             self._show_optimize_help()
 
-    def _show_optimize_help(self):
+    def _show_optimize_help(self) -> None:
         """Show help for database optimization commands."""
-        print("\nDatabase Optimization Commands:")
-        print("------------------------------")
-        print("/optimize            - Show this help message")
-        print("/optimize analyze    - Analyze query patterns and suggest optimizations")
-        print("/optimize apply      - Apply recommended optimizations")
-        print("/optimize status     - Show optimization status")
-        print("/analyze             - Same as /optimize analyze")
-        print("/index               - Manage index recommendations")
-        print("/view                - Manage view recommendations")
-        print("/query               - Manage query optimizations")
-        print("/impact              - Show impact of applied optimizations")
 
-    def analyze_queries(self, args):
+    def analyze_queries(self, args) -> None:
         """
         Analyze query patterns and suggest optimizations.
 
@@ -144,22 +133,16 @@ class DatabaseOptimizerCliIntegration:
         days = 7  # Default to 7 days
 
         if args:
-            try:
+            with contextlib.suppress(ValueError, IndexError):
                 days = int(args.split()[0])
-            except (ValueError, IndexError):
-                print(f"Invalid days argument: {args}. Using default (7 days).")
 
-        print(f"\nAnalyzing query patterns from the past {days} days...")
         analysis = self.optimizer.analyze_query_patterns(timedelta(days=days))
 
         # Print summary
-        print(f"\nAnalyzed {analysis.get('analyzed_queries', 0)} queries.")
-        print(f"Found {len(analysis.get('slow_queries', []))} slow queries.")
 
         # Print index recommendations
         index_recs = analysis.get("index_recommendations", [])
         if index_recs:
-            print(f"\nIndex Recommendations ({len(index_recs)}):")
             recs_to_show = min(5, len(index_recs))  # Show top 5 by default
 
             table_data = []
@@ -168,26 +151,16 @@ class DatabaseOptimizerCliIntegration:
                     [i, rec.short_description(), f"{rec.estimated_impact:.2f}"],
                 )
 
-            print(
-                tabulate(
-                    table_data,
-                    headers=["#", "Recommendation", "Impact Score"],
-                    tablefmt="simple",
-                ),
-            )
 
             if len(index_recs) > recs_to_show:
-                print(f"...and {len(index_recs) - recs_to_show} more.")
+                pass
 
-            print("\nTo see all index recommendations, use '/index list'")
-            print("To create an index, use '/index create <number>'")
         else:
-            print("\nNo index recommendations.")
+            pass
 
         # Print view recommendations
         view_recs = analysis.get("view_recommendations", [])
         if view_recs:
-            print(f"\nView Recommendations ({len(view_recs)}):")
             recs_to_show = min(3, len(view_recs))  # Show top 3 by default
 
             table_data = []
@@ -196,26 +169,16 @@ class DatabaseOptimizerCliIntegration:
                     [i, rec.short_description(), f"{rec.estimated_impact:.2f}"],
                 )
 
-            print(
-                tabulate(
-                    table_data,
-                    headers=["#", "Recommendation", "Impact Score"],
-                    tablefmt="simple",
-                ),
-            )
 
             if len(view_recs) > recs_to_show:
-                print(f"...and {len(view_recs) - recs_to_show} more.")
+                pass
 
-            print("\nTo see all view recommendations, use '/view list'")
-            print("To create a view, use '/view create <number>'")
         else:
-            print("\nNo view recommendations.")
+            pass
 
         # Print query optimizations
         query_opts = analysis.get("query_optimizations", [])
         if query_opts:
-            print(f"\nQuery Optimization Recommendations ({len(query_opts)}):")
             opts_to_show = min(3, len(query_opts))  # Show top 3 by default
 
             table_data = []
@@ -224,22 +187,14 @@ class DatabaseOptimizerCliIntegration:
                     [i, opt.optimization_type, f"{opt.estimated_speedup:.1f}x"],
                 )
 
-            print(
-                tabulate(
-                    table_data,
-                    headers=["#", "Optimization Type", "Est. Speedup"],
-                    tablefmt="simple",
-                ),
-            )
 
             if len(query_opts) > opts_to_show:
-                print(f"...and {len(query_opts) - opts_to_show} more.")
+                pass
 
-            print("\nTo see all query optimizations, use '/query list'")
         else:
-            print("\nNo query optimization recommendations.")
+            pass
 
-    def _apply_recommendations(self, args):
+    def _apply_recommendations(self, args) -> None:
         """
         Apply recommended optimizations.
 
@@ -247,9 +202,6 @@ class DatabaseOptimizerCliIntegration:
             args: Command arguments
         """
         if not args:
-            print("Usage: /optimize apply <type> [count]")
-            print("Types: index, view, query, all")
-            print("Example: /optimize apply index 3")
             return
 
         opt_type = args[0].lower()
@@ -266,9 +218,9 @@ class DatabaseOptimizerCliIntegration:
             self._apply_index_recommendations(count)
             self._apply_view_recommendations(count)
         else:
-            print(f"Unknown optimization type: {opt_type}")
+            pass
 
-    def _apply_index_recommendations(self, count):
+    def _apply_index_recommendations(self, count) -> None:
         """
         Apply top N index recommendations.
 
@@ -280,27 +232,20 @@ class DatabaseOptimizerCliIntegration:
         index_recs = analysis.get("index_recommendations", [])
 
         if not index_recs:
-            print("No index recommendations available.")
             return
 
         # Apply top N recommendations
         applied_count = 0
-        for i, rec in enumerate(index_recs[:count], 1):
-            print(f"Creating index {i}/{count}: {rec.short_description()}")
+        for _i, rec in enumerate(index_recs[:count], 1):
             result = self.optimizer.create_index(rec)
 
-            if result["status"] == "success":
-                print(f"Success! Created index: {result['index_id']}")
-                applied_count += 1
-            elif result["status"] == "already_created":
-                print(f"Index already exists: {result['index_id']}")
+            if result["status"] == "success" or result["status"] == "already_created":
                 applied_count += 1
             else:
-                print(f"Error creating index: {result['message']}")
+                pass
 
-        print(f"\nApplied {applied_count} out of {count} index recommendations.")
 
-    def _apply_view_recommendations(self, count):
+    def _apply_view_recommendations(self, count) -> None:
         """
         Apply top N view recommendations.
 
@@ -312,40 +257,25 @@ class DatabaseOptimizerCliIntegration:
         view_recs = analysis.get("view_recommendations", [])
 
         if not view_recs:
-            print("No view recommendations available.")
             return
 
         # Apply top N recommendations
         applied_count = 0
-        for i, rec in enumerate(view_recs[:count], 1):
-            print(f"Creating view {i}/{count}: {rec.short_description()}")
+        for _i, rec in enumerate(view_recs[:count], 1):
             result = self.optimizer.create_view(rec)
 
-            if result["status"] == "success":
-                print(f"Success! Created view: {result['view_id']}")
-                applied_count += 1
-            elif result["status"] == "already_created":
-                print(f"View already exists: {result['view_id']}")
+            if result["status"] == "success" or result["status"] == "already_created":
                 applied_count += 1
             else:
-                print(f"Error creating view: {result['message']}")
+                pass
 
-        print(f"\nApplied {applied_count} out of {count} view recommendations.")
 
-    def _show_optimization_status(self):
+    def _show_optimization_status(self) -> None:
         """Show the current status of database optimizations."""
         status = self.optimizer.get_ongoing_optimizations()
 
-        print("\nDatabase Optimization Status:")
-        print("----------------------------")
-        print(f"Total optimizations applied: {status['total_optimizations']}")
-        print(f"- Index optimizations: {status['index_optimizations']}")
-        print(f"- View optimizations: {status['view_optimizations']}")
-        print(f"- Query optimizations: {status['query_optimizations']}")
-        print(f"Successful optimizations: {status['successful_optimizations']}")
 
         if status["recent_optimizations"]:
-            print("\nRecent Optimizations:")
 
             table_data = []
             for opt in status["recent_optimizations"]:
@@ -359,15 +289,8 @@ class DatabaseOptimizerCliIntegration:
                     ],
                 )
 
-            print(
-                tabulate(
-                    table_data,
-                    headers=["Type", "Description", "Applied At", "Impact"],
-                    tablefmt="simple",
-                ),
-            )
 
-    def manage_indexes(self, args):
+    def manage_indexes(self, args) -> None:
         """
         Manage index recommendations.
 
@@ -375,14 +298,6 @@ class DatabaseOptimizerCliIntegration:
             args: Command arguments
         """
         if not args:
-            print("Usage: /index <subcommand>")
-            print("Subcommands: list, create, info")
-            print("Examples:")
-            print("  /index list           - List all index recommendations")
-            print("  /index create 2       - Create the second index recommendation")
-            print(
-                "  /index info 3         - Show details about the third index recommendation",
-            )
             return
 
         parts = args.split()
@@ -395,27 +310,25 @@ class DatabaseOptimizerCliIntegration:
                 index_num = int(parts[1])
                 self._create_index(index_num)
             except ValueError:
-                print(f"Invalid index number: {parts[1]}")
+                pass
         elif subcommand == "info" and len(parts) > 1:
             try:
                 index_num = int(parts[1])
                 self._show_index_info(index_num)
             except ValueError:
-                print(f"Invalid index number: {parts[1]}")
+                pass
         else:
-            print(f"Unknown subcommand: {subcommand}")
+            pass
 
-    def _list_index_recommendations(self):
+    def _list_index_recommendations(self) -> None:
         """List all index recommendations."""
         # Get analysis
         analysis = self.optimizer.analyze_query_patterns()
         index_recs = analysis.get("index_recommendations", [])
 
         if not index_recs:
-            print("No index recommendations available.")
             return
 
-        print(f"\nIndex Recommendations ({len(index_recs)}):")
 
         table_data = []
         for i, rec in enumerate(index_recs, 1):
@@ -431,15 +344,8 @@ class DatabaseOptimizerCliIntegration:
                 ],
             )
 
-        print(
-            tabulate(
-                table_data,
-                headers=["#", "Collection", "Fields", "Type", "Impact", "Status"],
-                tablefmt="simple",
-            ),
-        )
 
-    def _create_index(self, index_num):
+    def _create_index(self, index_num) -> None:
         """
         Create a specific index recommendation.
 
@@ -451,28 +357,23 @@ class DatabaseOptimizerCliIntegration:
         index_recs = analysis.get("index_recommendations", [])
 
         if not index_recs:
-            print("No index recommendations available.")
             return
 
         if index_num < 1 or index_num > len(index_recs):
-            print(f"Invalid index number. Must be between 1 and {len(index_recs)}.")
             return
 
         # Get the recommendation
         rec = index_recs[index_num - 1]
 
         # Create the index
-        print(f"Creating index: {rec.short_description()}")
         result = self.optimizer.create_index(rec)
 
-        if result["status"] == "success":
-            print(f"Success! Created index: {result['index_id']}")
-        elif result["status"] == "already_created":
-            print(f"Index already exists: {result['index_id']}")
+        if result["status"] == "success" or result["status"] == "already_created":
+            pass
         else:
-            print(f"Error creating index: {result['message']}")
+            pass
 
-    def _show_index_info(self, index_num):
+    def _show_index_info(self, index_num) -> None:
         """
         Show detailed information about an index recommendation.
 
@@ -484,44 +385,29 @@ class DatabaseOptimizerCliIntegration:
         index_recs = analysis.get("index_recommendations", [])
 
         if not index_recs:
-            print("No index recommendations available.")
             return
 
         if index_num < 1 or index_num > len(index_recs):
-            print(f"Invalid index number. Must be between 1 and {len(index_recs)}.")
             return
 
         # Get the recommendation
         rec = index_recs[index_num - 1]
 
-        print(f"\nIndex Recommendation #{index_num}:")
-        print(f"Description: {rec.short_description()}")
-        print(f"Collection: {rec.collection}")
-        print(f"Fields: {', '.join(rec.fields)}")
-        print(f"Index Type: {rec.index_type}")
-        print(
-            f"Stored Values: {', '.join(rec.stored_values) if rec.stored_values else 'None'}",
-        )
-        print(f"Estimated Impact: {rec.estimated_impact:.2f}")
-        print(f"Status: {'Created' if rec.created else 'Pending'}")
 
         if rec.created:
-            print(f"Created At: {rec.creation_time}")
-            print(f"Index ID: {rec.index_id}")
+            pass
 
-        print(f"\nExplanation: {rec.explanation}")
 
         if rec.affected_queries:
-            print(f"\nAffected Queries: {len(rec.affected_queries)}")
-            for i, query_id in enumerate(rec.affected_queries[:3], 1):
+            for _i, query_id in enumerate(rec.affected_queries[:3], 1):
                 query = self.optimizer.query_history.get_query_by_id(query_id)
                 if query and hasattr(query, "Query"):
-                    print(f"  {i}. {query.Query[:100]}...")
+                    pass
 
             if len(rec.affected_queries) > 3:
-                print(f"  ...and {len(rec.affected_queries) - 3} more.")
+                pass
 
-    def manage_views(self, args):
+    def manage_views(self, args) -> None:
         """
         Manage view recommendations.
 
@@ -529,14 +415,6 @@ class DatabaseOptimizerCliIntegration:
             args: Command arguments
         """
         if not args:
-            print("Usage: /view <subcommand>")
-            print("Subcommands: list, create, info")
-            print("Examples:")
-            print("  /view list            - List all view recommendations")
-            print("  /view create 1        - Create the first view recommendation")
-            print(
-                "  /view info 2          - Show details about the second view recommendation",
-            )
             return
 
         parts = args.split()
@@ -549,27 +427,25 @@ class DatabaseOptimizerCliIntegration:
                 view_num = int(parts[1])
                 self._create_view(view_num)
             except ValueError:
-                print(f"Invalid view number: {parts[1]}")
+                pass
         elif subcommand == "info" and len(parts) > 1:
             try:
                 view_num = int(parts[1])
                 self._show_view_info(view_num)
             except ValueError:
-                print(f"Invalid view number: {parts[1]}")
+                pass
         else:
-            print(f"Unknown subcommand: {subcommand}")
+            pass
 
-    def _list_view_recommendations(self):
+    def _list_view_recommendations(self) -> None:
         """List all view recommendations."""
         # Get analysis
         analysis = self.optimizer.analyze_query_patterns()
         view_recs = analysis.get("view_recommendations", [])
 
         if not view_recs:
-            print("No view recommendations available.")
             return
 
-        print(f"\nView Recommendations ({len(view_recs)}):")
 
         table_data = []
         for i, rec in enumerate(view_recs, 1):
@@ -588,15 +464,8 @@ class DatabaseOptimizerCliIntegration:
                 ],
             )
 
-        print(
-            tabulate(
-                table_data,
-                headers=["#", "Name", "Collections", "Field Count", "Impact", "Status"],
-                tablefmt="simple",
-            ),
-        )
 
-    def _create_view(self, view_num):
+    def _create_view(self, view_num) -> None:
         """
         Create a specific view recommendation.
 
@@ -608,28 +477,23 @@ class DatabaseOptimizerCliIntegration:
         view_recs = analysis.get("view_recommendations", [])
 
         if not view_recs:
-            print("No view recommendations available.")
             return
 
         if view_num < 1 or view_num > len(view_recs):
-            print(f"Invalid view number. Must be between 1 and {len(view_recs)}.")
             return
 
         # Get the recommendation
         rec = view_recs[view_num - 1]
 
         # Create the view
-        print(f"Creating view: {rec.short_description()}")
         result = self.optimizer.create_view(rec)
 
-        if result["status"] == "success":
-            print(f"Success! Created view: {result['view_id']}")
-        elif result["status"] == "already_created":
-            print(f"View already exists: {result['view_id']}")
+        if result["status"] == "success" or result["status"] == "already_created":
+            pass
         else:
-            print(f"Error creating view: {result['message']}")
+            pass
 
-    def _show_view_info(self, view_num):
+    def _show_view_info(self, view_num) -> None:
         """
         Show detailed information about a view recommendation.
 
@@ -641,43 +505,32 @@ class DatabaseOptimizerCliIntegration:
         view_recs = analysis.get("view_recommendations", [])
 
         if not view_recs:
-            print("No view recommendations available.")
             return
 
         if view_num < 1 or view_num > len(view_recs):
-            print(f"Invalid view number. Must be between 1 and {len(view_recs)}.")
             return
 
         # Get the recommendation
         rec = view_recs[view_num - 1]
 
-        print(f"\nView Recommendation #{view_num}:")
-        print(f"Name: {rec.name}")
-        print(f"Collections: {', '.join(rec.collections)}")
-        print("Fields:")
-        for coll, fields in rec.fields.items():
-            print(f"  {coll}: {', '.join(fields)}")
+        for _coll, _fields in rec.fields.items():
+            pass
 
-        print(f"Estimated Impact: {rec.estimated_impact:.2f}")
-        print(f"Status: {'Created' if rec.created else 'Pending'}")
 
         if rec.created:
-            print(f"Created At: {rec.creation_time}")
-            print(f"View ID: {rec.view_id}")
+            pass
 
-        print(f"\nExplanation: {rec.explanation}")
 
         if rec.affected_queries:
-            print(f"\nAffected Queries: {len(rec.affected_queries)}")
-            for i, query_id in enumerate(rec.affected_queries[:3], 1):
+            for _i, query_id in enumerate(rec.affected_queries[:3], 1):
                 query = self.optimizer.query_history.get_query_by_id(query_id)
                 if query and hasattr(query, "Query"):
-                    print(f"  {i}. {query.Query[:100]}...")
+                    pass
 
             if len(rec.affected_queries) > 3:
-                print(f"  ...and {len(rec.affected_queries) - 3} more.")
+                pass
 
-    def optimize_queries(self, args):
+    def optimize_queries(self, args) -> None:
         """
         Manage query optimizations.
 
@@ -685,15 +538,6 @@ class DatabaseOptimizerCliIntegration:
             args: Command arguments
         """
         if not args:
-            print("Usage: /query <subcommand>")
-            print("Subcommands: list, info")
-            print("Examples:")
-            print(
-                "  /query list           - List all query optimization recommendations",
-            )
-            print(
-                "  /query info 2         - Show details about the second query optimization",
-            )
             return
 
         parts = args.split()
@@ -706,21 +550,19 @@ class DatabaseOptimizerCliIntegration:
                 query_num = int(parts[1])
                 self._show_query_optimization_info(query_num)
             except ValueError:
-                print(f"Invalid query number: {parts[1]}")
+                pass
         else:
-            print(f"Unknown subcommand: {subcommand}")
+            pass
 
-    def _list_query_optimizations(self):
+    def _list_query_optimizations(self) -> None:
         """List all query optimization recommendations."""
         # Get analysis
         analysis = self.optimizer.analyze_query_patterns()
         query_opts = analysis.get("query_optimizations", [])
 
         if not query_opts:
-            print("No query optimization recommendations available.")
             return
 
-        print(f"\nQuery Optimization Recommendations ({len(query_opts)}):")
 
         table_data = []
         for i, opt in enumerate(query_opts, 1):
@@ -737,15 +579,8 @@ class DatabaseOptimizerCliIntegration:
                 ],
             )
 
-        print(
-            tabulate(
-                table_data,
-                headers=["#", "Type", "Query", "Est. Speedup", "Status"],
-                tablefmt="simple",
-            ),
-        )
 
-    def _show_query_optimization_info(self, query_num):
+    def _show_query_optimization_info(self, query_num) -> None:
         """
         Show detailed information about a query optimization.
 
@@ -757,38 +592,24 @@ class DatabaseOptimizerCliIntegration:
         query_opts = analysis.get("query_optimizations", [])
 
         if not query_opts:
-            print("No query optimization recommendations available.")
             return
 
         if query_num < 1 or query_num > len(query_opts):
-            print(f"Invalid query number. Must be between 1 and {len(query_opts)}.")
             return
 
         # Get the recommendation
         opt = query_opts[query_num - 1]
 
-        print(f"\nQuery Optimization #{query_num}:")
-        print(f"Type: {opt.optimization_type}")
-        print(f"Estimated Speedup: {opt.estimated_speedup:.1f}x")
-        print(f"Status: {'Verified' if opt.verified else 'Pending'}")
 
         if opt.verified:
-            print(f"Actual Speedup: {opt.verification_speedup:.1f}x")
+            pass
 
-        print(f"\nExplanation: {opt.explanation}")
 
-        print("\nOriginal Query:")
-        print(
-            (opt.original_query[:200] + "..." if len(opt.original_query) > 200 else opt.original_query),
-        )
 
         if opt.optimized_query != opt.original_query:
-            print("\nOptimized Query:")
-            print(
-                (opt.optimized_query[:200] + "..." if len(opt.optimized_query) > 200 else opt.optimized_query),
-            )
+            pass
 
-    def show_impact(self, args):
+    def show_impact(self, args) -> None:
         """
         Show impact of applied optimizations.
 
@@ -799,40 +620,27 @@ class DatabaseOptimizerCliIntegration:
         status = self.optimizer.get_ongoing_optimizations()
 
         if status["total_optimizations"] == 0:
-            print("No optimizations have been applied yet.")
-            print("Use '/optimize apply' to apply recommended optimizations.")
             return
 
-        print("\nOptimization Impact Summary:")
-        print("--------------------------")
-        print(f"Total optimizations applied: {status['total_optimizations']}")
-        print(f"Successful optimizations: {status['successful_optimizations']}")
 
         # Get recent queries
-        print("\nRecent Query Performance:")
         recent_time = datetime.now() - timedelta(days=1)
         recent_queries = self.optimizer.query_history.get_queries_after(recent_time)
 
         if recent_queries:
             # Calculate average execution time
             total_time = sum(getattr(q, "ExecutionTimeMs", 0) for q in recent_queries)
-            avg_time = total_time / len(recent_queries)
+            total_time / len(recent_queries)
 
             # Count slow queries
             slow_threshold = 500  # ms
-            slow_count = sum(1 for q in recent_queries if getattr(q, "ExecutionTimeMs", 0) > slow_threshold)
+            sum(1 for q in recent_queries if getattr(q, "ExecutionTimeMs", 0) > slow_threshold)
 
-            print(f"Recent queries (24h): {len(recent_queries)}")
-            print(f"Average execution time: {avg_time:.2f} ms")
-            print(
-                f"Slow queries (>{slow_threshold} ms): {slow_count} ({slow_count/len(recent_queries)*100:.1f}%)",
-            )
         else:
-            print("No recent queries found.")
+            pass
 
         # Show recent optimizations with impact
         if status["recent_optimizations"]:
-            print("\nRecent Optimization Impact:")
 
             table_data = []
             for opt in status["recent_optimizations"]:
@@ -859,13 +667,6 @@ class DatabaseOptimizerCliIntegration:
                     [opt["type"], opt["description"], impact_text, evaluation],
                 )
 
-            print(
-                tabulate(
-                    table_data,
-                    headers=["Type", "Description", "Impact", "Evaluation"],
-                    tablefmt="simple",
-                ),
-            )
 
 
 def register_with_cli(cli_instance):
@@ -907,7 +708,7 @@ def register_with_cli(cli_instance):
     return integration
 
 
-def main():
+def main() -> None:
     """Test the database optimizer CLI integration."""
     # This would normally be called from the CLI
 

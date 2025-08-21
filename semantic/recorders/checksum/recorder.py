@@ -26,6 +26,7 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
 
 
@@ -50,11 +51,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Indaleko imports
 import semantic.recorders.checksum.characteristics as ChecksumDataCharacteristics
+
+from Indaleko import Indaleko
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from Indaleko import Indaleko
 from semantic.collectors.checksum.checksum import (
     IndalekoSemanticChecksums,
     compute_checksums,
@@ -74,7 +76,7 @@ class ChecksumRecorder:
     # Unique identifier for this recorder
     recorder_uuid = "de7ff1c7-2550-4cb3-9538-775f9464746e"
 
-    def __init__(self, output_path: str | None = None):
+    def __init__(self, output_path: str | None = None) -> None:
         """
         Initialize the checksum recorder.
 
@@ -225,7 +227,6 @@ class ChecksumRecorder:
                 # Progress reporting
                 current_percent = int((i / total_files) * 100)
                 if current_percent > last_percent and current_percent % 5 == 0:
-                    print(f"Progress: {current_percent}% ({i}/{total_files})")
                     last_percent = current_percent
 
                 if "path" not in file_info or "object_id" not in file_info:
@@ -250,10 +251,6 @@ class ChecksumRecorder:
         logging.info(
             f"Batch processing complete. Processed: {processed_count}, Errors: {error_count}",
         )
-        print(
-            f"Processing complete. Processed: {processed_count}, Errors: {error_count}",
-        )
-        print(f"Output file: {self.output_file}")
 
     def process_directory(self, directory_path: str, recursive: bool = True) -> None:
         """
@@ -263,14 +260,12 @@ class ChecksumRecorder:
             directory_path: Path to the directory
             recursive: Whether to process subdirectories
         """
-        print(f"Processing directory: {directory_path}, recursive: {recursive}")
         logging.info(f"Processing directory: {directory_path}, recursive: {recursive}")
 
         file_list = []
 
-        print("Discovering files...")
         # First, discover all files
-        for root, dirs, files in os.walk(directory_path):
+        for root, _dirs, files in os.walk(directory_path):
             for file in files:
                 file_path = os.path.join(root, file)
                 # Skip files that can't be read or don't exist
@@ -287,7 +282,6 @@ class ChecksumRecorder:
             if not recursive:
                 break
 
-        print(f"Found {len(file_list)} files. Beginning checksum computation...")
         self.batch_process_files(file_list)
 
     def upload_to_database(self, db_config: dict[str, Any] | None = None) -> None:
@@ -303,7 +297,7 @@ class ChecksumRecorder:
         logging.info(f"Data ready for upload at: {self.output_file}")
 
 
-def main():
+def main() -> None:
     """Main entry point for the checksum recorder."""
     parser = argparse.ArgumentParser(description="Indaleko Multi-Checksum Recorder")
 
@@ -356,10 +350,8 @@ def main():
         if file_data:
             with open(recorder.output_file, "w", encoding="utf-8") as f:
                 f.write(json.dumps(file_data, cls=IndalekoJSONEncoder) + "\n")
-            print(f"File processed successfully: {args.path}")
-            print(f"Output saved to: {recorder.output_file}")
         else:
-            print(f"Error processing file: {args.path}")
+            pass
 
     elif args.command == "directory":
         recorder.process_directory(args.path, args.recursive)

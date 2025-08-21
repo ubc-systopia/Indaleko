@@ -80,12 +80,8 @@ class InterfaceBase(ABC):
 
     @abstractmethod
     def initialize(self) -> None:
-        """
-        Perform any necessary initialization for the interface.
-        """
+        """Perform any necessary initialization for the interface."""
 
     @abstractmethod
     def cleanup(self) -> None:
-        """
-        Perform any necessary cleanup when closing the interface.
-        """
+        """Perform any necessary cleanup when closing the interface."""

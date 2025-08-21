@@ -21,12 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
+
 from datetime import UTC, datetime
 
 # third-party imports
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,13 +41,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class UnstructuredInputDataModel(IndalekoBaseModel):
-    """
-    This class defines the input data model for the unstructured data collector.
-    """
+    """This class defines the input data model for the unstructured data collector."""
 
     ObjectIdentifier: UUID = Field(
         ...,
@@ -87,7 +88,7 @@ class UnstructuredInputDataModel(IndalekoBaseModel):
         return value
 
 
-def main():
+def main() -> None:
     """This is the main handler for the Indaleko unstructured data collector."""
     UnstructuredInputDataModel.test_model_main()
 

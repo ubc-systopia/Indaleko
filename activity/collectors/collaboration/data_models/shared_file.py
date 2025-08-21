@@ -25,6 +25,7 @@ import sys
 from icecream import ic
 from pydantic import Field, HttpUrl
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -36,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.collaboration.data_models.collaboration_data_model import (
     BaseCollaborationDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -49,7 +51,7 @@ class SharedFileData(BaseCollaborationDataModel):
     class Config:
         @staticmethod
         def generate_example():
-            """Generate an example for the data model"""
+            """Generate an example for the data model."""
             example = BaseCollaborationDataModel.Config.json_schema_extra["example"]
             example["filename"] = "example.pdf"
             example["url"] = "https://cdn.discordapp.com/..."
@@ -60,8 +62,8 @@ class SharedFileData(BaseCollaborationDataModel):
         json_schema_extra = {"example": generate_example()}
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     ic(SharedFileData.Config.json_schema_extra)
     SharedFileData.test_model_main()
 

@@ -24,6 +24,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,22 +35,19 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.location_data_model import BaseLocationDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class WiFiLocationDataModel(BaseLocationDataModel):
-    """
-    This class defines the data model for the WiFi-based location activity data provider.
-    """
+    """This class defines the data model for the WiFi-based location activity data provider."""
 
     class Config(BaseLocationDataModel.Config):
-        """
-        This class defines the configuration for the WiFi-based location activity data provider.
-        """
+        """This class defines the configuration for the WiFi-based location activity data provider."""
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     data = WiFiLocationDataModel.get_example()
     ic(data)
     ic(dir(data))

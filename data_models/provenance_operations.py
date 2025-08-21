@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from enum import Enum
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,9 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class ProvenanceOperations(str, Enum):
-    """
-    This class defines the data model for the Indaleko provenance operations.
-    """
+    """This class defines the data model for the Indaleko provenance operations."""
 
     PROVENANCE_ATTRIBUTES_SAVED_TO = ""
     PROVENANCE_ATTRIBUTES_ATTACHED_TO_EMAIL = ""

@@ -18,12 +18,13 @@ import random
 import struct
 import sys
 import time
+
 from ctypes import *
 from datetime import datetime
 
+
 # Check if running on Windows
 if not sys.platform.startswith("win"):
-    print("ERROR: This script only works on Windows.")
     sys.exit(1)
 
 # Try to import pywin32 modules
@@ -33,8 +34,6 @@ try:
     import win32con
     import win32file
 except ImportError:
-    print("ERROR: This script requires the pywin32 package.")
-    print("Install it with: pip install pywin32")
     sys.exit(1)
 
 # Define Windows constants directly in case they're missing from pywin32
@@ -78,17 +77,15 @@ def create_test_file(volume):
             f.write(f"Test file created at {datetime.now()}\n")
             f.write(f"Random data: {random.randint(1000, 9999)}\n")
 
-        print(f"Created test file: {filename}")
         return filename
-    except Exception as e:
-        print(f"Error creating test file: {e}")
+    except Exception:
         return None
 
 
 def get_volume_handle(volume):
     """Get a handle to the volume."""
     # Clean up volume name
-    if volume.endswith("\\") or volume.endswith("/"):
+    if volume.endswith(("\\", "/")):
         volume = volume[:-1]
 
     # Try different volume path formats
@@ -101,8 +98,7 @@ def get_volume_handle(volume):
 
     for format in formats:
         try:
-            print(f"Trying to open volume with path: {format}")
-            handle = win32file.CreateFile(
+            return win32file.CreateFile(
                 format,
                 win32file.GENERIC_READ | win32file.GENERIC_WRITE,
                 win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE,
@@ -111,10 +107,8 @@ def get_volume_handle(volume):
                 win32file.FILE_ATTRIBUTE_NORMAL,
                 None,
             )
-            print(f"SUCCESS: Opened volume with path: {format}")
-            return handle
-        except Exception as e:
-            print(f"Failed to open volume with path {format}: {e}")
+        except Exception:
+            pass
 
     return None
 
@@ -122,11 +116,9 @@ def get_volume_handle(volume):
 def get_usn_info(handle):
     """Get USN journal information using direct DeviceIoControl calls."""
     if not handle:
-        print("ERROR: Invalid volume handle")
         return None
 
     try:
-        print("Querying USN journal using direct DeviceIoControl...")
         # Create a buffer to receive the USN journal data
         buffer_out = bytearray(1024)
 
@@ -138,7 +130,6 @@ def get_usn_info(handle):
             buffer_out,
         )
 
-        print("SUCCESS: USN journal query successful")
 
         # Parse the result (this is simplified, in a real implementation we'd parse more fields)
         # The format is complex, but we'll capture the basic info
@@ -163,11 +154,9 @@ def get_usn_info(handle):
             info["NextUsn"] = 0
 
         return info
-    except Exception as e:
-        print(f"Failed to query USN journal: {e}")
+    except Exception:
 
         try:
-            print("Trying to create USN journal...")
             # Initialize the USN journal with a max size of 32MB and delta of 4MB
             max_size = 32 * 1024 * 1024
             allocation_delta = 4 * 1024 * 1024
@@ -180,23 +169,19 @@ def get_usn_info(handle):
                 0,  # No output data expected
             )
 
-            print("SUCCESS: USN journal created")
 
             # Now try to query it again
             return get_usn_info(handle)
-        except Exception as e2:
-            print(f"Failed to create USN journal: {e2}")
+        except Exception:
             return None
 
 
 def get_usn_data(handle, journal_id, first_usn):
     """Read data from the USN journal."""
     if not handle:
-        print("ERROR: Invalid volume handle")
         return None, []
 
     try:
-        print(f"Reading USN journal (ID: {journal_id}, USN: {first_usn})...")
 
         # Create the input buffer using win32file.GetUsn if available, otherwise build it manually
         try:
@@ -218,17 +203,14 @@ def get_usn_data(handle, journal_id, first_usn):
         )
 
         if not result or len(result) < 8:
-            print("WARNING: No data returned from USN journal")
             return first_usn, []
 
         # The first 8 bytes should be the next USN
         next_usn = struct.unpack("<Q", result[:8])[0]
-        print(f"Next USN: {next_usn}")
 
         # The rest of the data contains USN records, but parsing them requires
         # detailed knowledge of the structure, which is complex.
         # In a full implementation, we'd parse this data into usable records.
-        print(f"Read {len(result) - 8} bytes of USN record data")
 
         # For now we'll return the raw data and next USN
         # In practice you'd want to parse this into structured records
@@ -237,94 +219,68 @@ def get_usn_data(handle, journal_id, first_usn):
                 "raw_data": "USN records received but not parsed in this simple implementation",
             },
         ]
-    except Exception as e:
-        print(f"Failed to read USN journal: {e}")
+    except Exception:
         return first_usn, []
 
 
-def main():
+def main() -> int | None:
     """Main function."""
     # Get volume from command line
     if len(sys.argv) < 2:
-        print("Usage: python debug_usn_journal_direct.py <volume>")
-        print("Example: python debug_usn_journal_direct.py C:")
         return 1
 
     volume = sys.argv[1]
-    print(f"Debugging USN journal for volume: {volume}")
 
     # Open volume
     handle = get_volume_handle(volume)
     if handle is None:
-        print(
-            "ERROR: Could not open volume. Try running with administrator privileges.",
-        )
         return 1
 
     try:
         # Get USN journal info
         journal_info = get_usn_info(handle)
         if journal_info is None:
-            print("ERROR: Could not get USN journal information.")
             return 1
 
         # Display journal info
-        print("\nUSN Journal Information:")
-        for key, value in journal_info.items():
-            print(f"  {key}: {value}")
+        for _key, _value in journal_info.items():
+            pass
 
         # Get starting USN
         journal_id = journal_info["UsnJournalID"]
         first_usn = journal_info["FirstUsn"]
 
         # Create a test file to generate activity
-        print("\nCreating test file to generate USN journal activity...")
         create_test_file(volume)
 
         # Wait a moment for the journal to update
-        print("Waiting for USN journal to update...")
         time.sleep(1)
 
         # Read USN records
-        print("\nReading USN journal records...")
         next_usn, records = get_usn_data(handle, journal_id, first_usn)
 
         # Create another test file
-        print("\nCreating another test file...")
         create_test_file(volume)
 
         # Wait a moment
         time.sleep(1)
 
         # Read more records
-        print("\nReading more USN journal records...")
         next_usn, more_records = get_usn_data(handle, journal_id, next_usn)
 
-        print("\nUSN journal direct access check complete.")
-        print(
-            "Results: We were able to open the volume and query/create the USN journal.",
-        )
-        print(
-            "         We have confirmed direct access to the USN journal is possible.",
-        )
-        print(
-            "         The full parsing of USN records would require more complex code.",
-        )
 
         return 0
     finally:
         # Close volume handle
         if handle:
             win32file.CloseHandle(handle)
-            print("Closed volume handle.")
 
 
 if __name__ == "__main__":
     try:
         exit_code = main()
         sys.exit(exit_code)
-    except Exception as e:
-        print(f"Unhandled error: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

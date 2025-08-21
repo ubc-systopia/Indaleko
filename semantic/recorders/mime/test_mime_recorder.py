@@ -24,6 +24,7 @@ import sys
 import tempfile
 import unittest
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from semantic.recorders.mime.recorder import MimeTypeRecorder
+
 
 # pylint: enable=wrong-import-position
 
@@ -107,18 +109,18 @@ class TestMimeTypeRecorder(unittest.TestCase):
         result = self.mime_recorder.process_file(self.text_file)
 
         # Verify the result
-        self.assertIsNotNone(result)
-        self.assertIn("mime_type", result)
-        self.assertIn("confidence", result)
-        self.assertTrue(result["mime_type"].startswith("text/"))
+        assert result is not None
+        assert "mime_type" in result
+        assert "confidence" in result
+        assert result["mime_type"].startswith("text/")
 
         # Process a binary file
         result = self.mime_recorder.process_file(self.bin_file)
-        self.assertIsNotNone(result)
+        assert result is not None
 
         # Process a non-existent file
         result = self.mime_recorder.process_file("non_existent_file.txt")
-        self.assertIsNone(result)
+        assert result is None
 
     def test_batch_process(self):
         """Test batch processing multiple files"""
@@ -135,23 +137,23 @@ class TestMimeTypeRecorder(unittest.TestCase):
         results = self.mime_recorder.batch_process_files(file_list)
 
         # Verify results
-        self.assertEqual(len(results), len(file_list))
+        assert len(results) == len(file_list)
 
         # Verify each result has correct structure
         for result in results:
-            self.assertIn("mime_type", result)
-            self.assertIn("confidence", result)
-            self.assertIn("mime_type_from_extension", result)
+            assert "mime_type" in result
+            assert "confidence" in result
+            assert "mime_type_from_extension" in result
 
     def test_process_directory(self):
         """Test processing a directory"""
         # Process the main directory without recursion
         results = self.mime_recorder.process_directory(self.test_dir, recursive=False)
-        self.assertEqual(len(results), 5)  # 5 files in the main directory
+        assert len(results) == 5  # 5 files in the main directory
 
         # Process with recursion
         results = self.mime_recorder.process_directory(self.test_dir, recursive=True)
-        self.assertEqual(len(results), 6)  # 5 files + 1 file in subdirectory
+        assert len(results) == 6  # 5 files + 1 file in subdirectory
 
         # Process with extension filter
         results = self.mime_recorder.process_directory(
@@ -159,7 +161,7 @@ class TestMimeTypeRecorder(unittest.TestCase):
             recursive=True,
             file_extensions=[".txt"],
         )
-        self.assertEqual(len(results), 2)  # 2 .txt files in total
+        assert len(results) == 2  # 2 .txt files in total
 
     def test_export_results(self):
         """Test exporting results to JSON"""
@@ -172,14 +174,14 @@ class TestMimeTypeRecorder(unittest.TestCase):
         self.mime_recorder.export_results_to_json(results, output_file)
 
         # Verify output file exists
-        self.assertTrue(os.path.exists(output_file))
+        assert os.path.exists(output_file)
 
         # Read the file and verify it contains valid JSON
         with open(output_file, encoding="utf-8") as f:
             exported_data = json.load(f)
 
-        self.assertEqual(len(exported_data), len(results))
-        self.assertIn("mime_type", exported_data[0])
+        assert len(exported_data) == len(results)
+        assert "mime_type" in exported_data[0]
 
         # Clean up
         os.remove(output_file)
@@ -200,17 +202,17 @@ class TestMimeTypeRecorder(unittest.TestCase):
         summary = self.mime_recorder.summarize_results(results)
 
         # Verify summary structure
-        self.assertIn("total_files", summary)
-        self.assertIn("mime_type_counts", summary)
-        self.assertIn("avg_confidence", summary)
-        self.assertIn("extension_match_percentage", summary)
+        assert "total_files" in summary
+        assert "mime_type_counts" in summary
+        assert "avg_confidence" in summary
+        assert "extension_match_percentage" in summary
 
         # Verify counts
-        self.assertEqual(summary["total_files"], len(file_list))
+        assert summary["total_files"] == len(file_list)
 
         # Verify the MIME type counts sum to the total files
         total_mime_count = sum(summary["mime_type_counts"].values())
-        self.assertEqual(total_mime_count, summary["total_files"])
+        assert total_mime_count == summary["total_files"]
 
 
 def main():

@@ -25,10 +25,8 @@ def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
                     timestamp = datetime.datetime.fromtimestamp(
                         stat_data.stat_info.st_ctime,
                     )
-                    if timestamp < oldest_file:
-                        oldest_file = timestamp
-                    if timestamp > newest_file:
-                        newest_file = timestamp
+                    oldest_file = min(oldest_file, timestamp)
+                    newest_file = max(newest_file, timestamp)
                     file_sizes += stat_data.st_size
                     file_count += 1
                 except:
@@ -40,10 +38,8 @@ def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
                     timestamp = datetime.datetime.fromtimestamp(
                         stat_data.stat_info.st_ctime,
                     )
-                    if timestamp < oldest_dir:
-                        oldest_dir = timestamp
-                    if timestamp > newest_dir:
-                        newest_dir = timestamp
+                    oldest_dir = min(oldest_dir, timestamp)
+                    newest_dir = max(newest_dir, timestamp)
                     dir_sizes += stat_data.st_size
                     dir_count += 1
                 except:
@@ -51,7 +47,7 @@ def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
     return total_files, total_dirs
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("topdir")
     parser.add_argument(
@@ -70,16 +66,12 @@ def main():
     start = datetime.datetime.utcnow()
     file_count, dir_count = count_files_and_directories(args.topdir, args.dostat)
     if type(args.label) is str and len(args.label) > 0:
-        print(args.label)
-    print("Total files:", file_count)
-    print("Total directories:", dir_count)
+        pass
     count = file_count + dir_count
     end = datetime.datetime.utcnow()
-    execution_time = end - start
+    end - start
     if count > 0:
-        print(
-            f"Enumerated {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
-        )
+        pass
     # TODO: write this to a json file
 
 
@@ -87,7 +79,7 @@ if __name__ == "__main__":
     main()
 
 
-def scratch():
+def scratch() -> None:
     # old code
     root_path = "C:\\Users\\TonyMason"
 
@@ -95,14 +87,10 @@ def scratch():
 
     file_count, dir_count = count_files_and_directories(root_path)
 
-    print("Total files:", file_count)
-    print("Total directories:", dir_count)
 
     count = file_count + dir_count
 
     end = datetime.datetime.utcnow()
-    execution_time = end - start
+    end - start
     if count > 0:
-        print(
-            f"Enumerated {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
-        )
+        pass

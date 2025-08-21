@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"]
 FILE_METADATA_FIELDS = [
     "kind",
@@ -143,7 +144,7 @@ def get_drive_metadata():
     return metadata_list
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output",

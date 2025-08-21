@@ -28,6 +28,7 @@ from git import Repo
 from icecream import ic
 from pydantic import BaseModel
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -52,7 +53,7 @@ class IndalekoGitInfoDataModel(BaseModel):
         """Serialize the object to a dictionary."""
         return json.loads(self.model_dump_json())
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return the string representation of the object."""
         return self.model_dump_json()
 
@@ -117,7 +118,7 @@ class IndalekoGitInfo:
         return data
 
 
-def main():
+def main() -> None:
     """Test code for the IndalekoGitInfo class."""
     ic("IndalekoGitInfo test code")
     git_info = IndalekoGitInfo()

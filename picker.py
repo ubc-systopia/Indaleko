@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-picker.py
+picker.py.
 
 Background file picker CLI for Indaleko.
 """
@@ -12,7 +12,10 @@ import signal
 import sys
 import time
 
+from typing import Never
+
 from utils.db.db_file_picker import IndalekoFilePicker
+
 
 # Attempt to import unstructured processor if available
 try:
@@ -25,10 +28,8 @@ except ImportError:
     UNSTRUCTURED_AVAILABLE = False
 
 
-def start(args):
-    """
-    Start the background file picker.
-    """
+def start(args) -> None:
+    """Start the background file picker."""
     # Lower process priority
     try:
         if sys.platform != "win32":
@@ -44,7 +45,7 @@ def start(args):
         sys.exit(1)
 
     # Graceful shutdown handler
-    def shutdown(signum, frame):
+    def shutdown(signum, frame) -> None:
         logging.info("Shutting down file picker...")
         picker.stop_background_processing(wait=True)
         sys.exit(0)
@@ -53,7 +54,7 @@ def start(args):
     signal.signal(signal.SIGTERM, shutdown)
 
     # Prepare extension filter
-    extensions = set(ext.lower() for ext in args.extensions) if args.extensions else None
+    extensions = {ext.lower() for ext in args.extensions} if args.extensions else None
 
     # Main loop
     while True:
@@ -74,7 +75,8 @@ def start(args):
                 func = process_unstructured
             else:
                 # Default: log the picked file paths
-                func = lambda f, p: logging.info(f"Picked file: {p}")
+                def func(f, p):
+                    return logging.info(f"Picked file: {p}")
             queued = picker.queue_for_background_processing(files, func, priority=args.priority)
             logging.info(f"Queued {queued} files for background processing.")
         else:
@@ -82,21 +84,17 @@ def start(args):
         time.sleep(args.interval)
 
 
-def batch_export(args):
-    """
-    Batch export files for remote processing (not yet implemented).
-    """
+def batch_export(args) -> Never:
+    """Batch export files for remote processing (not yet implemented)."""
     raise NotImplementedError("batch-export is not yet implemented")
 
 
-def batch_import(args):
-    """
-    Batch import files from a processing bundle (not yet implemented).
-    """
+def batch_import(args) -> Never:
+    """Batch import files from a processing bundle (not yet implemented)."""
     raise NotImplementedError("batch-import is not yet implemented")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(prog="picker", description="Indaleko file picker utility")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

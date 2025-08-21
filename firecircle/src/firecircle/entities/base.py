@@ -25,6 +25,7 @@ import abc
 import enum
 import logging
 import uuid
+
 from typing import Any
 
 from firecircle.protocol.message import CircleRequest, Message, MessageType
@@ -63,7 +64,7 @@ class Entity(abc.ABC):
         capabilities: set[EntityCapability] | None = None,
         entity_id: str | None = None,
         logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         """
         Initialize the entity.
 

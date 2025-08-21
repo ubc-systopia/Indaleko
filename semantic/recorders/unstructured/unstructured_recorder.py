@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Indaleko Project - Unstructured Semantic Recorder
+Indaleko Project - Unstructured Semantic Recorder.
 
 This module implements a recorder for semantic metadata extracted with unstructured.io.
 It stores the extracted data in ArangoDB following the Indaleko recorder pattern
@@ -34,8 +34,10 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,12 +46,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+from Indaleko import Indaleko
 from data_models.base import IndalekoBaseModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from db.db_config import IndalekoDBConfig
-from Indaleko import Indaleko
 from semantic.characteristics import SemanticDataCharacteristics
 from semantic.collectors.semantic_attributes import *  # Import all semantic attribute UUIDs
 from semantic.collectors.unstructured.data_models.embedded import (
@@ -135,7 +137,7 @@ class UnstructuredRecorder(SemanticRecorderBase):
         "FormKeysValues": SEM_FORMKEYSVALUES,
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the UnstructuredRecorder.
 
@@ -200,7 +202,7 @@ class UnstructuredRecorder(SemanticRecorderBase):
         # Latest update tracking
         self._latest_update = None
 
-    def _initialize_db(self):
+    def _initialize_db(self) -> None:
         """Initialize database connection and create collection if needed."""
         try:
             if self._db_config is None:
@@ -220,14 +222,14 @@ class UnstructuredRecorder(SemanticRecorderBase):
                 )
                 self._logger.info(f"Retrieved collection {self._collection_name}")
             except Exception as collection_error:
-                self._logger.error(f"Error getting collection: {collection_error}")
+                self._logger.exception(f"Error getting collection: {collection_error}")
                 raise
 
             self._logger.info(
                 f"Connected to database, using collection {self._collection_name}",
             )
         except Exception as e:
-            self._logger.error(f"Error initializing database: {e!s}")
+            self._logger.exception(f"Error initializing database: {e!s}")
             raise
 
     def get_recorder_characteristics(self) -> SemanticDataCharacteristics:
@@ -410,7 +412,7 @@ class UnstructuredRecorder(SemanticRecorderBase):
                 query = f"FOR doc IN {self._collection_name} FILTER doc.ObjectIdentifier == @id RETURN doc._key"
                 cursor = self._db.db.aql.execute(query, bind_vars={"id": object_id})
 
-                doc_keys = [doc for doc in cursor]
+                doc_keys = list(cursor)
 
                 if doc_keys:
                     # Update existing document
@@ -492,7 +494,7 @@ class UnstructuredRecorder(SemanticRecorderBase):
             # Create semantic model
             from semantic.data_models.base_data_model import BaseSemanticDataModel
 
-            semantic_model = BaseSemanticDataModel(
+            return BaseSemanticDataModel(
                 Record=record,
                 Timestamp=datetime.now(UTC).isoformat(),
                 ObjectIdentifier=uuid.UUID(object_id),
@@ -500,7 +502,6 @@ class UnstructuredRecorder(SemanticRecorderBase):
                 SemanticAttributes=semantic_attributes,
             )
 
-            return semantic_model
 
         except Exception as e:
             self._logger.error(
@@ -596,7 +597,7 @@ class UnstructuredRecorder(SemanticRecorderBase):
         return IndalekoSemanticAttributeDataModel(Identifier=identifier, Value=value)
 
 
-def main():
+def main() -> None:
     """Main function for testing the UnstructuredRecorder."""
     import argparse
 
@@ -621,15 +622,13 @@ def main():
     args = parser.parse_args()
 
     if not args.input:
-        print("Error: Input file not specified. Use --input to specify the data file.")
         return
 
     # Load data from file
     try:
         with open(args.input) as f:
             data = json.load(f)
-    except Exception as e:
-        print(f"Error loading input file: {e!s}")
+    except Exception:
         return
 
     # Create recorder
@@ -643,18 +642,13 @@ def main():
     if isinstance(data, list):
         processed_data = recorder.process_data(data)
         if args.skip_db:
-            print(f"Processed {len(processed_data)} items (database storage skipped)")
+            pass
         else:
-            success = recorder.store_data(processed_data)
-            print(
-                f"Stored {len(processed_data)} items: {'Success' if success else 'Failed'}",
-            )
+            recorder.store_data(processed_data)
     else:
-        print("Error: Input data is not a list")
+        pass
 
     # Print performance statistics
-    print("Performance statistics:")
-    print(json.dumps(recorder._perf_monitor.get_statistics(), indent=2))
 
 
 if __name__ == "__main__":

@@ -30,19 +30,20 @@ from query.tools.base import (
 )
 from query.tools.registry import ToolRegistry, get_registry
 
+
 # Add CognitiveMemoryQueryTool to exports
 try:
     from query.tools.memory.cognitive_query import CognitiveMemoryQueryTool
 
     __all__ = [
         "BaseTool",
+        "CognitiveMemoryQueryTool",
         "ToolDefinition",
         "ToolInput",
         "ToolOutput",
         "ToolParameter",
-        "get_registry",
         "ToolRegistry",
-        "CognitiveMemoryQueryTool",
+        "get_registry",
     ]
 except ImportError:
     # The CognitiveMemoryQueryTool might not be available
@@ -52,8 +53,8 @@ except ImportError:
         "ToolInput",
         "ToolOutput",
         "ToolParameter",
-        "get_registry",
         "ToolRegistry",
+        "get_registry",
     ]
 
 # Register default tools

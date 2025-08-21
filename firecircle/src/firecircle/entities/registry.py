@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import uuid
+
 from typing import Any
 
 from firecircle.entities.base import Entity, EntityCapability
@@ -41,7 +42,7 @@ class EntityRegistry:
     def __new__(cls):
         """Singleton pattern implementation."""
         if cls._instance is None:
-            cls._instance = super(EntityRegistry, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.entities: dict[str, Entity] = {}
             cls._instance.entity_types: dict[str, type[Entity]] = {}
             cls._instance.logger = logging.getLogger(__name__)
@@ -168,8 +169,7 @@ class EntityRegistry:
         """
         if partial_match:
             return [entity for entity in self.entities.values() if name.lower() in entity.name.lower()]
-        else:
-            return [entity for entity in self.entities.values() if entity.name.lower() == name.lower()]
+        return [entity for entity in self.entities.values() if entity.name.lower() == name.lower()]
 
     def remove_entity(self, entity_id: str) -> bool:
         """

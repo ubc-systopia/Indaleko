@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import sys
+
 from datetime import UTC, datetime
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,14 +47,13 @@ from db import IndalekoDBConfig
 # from utils.data_validation import validate_ip_address, validate_hostname
 from utils.misc.directory_management import indaleko_default_config_dir
 
+
 # import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
 
 class IndalekoDBLocal:
-    """
-    Class used to manage local installations of the database.
-    """
+    """Class used to manage local installations of the database."""
 
     def __init__(
         self,
@@ -139,7 +140,7 @@ class IndalekoDBLocal:
         return IndalekoDBConfigDataModel(**new_config_data)
 
 
-def main2():
+def main2() -> None:
     """Construct a new configuration file."""
     parser = argparse.ArgumentParser(description="Indaleko DB Configuration Generator.")
     parser.add_argument(
@@ -191,7 +192,7 @@ def list_command(args: argparse.Namespace) -> None:
     ic(args)
 
 
-def main():
+def main() -> None:
     """Construct a new docker configuration for the database."""
     parser = argparse.ArgumentParser(description="Indaleko DB Configuration Generator.")
     parser.add_argument(

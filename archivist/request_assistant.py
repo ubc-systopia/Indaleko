@@ -23,13 +23,16 @@ import os
 import sys
 import time
 import uuid
+
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 import openai
+
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -137,7 +140,7 @@ class RequestAssistant:
         enable_query_history: bool = True,
         query_cache_duration: int = 3600,  # 1 hour cache duration by default
         progress_callback: Callable[[str, float], None] | None = None,
-    ):
+    ) -> None:
         """
         Initialize the Indaleko Request-based Assistant.
 
@@ -192,9 +195,7 @@ class RequestAssistant:
         return api_key
 
     def _initialize_assistant(self) -> None:
-        """
-        Initialize the OpenAI Assistant, creating a new one if needed.
-        """
+        """Initialize the OpenAI Assistant, creating a new one if needed."""
         # Check if the assistant configuration is stored on disk
         config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
         assistant_config_file = os.path.join(
@@ -380,7 +381,7 @@ class RequestAssistant:
         # Get all registered tools
         registered_tools = self.tool_registry.get_all_tools()
 
-        for tool_name, tool in registered_tools.items():
+        for tool in registered_tools.values():
             # Convert our tool definition to OpenAI format
             definition = tool.definition
 
@@ -426,14 +427,13 @@ class RequestAssistant:
         """
         if isinstance(text, str):
             return len(text) // 4  # Simple approximation for strings
-        else:
-            # For non-string input, convert to string first
-            try:
-                text_str = str(text)
-                return len(text_str) // 4
-            except:
-                # Fallback for objects that can't be converted to strings
-                return 1000  # Assume it's a large object
+        # For non-string input, convert to string first
+        try:
+            text_str = str(text)
+            return len(text_str) // 4
+        except:
+            # Fallback for objects that can't be converted to strings
+            return 1000  # Assume it's a large object
 
     def _summarize_schema(
         self,
@@ -634,7 +634,7 @@ class RequestAssistant:
 
                     # Skip further processing and return this cached result
                     if result.success:
-                        output = {
+                        return {
                             "output": json.dumps(
                                 {
                                     "query": query,
@@ -646,7 +646,6 @@ class RequestAssistant:
                                 default=str,
                             ),
                         }
-                        return output
 
         # Execute the tool (if not found in cache)
         result = self.tool_registry.execute_tool_input(tool_input)
@@ -695,13 +694,13 @@ class RequestAssistant:
         if tool_name == "query_executor":
             # Handle large query results
             return self._process_query_results(result)
-        elif tool_name == "nl_parser" and isinstance(result, dict) and "collections" in result:
+        if tool_name == "nl_parser" and isinstance(result, dict) and "collections" in result:
             # Handle large NL parser results
             return self._process_nl_parser_results(result)
-        elif isinstance(result, list):
+        if isinstance(result, list):
             # Generic list handling (truncate if needed)
             return self._process_list_results(result)
-        elif isinstance(result, dict):
+        if isinstance(result, dict):
             # Generic dictionary handling (summarize if needed)
             return self._process_dict_results(result)
 
@@ -1036,7 +1035,7 @@ class RequestAssistant:
         """
         # Extract conversation for memory updating
         user_messages = [msg for msg in conversation.messages if msg.role == "user"]
-        assistant_messages = [msg for msg in conversation.messages if msg.role == "assistant"]
+        [msg for msg in conversation.messages if msg.role == "assistant"]
 
         if not user_messages:
             return
@@ -1145,7 +1144,7 @@ class RequestAssistant:
                 entities = entities_data["entities"]
             else:
                 # If the response doesn't have the expected format, try to find an array
-                for key, value in entities_data.items():
+                for value in entities_data.values():
                     if isinstance(value, list) and len(value) > 0:
                         entities = value
                         break
@@ -1262,7 +1261,7 @@ class RequestAssistant:
                             "type": entity_type,
                         },
                     )
-                    existing_entities = [doc for doc in cursor]
+                    existing_entities = list(cursor)
 
                     if existing_entities:
                         # Entity already exists, skip
@@ -1353,7 +1352,7 @@ class RequestAssistant:
                     "timestamp": datetime.now(UTC).isoformat(),
                 }
 
-            elif run.status == "requires_action":
+            if run.status == "requires_action":
                 # Handle required actions (tool calls)
                 if run.required_action and run.required_action.type == "submit_tool_outputs":
                     tool_calls = run.required_action.submit_tool_outputs.tool_calls
@@ -1388,7 +1387,7 @@ class RequestAssistant:
                 # Continue waiting for completion
                 continue
 
-            elif run.status in ["failed", "cancelled", "expired"]:
+            if run.status in ["failed", "cancelled", "expired"]:
                 # Get the error details
                 error_code = run.last_error.code if run.last_error else "unknown_error"
                 error_message = run.last_error.message if run.last_error else "Unknown error"
@@ -1416,7 +1415,7 @@ class RequestAssistant:
                             conversation.add_message("system", refresh_message)
 
                             # Refresh the context
-                            refresh_result = self.refresh_context(conversation_id)
+                            self.refresh_context(conversation_id)
 
                             # Process the last user message in the new thread
                             return self.process_message(
@@ -1651,13 +1650,11 @@ class RequestAssistant:
                     # Estimate based on first few items
                     if len(result) == 0:
                         return 0
-                    elif len(result) > 10:
+                    if len(result) > 10:
                         avg_size = sum(sys.getsizeof(str(item)) for item in result[:10]) / 10
                         return int(avg_size * len(result))
-                    else:
-                        return sum(sys.getsizeof(str(item)) for item in result)
-                else:
-                    return sys.getsizeof(str(result))
+                    return sum(sys.getsizeof(str(item)) for item in result)
+                return sys.getsizeof(str(result))
             except:
                 # Fallback to a conservative estimate
                 return 5 * 1024 * 1024  # Assume 5MB by default
@@ -1711,9 +1708,8 @@ class RequestAssistant:
             if (current_time - cache_time).total_seconds() < self.query_cache_duration:
                 ic(f"Cache hit for query: {query[:50]}")
                 return cache_entry["result"]
-            else:
-                # Remove expired entry
-                del self.query_cache[query_key]
+            # Remove expired entry
+            del self.query_cache[query_key]
 
         return None
 
@@ -1787,7 +1783,7 @@ class RequestAssistant:
         )
 
         # Wait for the run to complete
-        response = self._wait_for_run(new_thread_id, run.id, conversation_id)
+        self._wait_for_run(new_thread_id, run.id, conversation_id)
 
         # Return success
         return {
@@ -1941,7 +1937,7 @@ class RequestAssistant:
         return summary
 
 
-def main():
+def main() -> None:
     """Test the RequestAssistant."""
     assistant = RequestAssistant()
 
@@ -1950,20 +1946,18 @@ def main():
     conversation_id = conversation.conversation_id
 
     # Test a message
-    response = assistant.process_message(
+    assistant.process_message(
         conversation_id=conversation_id,
         message_content="How can you help me find my files?",
     )
 
-    print(f"Response: {response['response']}")
 
     # Test a query
-    response = assistant.process_message(
+    assistant.process_message(
         conversation_id=conversation_id,
         message_content="Find documents about Indaleko",
     )
 
-    print(f"Response: {response['response']}")
 
 
 if __name__ == "__main__":

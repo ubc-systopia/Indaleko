@@ -10,6 +10,7 @@ import sys
 
 from pydantic import Field, field_validator
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -21,6 +22,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.data_models.smart_thermostat import (
     ThermostatSensorData,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -83,7 +85,7 @@ class NestAmbientDataModel(ThermostatSensorData):
     @field_validator("device_id")
     @classmethod
     def validate_device_id(cls, value: str) -> str:
-        """Validate Nest device identifier format"""
+        """Validate Nest device identifier format."""
         if not value.isalnum():
             raise ValueError("Nest device identifier must be alphanumeric")
         return value
@@ -91,13 +93,13 @@ class NestAmbientDataModel(ThermostatSensorData):
     @field_validator("average_temperature")
     @classmethod
     def validate_avg_temperature(cls, value: float | None) -> float | None:
-        """Validate average temperature is within reasonable bounds"""
+        """Validate average temperature is within reasonable bounds."""
         if value is not None and not -50.0 <= value <= 100.0:
             raise ValueError("Average temperature must be between -50°C and 100°C")
         return value
 
     class Config:
-        """Configuration and example data for the Nest ambient data model"""
+        """Configuration and example data for the Nest ambient data model."""
 
         json_schema_extra = {
             "example": {
@@ -118,8 +120,8 @@ class NestAmbientDataModel(ThermostatSensorData):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     NestAmbientDataModel.test_model_main()
 
 

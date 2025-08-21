@@ -25,7 +25,9 @@ import argparse
 import logging
 import os
 import sys
+
 from pathlib import Path
+
 
 # Setup proper environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,50 +41,38 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 
 
-def process_file(file_path):
+def process_file(file_path) -> None:
     """Process a single file and show its MIME type."""
     collector = IndalekoSemanticMimeType()
     try:
         result = collector.detect_mime_type(file_path)
-        print(f"\nMIME Type Detection Results for: {file_path}")
-        print(f"  Content-based MIME type: {result['mime_type']}")
-        print(
-            f"  Extension-based MIME type: {result.get('mime_type_from_extension', 'N/A')}",
-        )
-        print(f"  Confidence: {result['confidence']:.2f}")
 
         if result.get("encoding"):
-            print(f"  Encoding: {result['encoding']}")
+            pass
 
         if result.get("additional_metadata"):
-            print("\n  Additional Metadata:")
-            for key, value in result["additional_metadata"].items():
-                print(f"    {key}: {value}")
+            for _key, _value in result["additional_metadata"].items():
+                pass
 
         # Show category classification
         if "type_category" in result:
-            print(f"\n  Type Category: {result['type_category']}")
-            print(f"  Is Container: {result.get('is_container', False)}")
-            print(f"  Is Compressed: {result.get('is_compressed', False)}")
-            print(f"  Is Encrypted: {result.get('is_encrypted', False)}")
+            pass
 
-    except Exception as e:
-        print(f"Error processing {file_path}: {e!s}")
+    except Exception:
+        pass
 
 
-def process_directory(directory_path, recursive=False, extensions=None):
+def process_directory(directory_path, recursive=False, extensions=None) -> None:
     """Process all files in a directory, optionally filtering by extension."""
     collector = IndalekoSemanticMimeType()
     path = Path(directory_path)
 
     if not path.exists() or not path.is_dir():
-        print(f"Error: {directory_path} is not a valid directory")
         return
 
     # Filter by extensions if provided
     if extensions:
         extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions]
-        print(f"Filtering by extensions: {', '.join(extensions)}")
 
     # Define the glob pattern based on recursion
     glob_pattern = "**/*" if recursive else "*"
@@ -108,24 +98,21 @@ def process_directory(directory_path, recursive=False, extensions=None):
 
                 # Print progress for every 10 files
                 if total_files % 10 == 0:
-                    print(f"Processed {total_files} files...", end="\r")
+                    pass
 
-            except Exception as e:
-                print(f"Error processing {file_path}: {e!s}")
+            except Exception:
+                pass
 
     # Print summary
-    print(f"\nProcessed {total_files} files in {directory_path}")
-    print("\nMIME Type Distribution:")
     for mime_type, count in sorted(
         mime_types.items(),
         key=lambda x: x[1],
         reverse=True,
     ):
-        percentage = (count / total_files) * 100 if total_files > 0 else 0
-        print(f"  {mime_type}: {count} files ({percentage:.1f}%)")
+        (count / total_files) * 100 if total_files > 0 else 0
 
 
-def main():
+def main() -> None:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Indaleko MIME Type Detector")
 

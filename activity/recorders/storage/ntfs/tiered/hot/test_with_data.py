@@ -27,8 +27,10 @@ import json
 import logging
 import os
 import sys
+
 from collections import Counter
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -85,8 +87,8 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, int]:
                 except json.JSONDecodeError:
                     # Skip invalid lines
                     pass
-    except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+    except Exception:
+        pass
 
     return {"total_lines": line_count, "activity_counts": dict(activity_types)}
 
@@ -161,7 +163,6 @@ def process_with_recorder(
     stats_only: bool = True,
 ) -> dict[str, Any]:
     """Process a JSONL file with the NTFS Hot Tier Recorder and return statistics."""
-    print(f"Processing {file_path}...")
 
     # Create recorder in mock mode (no database)
     recorder = NtfsHotTierRecorder(
@@ -178,7 +179,6 @@ def process_with_recorder(
         return []  # Return empty list to bypass semantic attributes processing
 
     # Apply the patch
-    original_func = activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity
     activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity = mock_get_semantic_attributes
 
     # Track processed activities
@@ -214,8 +214,7 @@ def process_with_recorder(
         try:
             # The real store_activity won't be called because no_db=True
             recorder.process_jsonl_file(file_path)
-        except Exception as e:
-            print(f"Error processing file: {e}")
+        except Exception:
             if debug:
                 import traceback
 
@@ -249,25 +248,10 @@ def process_with_recorder(
 
         # Print statistics if requested
         if stats_only:
-            print(f"File: {file_path}")
-            print(f"  Size: {stats['file_size']:,} bytes")
-            print(f"  Raw activities: {stats['raw_activity_count']:,}")
-            print(f"  Processed activities: {stats['processed_activity_count']:,}")
-            print(f"  Processing time: {stats['processing_time_seconds']:.2f} seconds")
-            print(f"  Activities per second: {stats['activities_per_second']:.2f}")
-            print("  Activity types:")
-            for activity_type, count in stats["activity_types"].items():
-                print(f"    {activity_type}: {count:,}")
-            print("  Importance scores:")
-            print(f"    Average: {stats['importance_stats']['average']:.2f}")
-            print(f"    Min: {stats['importance_stats']['min']:.2f}")
-            print(f"    Max: {stats['importance_stats']['max']:.2f}")
-            print("    Distribution:")
-            for range_name, count in stats["importance_stats"]["ranges"].items():
-                print(f"      {range_name}: {count:,}")
-            print("  Entity mapping:")
-            print(f"    Unique entities: {stats['entity_stats']['unique_entities']:,}")
-            print(f"    Unique FRNs: {stats['entity_stats']['unique_frns']:,}")
+            for activity_type in stats["activity_types"]:
+                pass
+            for _range_name, _count in stats["importance_stats"]["ranges"].items():
+                pass
 
         return stats
 
@@ -278,19 +262,17 @@ def process_with_recorder(
 
 def process_file_directly(file_path: str) -> None:
     """Process a JSONL file directly without using the recorder."""
-    print(f"Directly processing {file_path}...")
 
     try:
         activities = []
         with open(file_path, encoding="utf-8") as f:
-            for i, line in enumerate(f):
+            for _i, line in enumerate(f):
                 try:
                     activity = json.loads(line)
                     activities.append(activity)
-                except json.JSONDecodeError as e:
-                    print(f"Error parsing line {i+1}: {e}")
+                except json.JSONDecodeError:
+                    pass
 
-        print(f"Successfully parsed {len(activities)} activities")
 
         # Analyze activity types
         activity_types = {}
@@ -301,9 +283,8 @@ def process_file_directly(file_path: str) -> None:
             else:
                 activity_types[activity_type] = 1
 
-        print("Activity types:")
-        for activity_type, count in activity_types.items():
-            print(f"  {activity_type}: {count}")
+        for activity_type in activity_types:
+            pass
 
         # Calculate importance scores manually
         scores = []
@@ -346,22 +327,16 @@ def process_file_directly(file_path: str) -> None:
             scores.append(importance)
 
         # Calculate statistics
-        avg_score = sum(scores) / len(scores) if scores else 0
-        min_score = min(scores) if scores else 0
-        max_score = max(scores) if scores else 0
+        sum(scores) / len(scores) if scores else 0
+        min(scores) if scores else 0
+        max(scores) if scores else 0
 
-        print("Importance scores:")
-        print(f"  Average: {avg_score:.2f}")
-        print(f"  Min: {min_score:.2f}")
-        print(f"  Max: {max_score:.2f}")
 
         # Count files vs directories
-        files = sum(1 for a in activities if not a.get("is_directory", False))
-        directories = sum(1 for a in activities if a.get("is_directory", False))
-        print(f"Files: {files}, Directories: {directories}")
+        sum(1 for a in activities if not a.get("is_directory", False))
+        sum(1 for a in activities if a.get("is_directory", False))
 
-    except Exception as e:
-        print(f"Error directly processing file: {e}")
+    except Exception:
         import traceback
 
         traceback.print_exc()
@@ -401,12 +376,10 @@ def main():
     # Find JSONL files
     if args.file:
         if not os.path.exists(args.file):
-            print(f"File not found: {args.file}")
             return
         files_to_process = [args.file]
     else:
         files_to_process = find_ntfs_jsonl_files()
-        print(f"Found {len(files_to_process)} NTFS JSONL files")
 
     # Process all files or just the first one
     if args.direct:
@@ -416,7 +389,7 @@ def main():
         elif files_to_process:
             process_file_directly(files_to_process[0])
         else:
-            print("No NTFS JSONL files found")
+            pass
     elif args.all:
         results = []
         for file_path in files_to_process:
@@ -425,19 +398,12 @@ def main():
             )
 
         # Print summary
-        print("\nSummary:")
-        total_activities = sum(r["processed_activity_count"] for r in results)
-        total_time = sum(r["processing_time_seconds"] for r in results)
-        print(
-            f"Processed {len(results)} files with {total_activities:,} activities in {total_time:.2f} seconds",
-        )
-        print(
-            f"Overall performance: {total_activities / total_time:.2f} activities per second",
-        )
+        sum(r["processed_activity_count"] for r in results)
+        sum(r["processing_time_seconds"] for r in results)
     elif files_to_process:
         process_with_recorder(files_to_process[0], args.debug, args.stats_only)
     else:
-        print("No NTFS JSONL files found")
+        pass
 
 
 if __name__ == "__main__":

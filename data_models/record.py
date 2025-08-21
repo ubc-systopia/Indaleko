@@ -20,11 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 # > from icecream import ic
 
@@ -75,9 +77,7 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     @field_validator("Timestamp", mode="before")
     @classmethod
     def ensure_timezone(cls, value: datetime) -> datetime:
-        """
-        Ensure that the timestamp is timezone-aware.
-        """
+        """Ensure that the timestamp is timezone-aware."""
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
@@ -114,8 +114,8 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoRecordDataModel.test_model_main()
 
 

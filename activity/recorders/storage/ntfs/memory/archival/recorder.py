@@ -43,9 +43,11 @@ import socket
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -64,6 +66,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from activity.collectors.storage.semantic_attributes import StorageActivityAttributes
 from activity.recorders.storage.base import StorageActivityRecorder
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -176,7 +179,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 storage_location="archival_memory",
             )
         except Exception as e:
-            self._logger.error(f"Error setting up metadata: {e}")
+            self._logger.exception(f"Error setting up metadata: {e}")
             # Create minimal metadata
             self._metadata = StorageActivityMetadata(
                 provider_type=StorageProviderType.LOCAL_NTFS,
@@ -271,7 +274,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     f"Successfully registered with service manager: {self._recorder_id}",
                 )
             except Exception as e:
-                self._logger.error(f"Error registering with service manager: {e}")
+                self._logger.exception(f"Error registering with service manager: {e}")
                 # Log the error details to help troubleshoot registration issues
                 import traceback
 
@@ -280,14 +283,14 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 )
 
         except Exception as e:
-            self._logger.error(f"Error creating registration data: {e}")
+            self._logger.exception(f"Error creating registration data: {e}")
             import traceback
 
             self._logger.debug(
                 f"Registration data error details: {traceback.format_exc()}",
             )
 
-    def _setup_collections(self):
+    def _setup_collections(self) -> None:
         """Set up required collections for the archival memory recorder."""
         try:
             # Activities collection should already be created by parent class
@@ -326,11 +329,11 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 )
 
         except Exception as e:
-            self._logger.error(f"Error setting up collections: {e}")
+            self._logger.exception(f"Error setting up collections: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
-    def _setup_indices(self):
+    def _setup_indices(self) -> None:
         """Set up required indices for the archival memory recorder."""
         try:
             # Set up indices for query performance
@@ -406,7 +409,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             self._logger.info("Finished setting up archival memory indices")
 
         except Exception as e:
-            self._logger.error(f"Error setting up indices: {e}")
+            self._logger.exception(f"Error setting up indices: {e}")
             if not getattr(self, "_no_db", False):
                 raise
 
@@ -452,7 +455,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return {}
 
         except Exception as e:
-            self._logger.error(f"Error getting entity from entity collection: {e}")
+            self._logger.exception(f"Error getting entity from entity collection: {e}")
             return {}
 
     def _get_entity_from_long_term_memory(self, entity_id: uuid.UUID) -> dict:
@@ -497,7 +500,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return {}
 
         except Exception as e:
-            self._logger.error(f"Error getting entity from long-term memory: {e}")
+            self._logger.exception(f"Error getting entity from long-term memory: {e}")
             return {}
 
     def _enhance_ontology(self, w5h_concepts: dict[str, list[str]]) -> dict:
@@ -524,7 +527,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         }
 
         # Collect all concepts in a flat list (for backward compatibility)
-        for dimension, concepts in w5h_concepts.items():
+        for concepts in w5h_concepts.values():
             ontology["concepts"].extend(concepts)
 
         # Deduplicate
@@ -699,7 +702,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         try:
             # Extract file path and ontology
             file_path = entity_data.get("Record", {}).get("Data", {}).get("file_path", "")
-            volume = entity_data.get("Record", {}).get("Data", {}).get("volume_name", "")
+            entity_data.get("Record", {}).get("Data", {}).get("volume_name", "")
             w5h_concepts = entity_data.get("Record", {}).get("Data", {}).get("w5h_concepts", {})
 
             if not file_path:
@@ -744,7 +747,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             # Create semantic relationships
             for related_entity in cursor:
                 related_id = related_entity.get("_key", "")
-                related_concepts = related_entity.get("w5h_concepts", {})
+                related_entity.get("w5h_concepts", {})
 
                 if not related_id:
                     continue
@@ -824,7 +827,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return relationships
 
         except Exception as e:
-            self._logger.error(f"Error building knowledge graph relationships: {e}")
+            self._logger.exception(f"Error building knowledge graph relationships: {e}")
             return relationships
 
     def _build_archival_memory_document(
@@ -1024,7 +1027,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         """
         # Extract basic information
         file_name = os.path.basename(entity_data.get("file_path", ""))
-        file_path = entity_data.get("file_path", "")
+        entity_data.get("file_path", "")
         importance = entity_data.get("importance_score", 0.0)
 
         # Extract concepts
@@ -1057,10 +1060,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         purpose = ""
         for concept in why_concepts:
             if concept in ["project_work", "work_related", "personal_use"]:
-                if concept == "project_work":
-                    purpose = "project work"
-                else:
-                    purpose = concept.replace("_", " ")
+                purpose = "project work" if concept == "project_work" else concept.replace("_", " ")
                 break
 
         # Build contextual note
@@ -1132,7 +1132,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 )
                 stats["entities_found"] = len(eligible_entities)
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     f"Error getting eligible entities from long-term memory: {e}",
                 )
                 # Fall back to direct query
@@ -1219,7 +1219,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                             try:
                                 knowledge_graph_collection.insert(relationship)
                             except Exception as e:
-                                self._logger.error(f"Error storing relationship: {e}")
+                                self._logger.exception(f"Error storing relationship: {e}")
 
                         # Update relationship count in entity document
                         self._update_knowledge_graph_metadata(
@@ -1234,7 +1234,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     stats["entities_consolidated"] += 1
 
                 except Exception as e:
-                    self._logger.error(f"Error consolidating entity {entity_id}: {e}")
+                    self._logger.exception(f"Error consolidating entity {entity_id}: {e}")
                     stats["errors"] += 1
 
             self._logger.info(
@@ -1244,7 +1244,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error consolidating from long-term memory: {e}")
+            self._logger.exception(f"Error consolidating from long-term memory: {e}")
             return {"error": str(e)}
 
     def _is_in_archival_memory(self, entity_id: uuid.UUID) -> bool:
@@ -1265,7 +1265,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return self._collection.has(str(entity_id))
 
         except Exception as e:
-            self._logger.error(f"Error checking if entity is in archival memory: {e}")
+            self._logger.exception(f"Error checking if entity is in archival memory: {e}")
             return False
 
     def _mark_consolidated_in_long_term(self, entity_id: uuid.UUID) -> bool:
@@ -1307,7 +1307,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return True
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Error marking entity as consolidated in long-term memory: {e}",
             )
             return False
@@ -1334,7 +1334,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         try:
             # Extract relationship types
-            relationship_types = list(set(rel.get("type") for rel in relationships))
+            relationship_types = list({rel.get("type") for rel in relationships})
 
             # Calculate centrality (basic approximation)
             centrality = min(1.0, count / 20)
@@ -1369,7 +1369,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return True
 
         except Exception as e:
-            self._logger.error(f"Error updating knowledge graph metadata: {e}")
+            self._logger.exception(f"Error updating knowledge graph metadata: {e}")
             return False
 
     def get_archival_memory_statistics(self) -> dict[str, Any]:
@@ -1516,7 +1516,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error getting archival memory statistics: {e}")
+            self._logger.exception(f"Error getting archival memory statistics: {e}")
             return {"error": str(e)}
 
     def search_archival_memory(
@@ -1553,7 +1553,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 w5h_bind_vars = {}
 
                 # Build W5H filter conditions
-                for i, (dimension, concepts) in enumerate(w5h_filter.items()):
+                for _i, (dimension, concepts) in enumerate(w5h_filter.items()):
                     if dimension in ["who", "what", "when", "where", "why", "how"] and concepts:
                         filter_conditions.append(
                             f"LENGTH(INTERSECTION(doc.Record.Data.w5h_concepts.{dimension}, @{dimension}_concepts)) > 0",
@@ -1648,7 +1648,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return results
 
         except Exception as e:
-            self._logger.error(f"Error searching archival memory: {e}")
+            self._logger.exception(f"Error searching archival memory: {e}")
             return []
 
     def get_knowledge_graph_relationships(
@@ -1727,7 +1727,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return results
 
         except Exception as e:
-            self._logger.error(f"Error getting knowledge graph relationships: {e}")
+            self._logger.exception(f"Error getting knowledge graph relationships: {e}")
             return []
 
     def get_recorder_name(self) -> str:
@@ -1896,7 +1896,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 }
 
         except Exception as e:
-            self._logger.error(f"Error getting latest update: {e}")
+            self._logger.exception(f"Error getting latest update: {e}")
             return {"memory_type": "archival", "error": str(e)}
 
 
@@ -1993,63 +1993,46 @@ if __name__ == "__main__":
 
         # Execute requested operation
         if args.consolidate_from_long_term:
-            print("=== Consolidating from Long-Term Memory ===")
             result = recorder.consolidate_from_long_term_memory(
                 min_age_days=args.min_age_days,
                 min_importance=args.min_importance,
                 entity_limit=args.entity_limit,
             )
 
-            print("\nConsolidation Results:")
-            for key, value in result.items():
-                print(f"  {key}: {value}")
+            for _key, _value in result.items():
+                pass
 
         elif args.stats:
-            print("=== Archival Memory Statistics ===")
             stats = recorder.get_archival_memory_statistics()
 
             if "error" in stats:
-                print(f"Error: {stats['error']}")
+                pass
             else:
-                print(f"  Total entities: {stats.get('total_count', 0)}")
 
                 if "avg_relationships_per_entity" in stats:
-                    print(
-                        f"  Avg relationships per entity: {stats.get('avg_relationships_per_entity', 0):.1f}",
-                    )
+                    pass
 
                 if "avg_entity_age_days" in stats:
-                    print(
-                        f"  Avg entity age (days): {stats.get('avg_entity_age_days', 0):.1f}",
-                    )
+                    pass
 
                 if "by_importance" in stats:
-                    print("\nEntities by importance score:")
-                    for importance, count in stats["by_importance"].items():
-                        print(f"  {importance}: {count}")
+                    for _importance, _count in stats["by_importance"].items():
+                        pass
 
                 if "by_concept" in stats:
-                    print("\nTop ontology concepts:")
-                    for concept, count in stats["by_concept"].items():
-                        print(f"  {concept}: {count}")
+                    for _concept, _count in stats["by_concept"].items():
+                        pass
 
                 if "relationships_by_type" in stats:
-                    print("\nRelationship types:")
-                    for rel_type, count in stats["relationships_by_type"].items():
-                        print(f"  {rel_type}: {count}")
+                    for _rel_type, _count in stats["relationships_by_type"].items():
+                        pass
 
-                print("\nConfiguration:")
-                print(f"  Collection name: {stats.get('collection_name', 'unknown')}")
-                print(
-                    f"  Importance threshold: {stats.get('importance_threshold', 'unknown')}",
-                )
 
         elif args.search:
             concept_filter = args.concept_filter.split(",") if args.concept_filter else None
 
-            print(f'=== Searching Archival Memory for "{args.search}" ===')
             if concept_filter:
-                print(f"Filtering by concepts: {', '.join(concept_filter)}")
+                pass
 
             results = recorder.search_archival_memory(
                 args.search,
@@ -2058,55 +2041,37 @@ if __name__ == "__main__":
                 include_knowledge_graph=True,
             )
 
-            print(f"\nFound {len(results)} results:")
-            for i, entity in enumerate(results):
+            for _i, entity in enumerate(results):
                 data = entity.get("Record", {}).get("Data", {})
-                print(f"\nResult {i+1}:")
-                print(f"  File: {data.get('file_name', 'Unknown')}")
-                print(f"  Path: {data.get('file_path', 'Unknown')}")
-                print(f"  Importance: {data.get('importance_score', 0.0):.2f}")
 
                 # Show ontology concepts
                 ontology = data.get("ontology", {})
                 concepts = ontology.get("concepts", [])
                 if concepts:
-                    print(f"  Ontology concepts: {', '.join(concepts[:5])}")
+                    pass
 
                 # Show inferences
                 inferences = ontology.get("inferences", [])
                 if inferences:
-                    print(f"  Inferences: {', '.join(inferences)}")
+                    pass
 
                 # Show historical context
                 historical = data.get("historical_context", {})
                 if historical:
-                    print("  Historical context:")
-                    print(
-                        f"    First seen: {historical.get('first_seen_date', 'Unknown')}",
-                    )
-                    print(
-                        f"    Activity span: {historical.get('activity_span_days', 0)} days",
-                    )
-                    print(f"    Note: {historical.get('contextual_note', '')}")
+                    pass
 
                 # Show knowledge graph relationships if available
                 if entity.get("knowledge_graph_relationships"):
-                    print("  Related entities:")
-                    for j, rel in enumerate(entity["knowledge_graph_relationships"]):
+                    for _j, rel in enumerate(entity["knowledge_graph_relationships"]):
                         related_entity = rel.get("entity", {})
                         relationship = rel.get("relationship", {})
                         related_path = related_entity.get("Record", {}).get("Data", {}).get("file_path", "Unknown")
 
-                        print(
-                            f"    {j+1}. {os.path.basename(related_path)} ({relationship.get('type', 'related')})",
-                        )
 
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
-        print(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         import traceback
 
         traceback.print_exc()
         sys.exit(1)
 
-    print("\nDone.")

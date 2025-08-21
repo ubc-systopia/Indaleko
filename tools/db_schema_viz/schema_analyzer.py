@@ -23,13 +23,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import re
-from typing import Dict, List, Any, Set
+
+from typing import Any
 
 
 def group_collections(
-    collections: List[Dict[str, Any]],
-    group_definitions: Dict[str, List[str]]
-) -> Dict[str, List[str]]:
+    collections: list[dict[str, Any]],
+    group_definitions: dict[str, list[str]],
+) -> dict[str, list[str]]:
     """
     Group collections based on predefined groups or naming patterns.
 
@@ -95,7 +96,7 @@ def group_collections(
     return groups
 
 
-def analyze_indexes(collections: List[Dict[str, Any]], max_indexes: int = 2) -> List[Dict[str, Any]]:
+def analyze_indexes(collections: list[dict[str, Any]], max_indexes: int = 2) -> list[dict[str, Any]]:
     """
     Analyze collection indexes and identify the most important ones.
 
@@ -160,7 +161,7 @@ def analyze_indexes(collections: List[Dict[str, Any]], max_indexes: int = 2) -> 
     return collections
 
 
-def identify_foreign_keys(collections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def identify_foreign_keys(collections: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Identify potential foreign key relationships between collections.
 
@@ -173,17 +174,9 @@ def identify_foreign_keys(collections: List[Dict[str, Any]]) -> List[Dict[str, A
     logging.info("Identifying potential foreign key relationships...")
 
     foreign_keys = []
-    collection_names = {c["name"] for c in collections}
+    {c["name"] for c in collections}
 
     # Common foreign key field patterns
-    fk_patterns = [
-        r"(\w+)Id$",
-        r"(\w+)_id$",
-        r"(\w+)Key$",
-        r"(\w+)_key$",
-        r"(\w+)Reference$",
-        r"(\w+)Ref$"
-    ]
 
     # This is a placeholder function
     # In a full implementation, we would:

@@ -23,6 +23,7 @@ import random
 import sys
 import unittest
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -40,7 +41,7 @@ from utils.misc.string_similarity import (
 class TestJaroWinkler(unittest.TestCase):
     """Test cases for Jaro-Winkler similarity functions."""
 
-    def test_identical_strings(self):
+    def test_identical_strings(self) -> None:
         """Test that identical strings have a similarity of 1.0."""
         test_strings = [
             "IndalekoObject",
@@ -52,9 +53,9 @@ class TestJaroWinkler(unittest.TestCase):
 
         for s in test_strings:
             with self.subTest(string=s):
-                self.assertEqual(jaro_winkler_similarity(s, s), 1.0)
+                assert jaro_winkler_similarity(s, s) == 1.0
 
-    def test_completely_different_strings(self):
+    def test_completely_different_strings(self) -> None:
         """Test that completely different strings have a low similarity."""
         test_pairs = [
             ("IndalekoObject", "CompletelyDifferent"),
@@ -65,9 +66,9 @@ class TestJaroWinkler(unittest.TestCase):
         for s1, s2 in test_pairs:
             with self.subTest(string1=s1, string2=s2):
                 # Should be less than 0.5 for very different strings
-                self.assertLess(jaro_winkler_similarity(s1, s2), 0.5)
+                assert jaro_winkler_similarity(s1, s2) < 0.5
 
-    def test_similar_strings(self):
+    def test_similar_strings(self) -> None:
         """Test strings with small differences."""
         test_pairs = [
             # String pairs with expected minimum similarity
@@ -85,13 +86,9 @@ class TestJaroWinkler(unittest.TestCase):
         for s1, s2, min_expected in test_pairs:
             with self.subTest(string1=s1, string2=s2):
                 similarity = jaro_winkler_similarity(s1, s2)
-                self.assertGreaterEqual(
-                    similarity,
-                    min_expected,
-                    f"Expected {s1} and {s2} to have similarity >= {min_expected}, got {similarity}",
-                )
+                assert similarity >= min_expected, f"Expected {s1} and {s2} to have similarity >= {min_expected}, got {similarity}"
 
-    def test_common_prefix_boost(self):
+    def test_common_prefix_boost(self) -> None:
         """Test that strings with common prefixes get higher scores."""
         # Pairs with same edit distance but different prefix commonality
         test_cases = [
@@ -108,13 +105,13 @@ class TestJaroWinkler(unittest.TestCase):
                 sim2 = jaro_winkler_similarity(s2a, s2b)
 
                 # The second pair should have higher similarity due to common prefix
-                self.assertGreater(sim2, sim1)
+                assert sim2 > sim1
 
 
 class TestWeightedFilenameSimilarity(unittest.TestCase):
     """Test cases for the weighted filename similarity function."""
 
-    def test_identical_filenames(self):
+    def test_identical_filenames(self) -> None:
         """Test that identical filenames have a similarity of 1.0."""
         test_filenames = [
             "document.pdf",
@@ -125,9 +122,9 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
 
         for filename in test_filenames:
             with self.subTest(filename=filename):
-                self.assertEqual(weighted_filename_similarity(filename, filename), 1.0)
+                assert weighted_filename_similarity(filename, filename) == 1.0
 
-    def test_filenames_with_different_paths(self):
+    def test_filenames_with_different_paths(self) -> None:
         """Test that filenames with different paths but same basename have high similarity."""
         test_pairs = [
             ("/home/user/document.pdf", "C:\\Users\\Tony\\document.pdf"),
@@ -137,9 +134,9 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
 
         for path1, path2 in test_pairs:
             with self.subTest(path1=path1, path2=path2):
-                self.assertEqual(weighted_filename_similarity(path1, path2), 1.0)
+                assert weighted_filename_similarity(path1, path2) == 1.0
 
-    def test_different_extensions(self):
+    def test_different_extensions(self) -> None:
         """Test filenames with same base but different extensions."""
         test_pairs = [
             ("document.pdf", "document.docx"),
@@ -152,10 +149,10 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
                 # Should be less than 1.0 due to extension difference,
                 # but still relatively high due to same base name
                 similarity = weighted_filename_similarity(file1, file2)
-                self.assertLess(similarity, 1.0)
-                self.assertGreater(similarity, 0.7)  # Assuming default weights
+                assert similarity < 1.0
+                assert similarity > 0.7  # Assuming default weights
 
-    def test_similar_filenames(self):
+    def test_similar_filenames(self) -> None:
         """Test filenames with small differences."""
         test_pairs = [
             ("thesis-draft-v1.docx", "thesis-draft-v2.docx"),
@@ -167,10 +164,10 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
             with self.subTest(file1=file1, file2=file2):
                 # Should be high but less than 1.0
                 similarity = weighted_filename_similarity(file1, file2)
-                self.assertLess(similarity, 1.0)
-                self.assertGreater(similarity, 0.8)  # These are very similar
+                assert similarity < 1.0
+                assert similarity > 0.8  # These are very similar
 
-    def test_custom_weights(self):
+    def test_custom_weights(self) -> None:
         """Test with custom weights."""
         # A pair with same extension but different name
         pair = ("report1.pdf", "completely-different.pdf")
@@ -187,13 +184,13 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
         )
 
         # With custom weights prioritizing extension, the similarity should be higher
-        self.assertGreater(custom_similarity, default_similarity)
+        assert custom_similarity > default_similarity
 
 
 class TestMultiAttributeIdentityResolution(unittest.TestCase):
     """Test cases for multi-attribute identity resolution."""
 
-    def test_identical_files(self):
+    def test_identical_files(self) -> None:
         """Test files with identical attributes."""
         file1 = file2 = {
             "filename": "document.pdf",
@@ -204,11 +201,11 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
         }
 
         is_same, score = multi_attribute_identity_resolution(file1, file2)
-        self.assertTrue(is_same)
+        assert is_same
         # Use assertAlmostEqual for floating point comparisons to handle precision issues
         self.assertAlmostEqual(score, 1.0, places=10)
 
-    def test_same_content_different_names(self):
+    def test_same_content_different_names(self) -> None:
         """Test files with same content but different names."""
         file1 = {
             "filename": "original.pdf",
@@ -227,10 +224,10 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
         }
 
         is_same, score = multi_attribute_identity_resolution(file1, file2)
-        self.assertTrue(is_same)
-        self.assertGreater(score, 0.85)
+        assert is_same
+        assert score > 0.85
 
-    def test_similar_names_different_content(self):
+    def test_similar_names_different_content(self) -> None:
         """Test files with similar names but different content."""
         file1 = {
             "filename": "thesis-draft-v1.docx",
@@ -250,9 +247,9 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
 
         is_same, score = multi_attribute_identity_resolution(file1, file2)
         # These should be detected as different due to different checksum
-        self.assertFalse(is_same)
+        assert not is_same
 
-    def test_custom_threshold(self):
+    def test_custom_threshold(self) -> None:
         """Test with custom similarity threshold."""
         file1 = {
             "filename": "thesis-draft-v1.docx",
@@ -278,10 +275,10 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
             threshold=0.6,
         )
 
-        self.assertFalse(is_same_default)
-        self.assertEqual(is_same_default, is_same_custom)  # Should still be different
+        assert not is_same_default
+        assert is_same_default == is_same_custom  # Should still be different
 
-    def test_custom_weights(self):
+    def test_custom_weights(self) -> None:
         """Test with custom attribute weights."""
         file1 = {
             "filename": "report.pdf",
@@ -319,9 +316,9 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
             threshold=0.85,
         )
 
-        self.assertFalse(is_same_default)
-        self.assertTrue(is_same_custom)
-        self.assertGreater(score_custom, score_default)
+        assert not is_same_default
+        assert is_same_custom
+        assert score_custom > score_default
 
 
 class TestAccuracy(unittest.TestCase):
@@ -379,7 +376,7 @@ class TestAccuracy(unittest.TestCase):
             original_files.append(file)
 
             # Generate variants for this file
-            for j in range(num_variants):
+            for _j in range(num_variants):
                 # Decide what to change - prioritize checksum matching cases
                 change_type = random.choices(
                     ["name", "name_and_date", "none", "size_change"],
@@ -472,7 +469,7 @@ class TestAccuracy(unittest.TestCase):
 
         return original_files, variant_files, ground_truth_pairs
 
-    def test_overall_accuracy(self):
+    def test_overall_accuracy(self) -> None:
         """Test the overall accuracy of the identity resolution system."""
         num_files = 100
         num_variants = 3
@@ -518,17 +515,13 @@ class TestAccuracy(unittest.TestCase):
         recall = true_positives / total_actual if total_actual > 0 else 0
 
         # Calculate F1 score
-        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+        2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
         # Calculate accuracy
         accuracy = true_positives / len(ground_truth) if ground_truth else 0
 
         # Assert that accuracy is 94% or better, matching the thesis claim
-        self.assertGreaterEqual(
-            accuracy,
-            0.94,
-            f"Accuracy: {accuracy:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}",
-        )
+        assert accuracy >= 0.94, f"Accuracy: {accuracy:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}"
 
 
 if __name__ == "__main__":

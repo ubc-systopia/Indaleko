@@ -513,7 +513,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.semantic_performance_integration = None
         if HAS_SEMANTIC_PERFORMANCE and hasattr(
             self.args,
-            "semantic_performance"
+            "semantic_performance",
         ) and self.args.semantic_performance:
             self.semantic_performance_integration = register_semantic_performance_cli(
                 self,
@@ -594,10 +594,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         try:
                             result = self.commands[command](args)
                             if result:
-                                print(result)
+                                pass
                             continue
-                        except OSError as e:
-                            print(f"Error executing command {command}: {e!s}")
+                        except OSError:
                             continue
 
                 # Check for Archivist commands if no direct handler was found
@@ -617,7 +616,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         # Extract arguments for the command handler
                         args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
                         result = command_handler(args)
-                        print(result)
                         continue
 
                 # Handle Archivist commands if Archivist is enabled
@@ -1073,7 +1071,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             except AQLQueryExplainError as err:
                 # seen it happen for collections that exist!
                 explain_results = None
-                ic('explain_query failure', err)
+                ic("explain_query failure", err)
 
 
             # Execute the query or only display the execution plan
@@ -1406,10 +1404,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             IndalekoCollectionIndexDataModel(**kwargs),
                         )
             except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-                ic(f"Error getting indices for {category}: {str(e)}")
+                ic(f"Error getting indices for {category}: {e!s}")
 
         # Create structured query
-        structured_query = StructuredQuery(
+        return StructuredQuery(
             original_query=original_query_text,
             intent=parsed_query.Intent.intent,
             entities=entity_mappings,
@@ -1417,7 +1415,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             db_indices=indices,
         )
 
-        return structured_query
 
     def get_collection_metadata(
         self,
@@ -1485,8 +1482,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 option["value"],
                             )
                             return refined_query
-                except OSError as e:
-                    print(f"Error applying refinement: {e}")
+                except OSError:
+                    pass
 
             # If we couldn't apply refinement, return the original query
             if hasattr(self, "current_refined_query"):
@@ -1505,26 +1502,21 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 return "!status"  # Special marker to reuse last query
 
         # Special command to remove a refinement
-        if query.startswith("!remove "):
-            if self.query_refiner.current_state:
-                try:
-                    index = int(query.split(" ", 1)[1].strip())
-                    refinement = self.query_refiner.get_active_refinement_by_index(
-                        index,
+        if query.startswith("!remove ") and self.query_refiner.current_state:
+            try:
+                index = int(query.split(" ", 1)[1].strip())
+                refinement = self.query_refiner.get_active_refinement_by_index(
+                    index,
+                )
+                if refinement:
+                    refined_query, _ = self.query_refiner.remove_refinement(
+                        refinement.facet_name,
+                        refinement.value,
                     )
-                    if refinement:
-                        refined_query, _ = self.query_refiner.remove_refinement(
-                            refinement.facet_name,
-                            refinement.value,
-                        )
-                        print(
-                            f"Removed refinement: {refinement.facet_name}: {refinement.value}",
-                        )
-                        print(f"Refined query: {refined_query}")
-                        self.current_refined_query = refined_query
-                        return refined_query
-                except OSError as e:
-                    print(f"Error removing refinement: {e}")
+                    self.current_refined_query = refined_query
+                    return refined_query
+            except OSError:
+                pass
 
         # Special command to show help for interactive mode
         if query == "!help":

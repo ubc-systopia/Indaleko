@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from textwrap import dedent
 from typing import Any
 
 from pydantic import Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,13 +38,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the Indaleko query history.
-    """
+    """This class defines the data model for the Indaleko query history."""
 
     Record: IndalekoRecordDataModel = Field(
         ...,
@@ -76,7 +77,7 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     IndalekoQueryHistoryDataModel.test_model_main()
 

@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+
 from datetime import UTC, datetime
 from textwrap import dedent
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,20 +41,19 @@ from db import IndalekoDBCollections, IndalekoDBConfig
 from query.history.data_models.query_history import QueryHistoryData
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
 class QueryHistory:
-    """
-    Manages the history of user queries and their results.
-    """
+    """Manages the history of user queries and their results."""
 
     query_history_uuid_str = "9d13e4b4-de50-4a7d-878a-932c54f346ec"
     query_history_version = "2025.02.17.01"
     query_history_description = dedent("""Captured query history for Indaleko.""")
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
-        """Set up the query history"""
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
+        """Set up the query history."""
         self.db_config = db_config
         self.query_history_collection = self.db_config._arangodb.collection(
             IndalekoDBCollections.Indaleko_Query_History_Collection,
@@ -119,9 +120,7 @@ class QueryHistory:
         return self.get_recent_queries(1)[0] if self.query_history_collection.count() > 0 else None
 
     def clear(self) -> None:
-        """
-        Clear the query history.
-        """
+        """Clear the query history."""
         self.history.clear()
 
     def get_full_history(self) -> list[dict[str, Any]]:

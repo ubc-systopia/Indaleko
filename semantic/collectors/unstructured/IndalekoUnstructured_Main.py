@@ -2,7 +2,9 @@ import logging
 import os
 import subprocess
 import sys  # Added to use sys.exit()
+
 from datetime import datetime
+
 
 # Prompt the user for the necessary paths
 PathToWhereLogFileWillBeStored = input(
@@ -68,17 +70,17 @@ def get_local_image_version(image_name, image_tag):
     return None
 
 
-def pull_docker_image(image_name, image_tag):
+def pull_docker_image(image_name, image_tag) -> None:
     logger.info(f"Pulling Docker image {image_name}:{image_tag}...")
     try:
         subprocess.run(["docker", "pull", f"{image_name}:{image_tag}"], check=True)
         logger.info(f"Successfully pulled Docker image {image_name}:{image_tag}")
     except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to pull Docker image {image_name}:{image_tag}: {e}")
+        logger.exception(f"Failed to pull Docker image {image_name}:{image_tag}: {e}")
         sys.exit(1)  # Exit the script if the image pull fails
 
 
-def setup_directories_and_volumes():
+def setup_directories_and_volumes() -> None:
     for volume in volumes:
         host_path = volume["host"]
         if not os.path.exists(host_path):
@@ -103,7 +105,7 @@ def container_exists(container_name):
     return bool(result.stdout.strip())
 
 
-def run_docker_container(container_name, image_name, image_tag, output_file_name):
+def run_docker_container(container_name, image_name, image_tag, output_file_name) -> None:
     logger.info(
         f"Running the Docker container '{container_name}' with necessary volume mounts...",
     )
@@ -119,7 +121,7 @@ def run_docker_container(container_name, image_name, image_tag, output_file_name
             subprocess.run(["docker", "rm", "-f", container_name], check=True)
             logger.info(f"Successfully removed existing container '{container_name}'")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to remove existing container '{container_name}': {e}")
+            logger.exception(f"Failed to remove existing container '{container_name}': {e}")
             raise  # Stop execution if the container cannot be removed
 
     try:
@@ -140,8 +142,7 @@ def run_docker_container(container_name, image_name, image_tag, output_file_name
                 output_file_name,
             ],
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
         logger.info(
@@ -150,8 +151,8 @@ def run_docker_container(container_name, image_name, image_tag, output_file_name
         logger.info(f"Container stdout:\n{result.stdout}")
         logger.info(f"Container stderr:\n{result.stderr}")
     except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to run Docker container '{container_name}': {e}")
-        logger.error(f"Error output:\n{e.stderr}")
+        logger.exception(f"Failed to run Docker container '{container_name}': {e}")
+        logger.exception(f"Error output:\n{e.stderr}")
         raise
 
 
@@ -165,20 +166,19 @@ This is not necessary as I can access the full log file in the log directory.
 Leaving it here to serve as a reminder to potentially work on"""
 
 
-def access_logs():
+def access_logs() -> None:
     logger.info("Displaying logs from the host machine...")
     log_file_path = os.path.join(logs_directory, "indexing.log")
     if os.path.exists(log_file_path):
         with open(log_file_path) as log_file:
             logs = log_file.read()
-            print(logs)
             logger.info("Log file content:")
             logger.info(logs)
     else:
         logger.error("Log file not found.")
 
 
-def clean_up(container_name):
+def clean_up(container_name) -> None:
     logger.info(f"Stopping and removing the Docker container '{container_name}'...")
     try:
         subprocess.run(["docker", "stop", container_name], check=True)
@@ -187,7 +187,7 @@ def clean_up(container_name):
             f"Successfully stopped and removed Docker container '{container_name}'",
         )
     except subprocess.CalledProcessError as e:
-        logger.error(
+        logger.exception(
             f"Failed to stop and remove Docker container '{container_name}': {e}",
         )
 
@@ -204,10 +204,10 @@ if __name__ == "__main__":
         run_docker_container(container_name, image_name, image_tag, output_file_name)
         # access_logs()  # Optional: Uncomment if you want to automatically display logs
     except subprocess.CalledProcessError as e:
-        logger.error(f"An error occurred during execution: {e}")
+        logger.exception(f"An error occurred during execution: {e}")
         sys.exit(1)  # Exit the script with a non-zero status code
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        logger.exception(f"An unexpected error occurred: {e}")
         sys.exit(1)  # Exit the script with a non-zero status code
     logger.info(
         f"Docker Unstructured script finished on: {PathToUserDefinedFolder}.\nSaved to: {PathToOutputFileWillBeSaved}",

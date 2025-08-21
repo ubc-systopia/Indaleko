@@ -23,10 +23,12 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.task_activity.data_models.task_data_model import (
     TaskActivityData,
@@ -69,8 +73,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -105,8 +107,8 @@ class TaskActivityRecorder(RecorderBase):
         "source_app": ACTIVITY_DATA_TASK_SOURCE_APP,
     }
 
-    def __init__(self, **kwargs):
-        """Initialize the task activity recorder"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the task activity recorder."""
         # Initialize database connection
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, "Failed to get the database configuration"
@@ -171,23 +173,23 @@ class TaskActivityRecorder(RecorderBase):
             self.logger.setLevel(logging.INFO)
 
     def get_recorder_name(self) -> str:
-        """Get the name of the recorder"""
+        """Get the name of the recorder."""
         return "task_activity_recorder"
 
     def get_recorder_id(self) -> uuid.UUID:
-        """Get the ID of the recorder"""
+        """Get the ID of the recorder."""
         return self.source_data["Identifier"]
 
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the recorder"""
+        """Get the characteristics of the recorder."""
         return self.collector.get_collector_characteristics()
 
     def get_collector_class_model(self) -> dict[str, type]:
-        """Get the class model for the collector"""
+        """Get the class model for the collector."""
         return {"TaskData": TaskData, "TaskActivityData": TaskActivityData}
 
     def get_description(self) -> str:
-        """Get the description of the recorder"""
+        """Get the description of the recorder."""
         return self.source_data["Description"]
 
     def process_data(self, data: Any) -> dict[str, Any]:
@@ -367,7 +369,7 @@ class TaskActivityRecorder(RecorderBase):
             bind_vars = {"@collection": self.collection.name}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         if len(entries) == 0:
             return None
@@ -405,7 +407,7 @@ class TaskActivityRecorder(RecorderBase):
         }
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        return [entry for entry in results]
+        return list(results)
 
     def sync_all_tasks(self) -> int:
         """
@@ -465,8 +467,8 @@ class TaskActivityRecorder(RecorderBase):
         return self.sync_recent_activities()
 
 
-def main():
-    """Main function for testing the recorder"""
+def main() -> None:
+    """Main function for testing the recorder."""
     # Create collector and recorder
     collector = TaskActivityCollector()
     recorder = TaskActivityRecorder(collector=collector)
@@ -485,7 +487,7 @@ def main():
     ic(f"Created new task: {new_task.task_id} - {new_task.title}")
 
     # Store the new task
-    doc = recorder.store_task_activity(new_task, "created")
+    recorder.store_task_activity(new_task, "created")
     ic("Stored new task in database")
 
     # Update a task
@@ -501,7 +503,7 @@ def main():
         )
         if updated_task:
             ic(f"Updated task {updated_task.task_id} status to {updated_task.status}")
-            doc = recorder.store_task_activity(
+            recorder.store_task_activity(
                 updated_task,
                 "updated",
                 {"status": task_to_update.status},

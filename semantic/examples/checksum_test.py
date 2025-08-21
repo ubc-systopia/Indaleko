@@ -26,7 +26,9 @@ import logging
 import os
 import sys
 import time
+
 from pathlib import Path
+
 
 # Setup proper environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -40,15 +42,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from semantic.collectors.checksum.checksum import compute_checksums
 
 
-def format_bytes(size):
+def format_bytes(size) -> str | None:
     """Format byte size to human-readable format."""
     for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size < 1024.0 or unit == "TB":
             return f"{size:.2f} {unit}"
         size /= 1024.0
+    return None
 
 
-def process_file(file_path, verbose=False):
+def process_file(file_path, verbose=False) -> None:
     """Process a single file and show its checksums."""
     try:
         # Get file size
@@ -56,45 +59,34 @@ def process_file(file_path, verbose=False):
 
         # Measure time for checksum calculation
         start_time = time.time()
-        checksums = compute_checksums(file_path)
+        compute_checksums(file_path)
         end_time = time.time()
 
         elapsed_time = end_time - start_time
 
-        print(f"\nChecksum Results for: {file_path}")
-        print(f"File size: {format_bytes(file_size)}")
-        print(f"Computation time: {elapsed_time:.3f} seconds")
 
-        print("\nChecksums:")
-        print(f"  MD5:     {checksums['MD5']}")
-        print(f"  SHA1:    {checksums['SHA1']}")
-        print(f"  SHA256:  {checksums['SHA256']}")
 
         if verbose:
-            print(f"  SHA512:  {checksums['SHA512']}")
-            print(f"  Dropbox: {checksums['Dropbox']}")
+            pass
 
         # Calculate throughput
         if elapsed_time > 0:
-            throughput = file_size / elapsed_time / 1024 / 1024  # MB/s
-            print(f"\nProcessing throughput: {throughput:.2f} MB/s")
+            file_size / elapsed_time / 1024 / 1024  # MB/s
 
-    except Exception as e:
-        print(f"Error processing {file_path}: {e!s}")
+    except Exception:
+        pass
 
 
-def process_directory(directory_path, recursive=False, extensions=None, verbose=False):
+def process_directory(directory_path, recursive=False, extensions=None, verbose=False) -> None:
     """Process all files in a directory, optionally filtering by extension."""
     path = Path(directory_path)
 
     if not path.exists() or not path.is_dir():
-        print(f"Error: {directory_path} is not a valid directory")
         return
 
     # Filter by extensions if provided
     if extensions:
         extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions]
-        print(f"Filtering by extensions: {', '.join(extensions)}")
 
     # Define the glob pattern based on recursion
     glob_pattern = "**/*" if recursive else "*"
@@ -130,25 +122,17 @@ def process_directory(directory_path, recursive=False, extensions=None, verbose=
                 total_time += elapsed_time
 
                 # Print progress
-                print(
-                    f"Processing {total_files} files: {file_path.name} ({format_bytes(file_size)}) - {elapsed_time:.2f}s",
-                    end="\r",
-                )
 
-            except Exception as e:
-                print(f"\nError processing {file_path}: {e!s}")
+            except Exception:
+                pass
 
     # Print summary
-    print(f"\n\nProcessed {total_files} files in {directory_path}")
-    print(f"Total data processed: {format_bytes(total_size)}")
-    print(f"Total processing time: {total_time:.2f} seconds")
 
     if total_time > 0:
-        avg_throughput = total_size / total_time / 1024 / 1024  # MB/s
-        print(f"Average throughput: {avg_throughput:.2f} MB/s")
+        total_size / total_time / 1024 / 1024  # MB/s
 
 
-def main():
+def main() -> None:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Indaleko Checksum Generator")
 

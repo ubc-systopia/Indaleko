@@ -1,8 +1,9 @@
-"""initializtion logic for the activity context system"""
+"""initializtion logic for the activity context system."""
 
 import importlib
 import os
 import sys
+
 
 # from icecream import ic
 
@@ -17,6 +18,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from semantic.characteristics import SemanticDataCharacteristics
+
 
 # pylint: enable=wrong-import-position
 

@@ -26,6 +26,7 @@ import sys
 from icecream import ic
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -38,11 +39,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from constants import IndalekoConstants
 from data_models.collector import IndalekoCollectorDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
-    """Defines the base data model for the storage collectors"""
+    """Defines the base data model for the storage collectors."""
 
     ServiceType: str = Field(
         IndalekoConstants.service_type_storage_collector,
@@ -51,7 +53,7 @@ class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
     )
 
     class Config:
-        """Configuration for the storage collector data model"""
+        """Configuration for the storage collector data model."""
 
         @staticmethod
         def get_example():
@@ -65,16 +67,14 @@ class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
         }
 
 
-def main():
-    """Test code for the storage collector data model"""
+def main() -> None:
+    """Test code for the storage collector data model."""
     ic("Testing Storage Collector Data Model")
     storage_collector_data = IndalekoStorageCollectorDataModel(
         **IndalekoStorageCollectorDataModel.Config.json_schema_extra["example"],
     )
     ic(storage_collector_data)
     ic(platform.system())
-    print(storage_collector_data.model_dump(exclude_unset=True))
-    print(storage_collector_data.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

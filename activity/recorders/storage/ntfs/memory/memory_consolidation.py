@@ -40,8 +40,10 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -53,6 +55,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from utils.i_logging import get_logger
+
 
 # pylint: enable=wrong-import-position
 
@@ -82,7 +85,7 @@ class MemoryConsolidationManager:
         archival_min_importance: float = 0.8,
         entity_batch_size: int = 100,
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the memory consolidation manager.
 
@@ -123,7 +126,7 @@ class MemoryConsolidationManager:
         # Initialize statistics
         self._stats = {}
 
-    def _initialize_recorders(self):
+    def _initialize_recorders(self) -> None:
         """Initialize memory recorders if not provided."""
         # Initialize sensory memory recorder if needed
         if self._sensory_memory_recorder is None:
@@ -138,7 +141,7 @@ class MemoryConsolidationManager:
                 )
                 self._logger.info("Created sensory memory recorder")
             except Exception as e:
-                self._logger.error(f"Failed to create sensory memory recorder: {e}")
+                self._logger.exception(f"Failed to create sensory memory recorder: {e}")
 
         # Initialize short-term memory recorder if needed
         if self._short_term_memory_recorder is None:
@@ -153,7 +156,7 @@ class MemoryConsolidationManager:
                 )
                 self._logger.info("Created short-term memory recorder")
             except Exception as e:
-                self._logger.error(f"Failed to create short-term memory recorder: {e}")
+                self._logger.exception(f"Failed to create short-term memory recorder: {e}")
 
         # Initialize long-term memory recorder if needed
         if self._long_term_memory_recorder is None:
@@ -168,7 +171,7 @@ class MemoryConsolidationManager:
                 )
                 self._logger.info("Created long-term memory recorder")
             except Exception as e:
-                self._logger.error(f"Failed to create long-term memory recorder: {e}")
+                self._logger.exception(f"Failed to create long-term memory recorder: {e}")
 
         # Initialize archival memory recorder if needed
         if self._archival_memory_recorder is None:
@@ -182,7 +185,7 @@ class MemoryConsolidationManager:
                 )
                 self._logger.info("Created archival memory recorder")
             except Exception as e:
-                self._logger.error(f"Failed to create archival memory recorder: {e}")
+                self._logger.exception(f"Failed to create archival memory recorder: {e}")
 
     def consolidate_sensory_to_short_term(self) -> dict[str, Any]:
         """
@@ -233,7 +236,7 @@ class MemoryConsolidationManager:
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error during sensory to short-term consolidation: {e}")
+            self._logger.exception(f"Error during sensory to short-term consolidation: {e}")
             return {"error": str(e), "consolidation_type": "sensory_to_short_term"}
 
     def consolidate_short_term_to_long_term(self) -> dict[str, Any]:
@@ -286,7 +289,7 @@ class MemoryConsolidationManager:
             return stats
 
         except Exception as e:
-            self._logger.error(
+            self._logger.exception(
                 f"Error during short-term to long-term consolidation: {e}",
             )
             return {"error": str(e), "consolidation_type": "short_term_to_long_term"}
@@ -338,7 +341,7 @@ class MemoryConsolidationManager:
             self._logger.info(f"Execution time: {stats['execution_time']:.2f} seconds")
 
         except Exception as e:
-            self._logger.error(f"Error during long-term to archival consolidation: {e}")
+            self._logger.exception(f"Error during long-term to archival consolidation: {e}")
             stats = {
                 "error": str(e),
                 "entities_processed": 0,
@@ -439,7 +442,7 @@ class MemoryConsolidationManager:
                 sensory_stats = self._sensory_memory_recorder.get_sensory_memory_statistics()
                 stats["memory_tiers"]["sensory"] = sensory_stats
             except Exception as e:
-                self._logger.error(f"Error getting sensory memory statistics: {e}")
+                self._logger.exception(f"Error getting sensory memory statistics: {e}")
                 stats["memory_tiers"]["sensory"] = {"error": str(e)}
         else:
             stats["memory_tiers"]["sensory"] = {"status": "recorder_not_available"}
@@ -450,7 +453,7 @@ class MemoryConsolidationManager:
                 short_term_stats = self._short_term_memory_recorder.get_short_term_memory_statistics()
                 stats["memory_tiers"]["short_term"] = short_term_stats
             except Exception as e:
-                self._logger.error(f"Error getting short-term memory statistics: {e}")
+                self._logger.exception(f"Error getting short-term memory statistics: {e}")
                 stats["memory_tiers"]["short_term"] = {"error": str(e)}
         else:
             stats["memory_tiers"]["short_term"] = {"status": "recorder_not_available"}
@@ -461,7 +464,7 @@ class MemoryConsolidationManager:
                 long_term_stats = self._long_term_memory_recorder.get_long_term_memory_statistics()
                 stats["memory_tiers"]["long_term"] = long_term_stats
             except Exception as e:
-                self._logger.error(f"Error getting long-term memory statistics: {e}")
+                self._logger.exception(f"Error getting long-term memory statistics: {e}")
                 stats["memory_tiers"]["long_term"] = {"error": str(e)}
         else:
             stats["memory_tiers"]["long_term"] = {"status": "recorder_not_available"}
@@ -472,7 +475,7 @@ class MemoryConsolidationManager:
                 archival_stats = self._archival_memory_recorder.get_archival_memory_statistics()
                 stats["memory_tiers"]["archival"] = archival_stats
             except Exception as e:
-                self._logger.error(f"Error getting archival memory statistics: {e}")
+                self._logger.exception(f"Error getting archival memory statistics: {e}")
                 stats["memory_tiers"]["archival"] = {"error": str(e)}
         else:
             stats["memory_tiers"]["archival"] = {"status": "recorder_not_available"}
@@ -480,7 +483,7 @@ class MemoryConsolidationManager:
         return stats
 
 
-def main():
+def main() -> int:
     """Main function for the memory consolidation process."""
     # Set up argument parser
     parser = argparse.ArgumentParser(
@@ -643,7 +646,7 @@ def main():
             results = manager.get_statistics()
 
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled error: {e}")
         import traceback
 
         traceback.print_exc()
@@ -670,7 +673,7 @@ def main():
                     output += f"Below Threshold: {results.get('below_threshold', 0)}\n"
                     output += f"Errors: {results.get('errors', 0)}\n"
 
-                elif consolidation_type == "short_term_to_long_term" or consolidation_type == "long_term_to_archival":
+                elif consolidation_type in {"short_term_to_long_term", "long_term_to_archival"}:
                     output += f"Entities Processed: {results.get('entities_processed', 0)}\n"
                     output += f"Entities Consolidated: {results.get('entities_consolidated', 0)}\n"
                     output += f"Errors: {results.get('errors', 0)}\n"
@@ -722,7 +725,7 @@ def main():
                 f.write(output)
             logger.info(f"Results written to {args.output_file}")
         else:
-            print(output)
+            pass
 
     return 0
 

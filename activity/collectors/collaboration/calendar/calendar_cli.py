@@ -29,6 +29,7 @@ import logging
 import os
 import sys
 
+
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -83,10 +84,6 @@ def setup_google_calendar(args):
     """
     # Check if Google API is available
     if not GOOGLE_API_AVAILABLE:
-        print("Google API libraries not available. Please install required packages:")
-        print(
-            "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib",
-        )
         return None, None
 
     # Set up configuration paths
@@ -103,11 +100,6 @@ def setup_google_calendar(args):
 
     # Check if config file exists
     if not os.path.exists(config_path):
-        print(f"Google Calendar API config file not found: {config_path}")
-        print(
-            "Please download OAuth 2.0 Client ID credentials from Google Cloud Console",
-        )
-        print("and save them as 'gcalendar_config.json' in the config directory")
         return None, None
 
     # Create collector
@@ -131,10 +123,6 @@ def setup_outlook_calendar(args):
     """
     # Check if MSAL is available
     if not MSAL_AVAILABLE:
-        print(
-            "Microsoft Authentication Library not available. Please install required packages:",
-        )
-        print("pip install msal requests")
         return None, None
 
     # Set up configuration paths
@@ -160,9 +148,6 @@ def setup_outlook_calendar(args):
     client_secret = args.client_secret or config.get("client_secret")
 
     if not client_id or not client_secret:
-        print("Microsoft Graph API credentials not found")
-        print("Please provide client_id and client_secret using command-line options")
-        print("or configure outlook_calendar_config.json")
         return None, None
 
     # Update config
@@ -203,26 +188,20 @@ def collect_events(collector, args):
     start_time = now - datetime.timedelta(days=start_days)
     end_time = now + datetime.timedelta(days=end_days)
 
-    print(f"Collecting events from {start_time.date()} to {end_time.date()}")
 
     # Authenticate
-    print("Authenticating with calendar service...")
     if not collector.authenticate():
-        print("Authentication failed")
         return []
 
     # Collect events
-    print("Collecting events...")
     collector.collect_data(start_time=start_time, end_time=end_time)
 
     # Process events
-    events = collector.process_data()
-    print(f"Collected {len(events)} events")
-
-    return events
+    return collector.process_data()
 
 
-def display_events(events, args):
+
+def display_events(events, args) -> None:
     """Display events in a readable format.
 
     Args:
@@ -230,17 +209,13 @@ def display_events(events, args):
         args: Command-line arguments
     """
     if not events:
-        print("No events found")
         return
 
     # Display events
-    print(f"\n{'-' * 80}")
-    print(f"{'SUBJECT':<40} {'START TIME':<20} {'LOCATION':<20}")
-    print(f"{'-' * 80}")
 
     for event in events:
         # Format start time
-        start_time = event.start_time.strftime("%Y-%m-%d %H:%M")
+        event.start_time.strftime("%Y-%m-%d %H:%M")
 
         # Format location
         location = event.location.display_name if event.location else ""
@@ -256,9 +231,7 @@ def display_events(events, args):
             subject = subject[:35] + "..."
 
         # Print event
-        print(f"{subject:<40} {start_time:<20} {location:<20}")
 
-    print(f"{'-' * 80}")
 
 
 def store_events(events, args):
@@ -275,13 +248,11 @@ def store_events(events, args):
     recorder = CalendarRecorder(collection_name=args.collection)
 
     # Store events
-    print(f"Storing {len(events)} events in collection '{args.collection}'...")
-    stored_count = recorder.store_calendar_events(events)
-
-    return stored_count
+    return recorder.store_calendar_events(events)
 
 
-def main():
+
+def main() -> int:
     """Main entry point for the calendar CLI."""
     parser = argparse.ArgumentParser(description="Indaleko Calendar Collector CLI")
 
@@ -343,11 +314,7 @@ def main():
 
     # If only registration is requested, create recorder and exit
     if args.register and not (args.store or args.provider):
-        print("Registering calendar recorder with activity service manager...")
-        recorder = CalendarRecorder(collection_name=args.collection)
-        print(
-            "Registration complete. Calendar events will now appear in query results.",
-        )
+        CalendarRecorder(collection_name=args.collection)
         return 0
 
     # Set up collector
@@ -368,15 +335,11 @@ def main():
 
     # Store events if requested
     if args.store and events:
-        stored_count = store_events(events, args)
-        print(f"Stored {stored_count} events in the database")
+        store_events(events, args)
 
         # Register with service manager if requested
         if args.register:
-            print(
-                "Calendar recorder is automatically registered with the activity service manager",
-            )
-            print("Calendar events will now appear in query results")
+            pass
 
     return 0
 

@@ -23,12 +23,14 @@ import json
 import mimetypes
 import os
 import sys
+
 from datetime import UTC, datetime
 
 # third-party imports
 from uuid import UUID, uuid4
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,19 +39,17 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from data_models.base import IndalekoBaseModel
-
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from data_models.base import IndalekoBaseModel
+
 
 # pylint: enable=wrong-import-position
 
 
 class UnstructuredEmbeddedDataModel(IndalekoBaseModel):
-    """
-    This class defines the data model for the unstructured data collector.
-    """
+    """This class defines the data model for the unstructured data collector."""
 
     ElementId: UUID = Field(
         default_factory=uuid4,
@@ -143,7 +143,7 @@ class UnstructuredEmbeddedDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     UnstructuredEmbeddedDataModel.test_model_main()
 

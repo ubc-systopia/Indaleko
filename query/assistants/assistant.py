@@ -23,11 +23,14 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 import openai
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +42,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from query.assistants.state import ConversationState
 from query.tools.base import ToolInput
 from query.tools.registry import get_registry
+
 
 # Import Query Context Integration components if available
 try:
@@ -63,9 +67,7 @@ except ImportError:
 
 
 class IndalekoAssistant:
-    """
-    Indaleko Assistant implementation using OpenAI's Assistant API.
-    """
+    """Indaleko Assistant implementation using OpenAI's Assistant API."""
 
     # System instructions for the assistant
     ASSISTANT_INSTRUCTIONS = """You are Indaleko Assistant, a helpful AI that helps users find and understand their personal data.
@@ -102,7 +104,7 @@ class IndalekoAssistant:
         archivist_memory=None,
         recommendation_engine=None,
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the Indaleko Assistant.
 
@@ -200,9 +202,7 @@ class IndalekoAssistant:
         return api_key
 
     def _initialize_assistant(self) -> None:
-        """
-        Initialize the OpenAI Assistant, creating a new one if needed.
-        """
+        """Initialize the OpenAI Assistant, creating a new one if needed."""
         # Check if the assistant configuration is stored on disk
         config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
         assistant_config_file = os.path.join(config_dir, "assistant-config.json")
@@ -253,7 +253,7 @@ class IndalekoAssistant:
         # Get all registered tools
         registered_tools = self.tool_registry.get_all_tools()
 
-        for tool_name, tool in registered_tools.items():
+        for tool in registered_tools.values():
             # Convert our tool definition to OpenAI format
             definition = tool.definition
 
@@ -475,9 +475,8 @@ class IndalekoAssistant:
         )
 
         # Wait for the run to complete or require action
-        response = self._wait_for_run(thread_id, run.id, conversation_id)
+        return self._wait_for_run(thread_id, run.id, conversation_id)
 
-        return response
 
     def _wait_for_run(
         self,
@@ -539,7 +538,7 @@ class IndalekoAssistant:
                     "timestamp": datetime.now(UTC).isoformat(),
                 }
 
-            elif run.status == "requires_action":
+            if run.status == "requires_action":
                 # Handle required actions (tool calls)
                 if run.required_action and run.required_action.type == "submit_tool_outputs":
                     tool_calls = run.required_action.submit_tool_outputs.tool_calls
@@ -619,7 +618,7 @@ class IndalekoAssistant:
                 # Continue waiting for completion
                 continue
 
-            elif run.status in ["failed", "cancelled", "expired"]:
+            if run.status in ["failed", "cancelled", "expired"]:
                 # Handle failure
                 error_message = (
                     f"Run {run_id} {run.status}: {run.last_error.message if run.last_error else 'Unknown error'}"

@@ -1,5 +1,5 @@
 """
-This implements the WiFi map based Location Service
+This implements the WiFi map based Location Service.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -23,9 +23,11 @@ import os
 import subprocess
 import sys
 import uuid
+
 from typing import Any
 
 import requests
+
 
 # from icecream import ic
 
@@ -48,9 +50,9 @@ from activity.collectors.location.data_models.wifi_location_data_model import (
 
 
 class WiFiLocation(LocationCollector):
-    """This is the WiFi-based Location Service"""
+    """This is the WiFi-based Location Service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.timeout = 10
         self._name = "WiFi Location Service"
         self._location = "WiFi Location"
@@ -59,7 +61,7 @@ class WiFiLocation(LocationCollector):
         self.data: list[dict] = []
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the provider characteristics"""
+        """Get the provider characteristics."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
             ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
@@ -67,18 +69,18 @@ class WiFiLocation(LocationCollector):
         ]
 
     def get_collector_name(self) -> str:
-        """Get the provider name"""
+        """Get the provider name."""
         return self._name
 
     # alias for backwards compatibility
     get_collectorr_name = get_collector_name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the provider ID"""
+        """Get the provider ID."""
         return self._provider_id
 
     def retrieve_data(self, data_id: uuid.UUID) -> dict[str, Any]:
-        """Retrieve the data associated with the given data_id"""
+        """Retrieve the data associated with the given data_id."""
         if data_id == self.get_provider_id() and self.data:
             return self.data[-1]
         return {}
@@ -90,7 +92,7 @@ class WiFiLocation(LocationCollector):
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
     ) -> list[dict[str, Any]]:
-        """Retrieve temporal data from the provider"""
+        """Retrieve temporal data from the provider."""
         # Return historical records within the time window
         start = reference_time - prior_time_window
         end = reference_time + subsequent_time_window
@@ -100,14 +102,14 @@ class WiFiLocation(LocationCollector):
         return history
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
-        """Retrieve the current cursor for this data provider"""
+        """Retrieve the current cursor for this data provider."""
         # Use provider ID as a simple cursor
         return self.get_provider_id()
 
     def cache_duration(self) -> datetime.timedelta:
         """
         Retrieve the maximum duration that data from this provider may be
-        cached
+        cached.
         """
         return datetime.timedelta(minutes=10)
 
@@ -123,18 +125,18 @@ class WiFiLocation(LocationCollector):
         """
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the provider"""
+        """Get the JSON schema for the provider."""
         return WiFiLocationDataModel.schema_json()
 
     def get_location_name(self) -> str:
-        """Get the location"""
+        """Get the location."""
         location = self._location
         if location is None:
             location = ""
         return location
 
     def get_coordinates(self) -> dict[str, float]:
-        """Get the coordinates for the most recent location"""
+        """Get the coordinates for the most recent location."""
         if self.data:
             loc = self.data[-1].get("Location", {})
             return {
@@ -148,7 +150,7 @@ class WiFiLocation(LocationCollector):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
-        """Get the location history for the location"""
+        """Get the location history for the location."""
         events: list[dict[str, Any]] = []
         for record in self.data:
             loc = record.get("Location", {})
@@ -162,7 +164,7 @@ class WiFiLocation(LocationCollector):
         return events
 
     def collect_data(self) -> None:
-        """Collect and store the latest WiFi-based location data"""
+        """Collect and store the latest WiFi-based location data."""
         # Scan nearby WiFi access points
         aps = []
         try:
@@ -217,7 +219,7 @@ class WiFiLocation(LocationCollector):
             self.store_data(record)
 
     def process_data(self, data: Any) -> dict[str, Any]:
-        """Process collected data into a serializable dict"""
+        """Process collected data into a serializable dict."""
         if isinstance(data, WiFiLocationDataModel):
             return data.model_dump()
         if isinstance(data, dict):
@@ -226,7 +228,7 @@ class WiFiLocation(LocationCollector):
         raise TypeError(f"Unsupported data type: {type(data)}")
 
     def store_data(self, data: dict[str, Any]) -> None:
-        """Store processed data in memory"""
+        """Store processed data in memory."""
         self.data.append(data)
 
     def get_distance(
@@ -234,7 +236,7 @@ class WiFiLocation(LocationCollector):
         location1: dict[str, float],
         location2: dict[str, float],
     ) -> float:
-        """Get the distance between two locations in meters using Haversine formula"""
+        """Get the distance between two locations in meters using Haversine formula."""
         # Earth radius in meters
         from math import atan2, cos, radians, sin, sqrt
 
@@ -249,7 +251,7 @@ class WiFiLocation(LocationCollector):
         return 6371000 * c
 
 
-def main():
+def main() -> None:
     """This is the interface for testing the foo.py module."""
 
 

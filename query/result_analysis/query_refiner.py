@@ -21,8 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import re
 import sys
+
 from datetime import datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -106,11 +108,9 @@ class QueryRefinementState(IndalekoBaseModel):
 
 
 class QueryRefiner:
-    """
-    Manages the refinement of queries based on facet selections.
-    """
+    """Manages the refinement of queries based on facet selections."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the QueryRefiner."""
         self.current_state = None
         self.facet_mappings = {
@@ -265,45 +265,40 @@ class QueryRefiner:
         """Apply file type refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            values = [f'"{r.value}"' for r in refinements]
-            return f'file_type:({" OR ".join(values)})'
+        values = [f'"{r.value}"' for r in refinements]
+        return f'file_type:({" OR ".join(values)})'
 
     def _apply_date_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply date refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            # Date refinements typically don't combine well with OR
-            # Using the most recent one as precedence
-            newest = max(refinements, key=lambda r: r.applied_at)
-            return newest.query_fragment
+        # Date refinements typically don't combine well with OR
+        # Using the most recent one as precedence
+        newest = max(refinements, key=lambda r: r.applied_at)
+        return newest.query_fragment
 
     def _apply_location_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply location refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            values = [f'"{r.value}"' for r in refinements]
-            return f'location:({" OR ".join(values)})'
+        values = [f'"{r.value}"' for r in refinements]
+        return f'location:({" OR ".join(values)})'
 
     def _apply_size_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply size refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            # Size refinements typically don't combine well with OR
-            # Using the most recent one as precedence
-            newest = max(refinements, key=lambda r: r.applied_at)
-            return newest.query_fragment
+        # Size refinements typically don't combine well with OR
+        # Using the most recent one as precedence
+        newest = max(refinements, key=lambda r: r.applied_at)
+        return newest.query_fragment
 
     def _apply_author_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply author refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            values = [f'"{r.value}"' for r in refinements]
-            return f'author:({" OR ".join(values)})'
+        values = [f'"{r.value}"' for r in refinements]
+        return f'author:({" OR ".join(values)})'
 
     def _apply_semantic_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply semantic refinements."""
@@ -329,9 +324,8 @@ class QueryRefiner:
         """Apply tag refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            values = [f'"{r.value}"' for r in refinements]
-            return f'tag:({" OR ".join(values)})'
+        values = [f'"{r.value}"' for r in refinements]
+        return f'tag:({" OR ".join(values)})'
 
     def _apply_content_type_refinement(
         self,
@@ -340,9 +334,8 @@ class QueryRefiner:
         """Apply content type refinements."""
         if len(refinements) == 1:
             return refinements[0].query_fragment
-        else:
-            values = [f'"{r.value}"' for r in refinements]
-            return f'content_type:({" OR ".join(values)})'
+        values = [f'"{r.value}"' for r in refinements]
+        return f'content_type:({" OR ".join(values)})'
 
     def _apply_custom_refinement(self, refinements: list[ActiveRefinement]) -> str:
         """Apply custom refinements."""

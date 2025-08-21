@@ -25,9 +25,11 @@ import os
 import platform
 import sys
 import uuid
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,13 +46,12 @@ from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 from utils.misc.file_name_management import find_candidate_files
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
-    """
-    This is the class that indexes Mac local file systems.
-    """
+    """This is the class that indexes Mac local file systems."""
 
     mac_platform = "Mac"
     mac_local_collector_name = "fs_collector"
@@ -80,7 +81,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
         ServiceVersion=indaleko_mac_local_collector_service_version,
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(
             **kwargs,
             **IndalekoMacLocalStorageCollector.indaleko_mac_local_collector_service,
@@ -103,7 +104,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
         """
         Given a file name and a root directory, this will return a dict
         constructed from the file system metadata ("stat") for that file.
-        Returns: dict_stat, last_uri
+        Returns: dict_stat, last_uri.
         """
         file_path = os.path.join(root, name)
 
@@ -127,7 +128,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
     class local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoMacOSMachineConfig:
-            """Load the machine configuration"""
+            """Load the machine configuration."""
             if keys.get("debug"):
                 ic(f"local_collector_mixin.load_machine_config: {keys}")
             if "machine_config_file" not in keys:
@@ -146,7 +147,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
             platform: str,
             debug: bool = False,
         ) -> list[str] | None:
-            """Find the machine configuration files"""
+            """Find the machine configuration files."""
             if debug:
                 ic(f"find_machine_config_files: config_dir = {config_dir}")
                 ic(f"find_machine_config_files:   platform = {platform}")
@@ -182,19 +183,18 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
                 file_name[prefix_length + 1 : prefix_length + 37],
             ).hex
             timestamp = file_name[prefix_length + 38 : -5]
-            keys = {
+            return {
                 "platform": platform.system(),
                 "service": "macos_machine_config",
                 "machine": machine_id,
                 "timestamp": timestamp,
                 "suffix": ".json",
             }
-            return keys
 
     cli_handler_mixin = local_collector_mixin
 
 
-def main():
+def main() -> None:
     """This is the CLI handler for the mac local storage collector."""
     BaseLocalStorageCollector.local_collector_runner(
         IndalekoMacLocalStorageCollector,

@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import random
 import sys
+
 from datetime import UTC, datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,15 +40,14 @@ from query.memory.proactive_archivist import (
     SuggestionType,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class ProactiveCliIntegration:
-    """
-    Integrates the Proactive Archivist capabilities with the Indaleko CLI.
-    """
+    """Integrates the Proactive Archivist capabilities with the Indaleko CLI."""
 
-    def __init__(self, cli_instance, archivist_memory=None, proactive_archivist=None):
+    def __init__(self, cli_instance, archivist_memory=None, proactive_archivist=None) -> None:
         """
         Initialize the CLI integration for Proactive Archivist.
 
@@ -89,7 +90,7 @@ class ProactiveCliIntegration:
             "/cross-analyze": self.force_cross_source_analysis,
         }
 
-    def handle_command(self, command):
+    def handle_command(self, command) -> bool:
         """
         Handle a proactive-related command.
 
@@ -109,24 +110,10 @@ class ProactiveCliIntegration:
 
         return False
 
-    def show_proactive_help(self, args):
+    def show_proactive_help(self, args) -> None:
         """Show help for proactive commands."""
-        print("\nProactive Archivist Commands:")
-        print("---------------------------")
-        print("/proactive       - Show this help message")
-        print("/suggest         - Show current suggestions")
-        print("/feedback        - Provide feedback on a suggestion (positive/negative)")
-        print("/patterns        - View detected temporal patterns")
-        print("/insights        - View insights from proactive analysis")
-        print("/priorities      - Manage suggestion priorities")
-        print("/disable         - Disable proactive suggestions")
-        print("/enable          - Enable proactive suggestions")
-        print("/cross-source    - View cross-source pattern status")
-        print("/cross-enable    - Enable cross-source pattern detection")
-        print("/cross-disable   - Disable cross-source pattern detection")
-        print("/cross-analyze   - Force a cross-source pattern analysis")
 
-    def check_suggestions(self, context_update=None):
+    def check_suggestions(self, context_update=None) -> None:
         """
         Check if it's time to show suggestions and display them if appropriate.
 
@@ -156,7 +143,7 @@ class ProactiveCliIntegration:
             self._display_suggestions(suggestions[: self.suggestion_limit])
             self.last_suggestions_time = now
 
-    def _display_suggestions(self, suggestions: list[ProactiveSuggestion]):
+    def _display_suggestions(self, suggestions: list[ProactiveSuggestion]) -> None:
         """
         Display suggestions to the user.
 
@@ -166,32 +153,25 @@ class ProactiveCliIntegration:
         if not suggestions:
             return
 
-        print("\n🔮 Proactive suggestions:")
-        print("------------------------")
 
         for i, suggestion in enumerate(suggestions, 1):
-            priority_icon = {
+            {
                 "low": "📌",
                 "medium": "⭐",
                 "high": "🔥",
                 "critical": "⚠️",
             }.get(suggestion.priority, "📌")
 
-            print(f"{i}. {priority_icon} {suggestion.title}")
-            print(f"   {suggestion.content}")
 
             # Add a tip about the feedback command
             if i == len(suggestions):
-                print(
-                    "\nTip: Use /feedback <number> positive|negative to provide feedback",
-                )
+                pass
 
-    def show_suggestions_cmd(self, args):
+    def show_suggestions_cmd(self, args) -> None:
         """Force display of suggestions."""
         suggestions = self.proactive.generate_suggestions(self.context)
 
         if not suggestions:
-            print("No suggestions available at this time.")
             return
 
         self._display_suggestions(
@@ -199,7 +179,7 @@ class ProactiveCliIntegration:
         )  # Show more when explicitly requested
         self.last_suggestions_time = datetime.now(UTC)
 
-    def provide_feedback(self, args):
+    def provide_feedback(self, args) -> None:
         """
         Process feedback on a suggestion.
 
@@ -207,12 +187,10 @@ class ProactiveCliIntegration:
             args: Format should be "<suggestion_number> <positive|negative>"
         """
         if not args:
-            print("Usage: /feedback <suggestion_number> positive|negative")
             return
 
         parts = args.split(maxsplit=1)
         if len(parts) != 2:
-            print("Usage: /feedback <suggestion_number> positive|negative")
             return
 
         try:
@@ -220,13 +198,11 @@ class ProactiveCliIntegration:
             feedback_type = parts[1].lower()
 
             if feedback_type not in ["positive", "negative"]:
-                print("Feedback must be either 'positive' or 'negative'")
                 return
 
             if not self.proactive.data.active_suggestions or num >= len(
                 self.proactive.data.active_suggestions,
             ):
-                print("Invalid suggestion number")
                 return
 
             suggestion = self.proactive.data.active_suggestions[num]
@@ -240,49 +216,34 @@ class ProactiveCliIntegration:
 
             # Confirm to user
             if feedback_type == "positive":
-                print(
-                    "Thanks for the positive feedback! I'll show more suggestions like this.",
-                )
 
                 # If it's a query suggestion, offer to run it
                 if suggestion.suggestion_type == SuggestionType.QUERY and suggestion.related_queries:
-                    query = suggestion.related_queries[0]
-                    print(f"\nWould you like to run the suggested query? Type: {query}")
+                    suggestion.related_queries[0]
             else:
-                print(
-                    "Thanks for the feedback. I'll show fewer suggestions like this.",
-                )
+                pass
 
         except ValueError:
-            print("Invalid suggestion number")
+            pass
 
-    def view_patterns(self, args):
+    def view_patterns(self, args) -> None:
         """View detected temporal patterns."""
         patterns = self.proactive.data.temporal_patterns
 
         if not patterns:
-            print("No temporal patterns detected yet.")
             return
 
-        print("\nDetected Temporal Patterns:")
-        print("--------------------------")
 
-        for i, pattern in enumerate(
+        for _i, pattern in enumerate(
             sorted(patterns, key=lambda p: p.confidence, reverse=True),
             1,
         ):
-            print(f"{i}. {pattern.description}")
-            print(
-                f"   Type: {pattern.pattern_type}, Confidence: {pattern.confidence:.2f}",
-            )
 
             # Print timeframe details
             if pattern.pattern_type == "daily":
-                print(
-                    f"   Active hours: {pattern.timeframe.get('hour_start')}:00-{pattern.timeframe.get('hour_end')}:00",
-                )
+                pass
             elif pattern.pattern_type == "weekly":
-                day = [
+                [
                     "Monday",
                     "Tuesday",
                     "Wednesday",
@@ -291,18 +252,14 @@ class ProactiveCliIntegration:
                     "Saturday",
                     "Sunday",
                 ][pattern.timeframe.get("day_of_week", 0)]
-                print(f"   Active day: {day}")
             elif pattern.pattern_type == "monthly":
-                print(f"   Active day: {pattern.timeframe.get('day_of_month')}")
+                pass
 
             if pattern.associated_actions:
-                print(
-                    f"   Associated actions: {', '.join(pattern.associated_actions[:3])}",
-                )
+                pass
 
-            print()
 
-    def view_insights(self, args):
+    def view_insights(self, args) -> None:
         """View insights derived from proactive analysis."""
         # Get insights from archivist memory
         insights = self.memory.get_most_relevant_insights(
@@ -311,27 +268,19 @@ class ProactiveCliIntegration:
         )  # Get up to 10 insights
 
         if not insights:
-            print("No insights available yet.")
             return
 
         # Filter for insights from proactive analysis
         proactive_insights = [i for i in insights if i.category in ["temporal", "sequential", "pattern"]]
 
         if not proactive_insights:
-            print("No proactive insights available yet.")
             return
 
-        print("\nProactive Insights:")
-        print("------------------")
 
-        for i, insight in enumerate(proactive_insights, 1):
-            print(f"{i}. {insight.insight}")
-            print(
-                f"   Category: {insight.category}, Confidence: {insight.confidence:.2f}",
-            )
-            print()
+        for _i, _insight in enumerate(proactive_insights, 1):
+            pass
 
-    def manage_priorities(self, args):
+    def manage_priorities(self, args) -> None:
         """Manage suggestion type priorities."""
         if args:
             # Handle sub-commands
@@ -344,9 +293,6 @@ class ProactiveCliIntegration:
                 try:
                     suggestion_type = SuggestionType(suggestion_type.lower())
                 except ValueError:
-                    print(
-                        f"Invalid suggestion type. Valid types: {', '.join(t.value for t in SuggestionType)}",
-                    )
                     return
 
                 # Update threshold
@@ -354,52 +300,35 @@ class ProactiveCliIntegration:
                     threshold = float(threshold_str)
                     if 0.0 <= threshold <= 1.0:
                         self.proactive.data.suggestion_thresholds[suggestion_type] = threshold
-                        print(
-                            f"Updated threshold for {suggestion_type} to {threshold:.2f}",
-                        )
                     else:
-                        print("Threshold must be between 0.0 and 1.0")
+                        pass
                 except ValueError:
-                    print("Threshold must be a number between 0.0 and 1.0")
+                    pass
 
                 return
 
         # Display current thresholds
-        print("\nSuggestion Type Thresholds:")
-        print("-------------------------")
-        print("(Higher thresholds mean fewer but more confident suggestions)")
-        print()
 
         for suggestion_type, threshold in sorted(
             self.proactive.data.suggestion_thresholds.items(),
         ):
-            print(f"{suggestion_type.value}: {threshold:.2f}")
+            pass
 
-        print("\nUsage: /priorities <type> <threshold>")
-        print("Example: /priorities query 0.7")
 
-    def disable_suggestions(self, args):
+    def disable_suggestions(self, args) -> None:
         """Disable proactive suggestions."""
         self.show_suggestions = False
-        print("Proactive suggestions have been disabled.")
-        print("Use /enable to turn them back on.")
 
-    def enable_suggestions(self, args):
+    def enable_suggestions(self, args) -> None:
         """Enable proactive suggestions."""
         self.show_suggestions = True
         self.last_suggestions_time = None  # Reset cooldown
-        print("Proactive suggestions have been enabled.")
 
         # Show suggestions immediately
         self.show_suggestions_cmd("")
 
-    def show_cross_source_status(self, args):
+    def show_cross_source_status(self, args) -> None:
         """Show the status of cross-source pattern detection."""
-        enabled = self.proactive.data.cross_source_enabled
-        status = "enabled" if enabled else "disabled"
-
-        print(f"\nCross-Source Pattern Detection: {status}")
-
         # Show last analysis time if available
         if self.proactive.data.last_cross_source_analysis:
             last_time = self.proactive.data.last_cross_source_analysis
@@ -408,55 +337,42 @@ class ProactiveCliIntegration:
             hours_ago = time_diff.total_seconds() / 3600
 
             if hours_ago < 1:
-                time_str = f"{int(time_diff.total_seconds() / 60)} minutes ago"
+                f"{int(time_diff.total_seconds() / 60)} minutes ago"
             elif hours_ago < 24:
-                time_str = f"{int(hours_ago)} hours ago"
+                f"{int(hours_ago)} hours ago"
             else:
-                days_ago = int(hours_ago / 24)
-                time_str = f"{days_ago} days ago"
+                int(hours_ago / 24)
 
-            print(
-                f"Last analysis: {last_time.strftime('%Y-%m-%d %H:%M:%S')} ({time_str})",
-            )
         else:
-            print("No analysis has been run yet.")
+            pass
 
         # Show patterns and correlations if available
         if hasattr(self.proactive, "cross_source_detector"):
-            patterns = len(self.proactive.cross_source_detector.data.patterns)
-            correlations = len(self.proactive.cross_source_detector.data.correlations)
-            print(f"Detected patterns: {patterns}")
-            print(f"Detected correlations: {correlations}")
+            len(self.proactive.cross_source_detector.data.patterns)
+            len(self.proactive.cross_source_detector.data.correlations)
 
             # Show data sources with events
             sources = self.proactive.cross_source_detector.data.source_statistics
             if sources:
-                print("\nData sources with events:")
-                for source_type, stats in sources.items():
+                for stats in sources.values():
                     if stats["event_count"] > 0:
-                        print(f"- {source_type}: {stats['event_count']} events")
+                        pass
 
-    def enable_cross_source(self, args):
+    def enable_cross_source(self, args) -> None:
         """Enable cross-source pattern detection."""
         self.proactive.data.cross_source_enabled = True
-        print("Cross-source pattern detection has been enabled.")
-        print("Run /cross-analyze to perform an immediate analysis.")
 
-    def disable_cross_source(self, args):
+    def disable_cross_source(self, args) -> None:
         """Disable cross-source pattern detection."""
         self.proactive.data.cross_source_enabled = False
-        print("Cross-source pattern detection has been disabled.")
 
-    def force_cross_source_analysis(self, args):
+    def force_cross_source_analysis(self, args) -> None:
         """Force a cross-source pattern analysis."""
-        print("Running cross-source pattern analysis. This may take a moment...")
-
         try:
             # Run the analysis
             self.proactive.analyze_cross_source_patterns()
 
             # Show results
-            print("Analysis complete.")
             self.show_cross_source_status("")
 
             # Show new suggestions if any
@@ -467,15 +383,14 @@ class ProactiveCliIntegration:
             ]
 
             if cross_source_suggestions:
-                print("\nNew cross-source suggestions:")
                 self._display_suggestions(cross_source_suggestions[:3])
             else:
-                print("No new cross-source suggestions generated.")
+                pass
 
-        except Exception as e:
-            print(f"Error running cross-source analysis: {e}")
+        except Exception:
+            pass
 
-    def update_context_with_query(self, query_text, results=None):
+    def update_context_with_query(self, query_text, results=None) -> None:
         """
         Update context with a new query.
 
@@ -484,10 +399,7 @@ class ProactiveCliIntegration:
             results: Optional results information
         """
         # Update recent queries list
-        self.context["last_queries"] = [query_text] + self.context.get(
-            "last_queries",
-            [],
-        )[:4]
+        self.context["last_queries"] = [query_text, *self.context.get("last_queries", [])[:4]]
 
         # Extract topics from query
         topics = self._extract_topics_from_query(query_text)
@@ -517,13 +429,13 @@ class ProactiveCliIntegration:
         topics = []
 
         # Check against known topics
-        for topic in self.memory.memory.semantic_topics.keys():
+        for topic in self.memory.memory.semantic_topics:
             if topic.lower() in query_text.lower():
                 topics.append(topic)
 
         return topics
 
-    def analyze_session(self, query_history=None):
+    def analyze_session(self, query_history=None) -> None:
         """
         Analyze the current session and update patterns.
 
@@ -562,14 +474,14 @@ class ProactiveCliIntegration:
         return important_suggestions[:2]
 
 
-def main():
+def main() -> None:
     """Test the Proactive CLI integration."""
     # This would normally be integrated with the main CLI
     from query.memory.archivist_memory import ArchivistMemory
 
     # Create a simple mock CLI class
     class MockCLI:
-        def __init__(self):
+        def __init__(self) -> None:
             from db import IndalekoDBConfig
 
             self.db_config = IndalekoDBConfig()
@@ -593,7 +505,6 @@ def main():
     )
 
     # Test commands
-    print("Testing Proactive CLI Integration")
     cli_integration.show_proactive_help("")
 
     # Show initial suggestions
@@ -601,10 +512,9 @@ def main():
     if initial_suggestions:
         cli_integration._display_suggestions(initial_suggestions)
     else:
-        print("\nNo initial suggestions available.")
+        pass
 
     # Simulate a query
-    print("\nSimulating a query about work documents...")
     cli_integration.update_context_with_query(
         "Find recent work documents about budgets",
     )

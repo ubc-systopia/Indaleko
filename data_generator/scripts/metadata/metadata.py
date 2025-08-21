@@ -1,4 +1,5 @@
 """Metadata class for generating metadata."""
+
 import random
 
 from abc import ABC, abstractmethod
@@ -32,8 +33,10 @@ class Metadata(ABC):
 
     def _check_return_value_within_range(
         self,
-        default_min: float, default_max: float,
-        target_min: float, target_max: float,
+        default_min: float,
+        default_max: float,
+        target_min: float,
+        target_max: float,
         random_func: Callable[[float, float], float],
         delta: float = 0,
     ) -> float:
@@ -57,11 +60,11 @@ class Metadata(ABC):
         raise ValueError("Invalid query")
 
     def _define_truth_attribute(
-            self,
-            attribute: str,
-            truth_file: bool,  # noqa: FBT001
-            truthlike_file: bool,  # noqa: FBT001
-            truth_attributes: list[str],
+        self,
+        attribute: str,
+        truth_file: bool,  # noqa: FBT001
+        truthlike_file: bool,  # noqa: FBT001
+        truth_attributes: list[str],
     ) -> bool:
         """
         Defines truth attribute.
@@ -70,48 +73,47 @@ class Metadata(ABC):
         contained in the truthlike attribute list.
         """
         return truth_file or (truthlike_file and attribute in truth_attributes)
-        
+
     @staticmethod
     def return_JSON(obj):
         """Convert an object to its dictionary representation for JSON serialization."""
         if hasattr(obj, "dict"):
             data = obj.dict()
             # Process the dictionary to make it JSON serializable
-            data = Metadata._make_json_serializable(data)
-            return data
+            return Metadata._make_json_serializable(data)
         if hasattr(obj, "model_dump"):
             data = obj.model_dump()
             return Metadata._make_json_serializable(data)
-        if hasattr(obj, 'hex'):  # UUID object
+        if hasattr(obj, "hex"):  # UUID object
             return str(obj)
-        if hasattr(obj, 'isoformat'):  # datetime object
+        if hasattr(obj, "isoformat"):  # datetime object
             return obj.isoformat()
         return obj
-        
+
     @staticmethod
     def _make_json_serializable(data):
         """Helper method to convert objects in a dictionary to JSON serializable format."""
         import datetime
-        
+
         if isinstance(data, dict):
             result = {}
             for key, value in data.items():
                 result[key] = Metadata._make_json_serializable(value)
             return result
-        elif isinstance(data, list):
+        if isinstance(data, list):
             return [Metadata._make_json_serializable(item) for item in data]
-        elif hasattr(data, 'hex'):  # UUID objects have a hex attribute
+        if hasattr(data, "hex"):  # UUID objects have a hex attribute
             return str(data)
-        elif isinstance(data, (datetime.datetime, datetime.date)):
+        if isinstance(data, (datetime.datetime, datetime.date)):
             return data.isoformat()
-        else:
-            return data
+        return data
 
-    def _generate_number(self,
-                         is_truth_file:bool,  # noqa: FBT001
-                         general_dict: dict[str],
-                         lower_bound: float,
-                         upper_bound:float,
+    def _generate_number(
+        self,
+        is_truth_file: bool,  # noqa: FBT001
+        general_dict: dict[str],
+        lower_bound: float,
+        upper_bound: float,
     ) -> float:
         """
         Generate number.
@@ -126,27 +128,39 @@ class Metadata(ABC):
 
         if target_max == upper_bound and target_min == lower_bound:
             raise ValueError(
-                "The range cannot be the whole boundary from ", target_min, " to ", target_max,
+                "The range cannot be the whole boundary from ",
+                target_min,
+                " to ",
+                target_max,
             )
         if target_min > target_max:
             raise ValueError(
                 f"The target min {target_min} cannot be greater than the target max {target_max}",
             )
 
-
         # if the size is the same as the target_max then just choose that file size
         if target_min == target_max and command == "equal":
             if is_truth_file:
                 return target_min
             return self._check_return_value_within_range(
-                lower_bound, upper_bound, target_min,  target_max, random.uniform, delta,
+                lower_bound,
+                upper_bound,
+                target_min,
+                target_max,
+                random.uniform,
+                delta,
             )
 
-        #if command specifies getting the range between two values
+        # if command specifies getting the range between two values
         if target_min != target_max and command == "range":
             if is_truth_file:
                 return random.uniform(target_min, target_max)  # noqa: S311
             return self._check_return_value_within_range(
-                lower_bound, upper_bound, target_min,  target_max, random.uniform, delta,
+                lower_bound,
+                upper_bound,
+                target_min,
+                target_max,
+                random.uniform,
+                delta,
             )
         raise ValueError("Invalid parameter or command, please check your query again.")

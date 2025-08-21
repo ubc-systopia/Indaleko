@@ -19,13 +19,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import json
 import os
 import sys
 import time
 
 import colorama
+
 from colorama import Fore, Style
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +53,6 @@ def run_basic_test(model: str = "gpt-4o", debug: bool = False) -> None:
     colorama.init()
 
     # Initialize the assistant
-    print(f"{Fore.CYAN}Initializing Request-based Archivist...{Style.RESET_ALL}")
 
     # Register tools
     registry = get_registry()
@@ -60,17 +60,13 @@ def run_basic_test(model: str = "gpt-4o", debug: bool = False) -> None:
     registry.register_tool(AQLTranslatorTool)
     registry.register_tool(QueryExecutorTool)
 
-    start_time = time.time()
+    time.time()
     assistant = RequestAssistant(model=model)
 
     # Create a conversation
     conversation = assistant.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(
-        f"{Fore.GREEN}Assistant initialized in {time.time() - start_time:.2f}s{Style.RESET_ALL}",
-    )
-    print(f"{Fore.GREEN}Created conversation: {conversation_id}{Style.RESET_ALL}")
 
     # Test queries
     test_queries = [
@@ -81,28 +77,20 @@ def run_basic_test(model: str = "gpt-4o", debug: bool = False) -> None:
     ]
 
     for query in test_queries:
-        print(f"\n{Fore.BLUE}User: {query}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
-        start_time = time.time()
-        response = assistant.process_message(
+        time.time()
+        assistant.process_message(
             conversation_id=conversation_id,
             message_content=query,
         )
-        end_time = time.time()
+        time.time()
 
-        print(f"{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
 
         if debug:
-            print(f"\n{Fore.CYAN}Debug Info:{Style.RESET_ALL}")
-            print(f"  Time: {end_time - start_time:.2f}s")
-            print(f"  Action: {response['action']}")
-            print(f"  Timestamp: {response['timestamp']}")
+            pass
 
     # Generate and print a forward prompt
-    print(f"\n{Fore.CYAN}Forward Prompt:{Style.RESET_ALL}")
-    forward_prompt = assistant.get_forward_prompt()
-    print(forward_prompt)
+    assistant.get_forward_prompt()
 
 
 def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> None:
@@ -116,15 +104,12 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
     colorama.init()
 
     # Initialize the assistant
-    print(f"{Fore.CYAN}Initializing Request-based Archivist...{Style.RESET_ALL}")
     assistant = RequestAssistant(model=model)
 
     # Create a conversation
     conversation = assistant.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(f"{Fore.GREEN}Assistant initialized.{Style.RESET_ALL}")
-    print(f"{Fore.GREEN}Created conversation: {conversation_id}{Style.RESET_ALL}")
 
     # Predefined conversation for non-interactive mode
     test_conversation = [
@@ -136,33 +121,26 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
 
     if interactive:
         # Interactive mode
-        print(f"\n{Fore.CYAN}Interactive Conversation Test{Style.RESET_ALL}")
-        print("Type your messages. Enter an empty line to exit.")
 
         while True:
             user_input = input(f"\n{Fore.BLUE}User: {Style.RESET_ALL}")
             if not user_input.strip():
                 break
 
-            print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
-            response = assistant.process_message(
+            assistant.process_message(
                 conversation_id=conversation_id,
                 message_content=user_input,
             )
 
-            print(f"{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
     else:
         # Run through predefined conversation
         for message in test_conversation:
-            print(f"\n{Fore.BLUE}User: {message}{Style.RESET_ALL}")
-            print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
-            response = assistant.process_message(
+            assistant.process_message(
                 conversation_id=conversation_id,
                 message_content=message,
             )
 
-            print(f"{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
 
     # Save conversation to a file
     os.makedirs("conversations", exist_ok=True)
@@ -171,23 +149,20 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
         f"test_conversation_{int(time.time())}.json",
     )
     assistant.save_conversations(filepath)
-    print(f"\n{Fore.GREEN}Conversation saved to {filepath}{Style.RESET_ALL}")
 
     # Show memory insights gained from the conversation
-    print(f"\n{Fore.CYAN}Memory Insights:{Style.RESET_ALL}")
     insights = assistant.archivist_memory.memory.insights
-    for insight in insights:
-        print(f"  - {insight.insight} (confidence: {insight.confidence:.2f})")
+    for _insight in insights:
+        pass
 
     # Show content preferences
-    print(f"\n{Fore.CYAN}Content Preferences:{Style.RESET_ALL}")
     preferences = assistant.archivist_memory.memory.content_preferences
-    for content_type, preference in sorted(
+    for _content_type, _preference in sorted(
         preferences.items(),
         key=lambda x: x[1],
         reverse=True,
     ):
-        print(f"  - {content_type}: {preference:.2f}")
+        pass
 
 
 def run_tool_usage_test(model: str = "gpt-4o") -> None:
@@ -206,34 +181,24 @@ def run_tool_usage_test(model: str = "gpt-4o") -> None:
     registry.register_tool(QueryExecutorTool)
 
     # Initialize the assistant
-    print(f"{Fore.CYAN}Initializing Request-based Archivist...{Style.RESET_ALL}")
     assistant = RequestAssistant(model=model)
 
     # Create a conversation
     conversation = assistant.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(f"{Fore.GREEN}Assistant initialized.{Style.RESET_ALL}")
 
     # Test tool-intensive query
     query = "Find all PDF documents modified in the last month and explain the query plan."
 
-    print(f"\n{Fore.BLUE}User: {query}{Style.RESET_ALL}")
-    print(
-        f"{Fore.YELLOW}Processing (this may take a while due to tool execution)...{Style.RESET_ALL}",
-    )
 
-    start_time = time.time()
-    response = assistant.process_message(
+    time.time()
+    assistant.process_message(
         conversation_id=conversation_id,
         message_content=query,
     )
-    end_time = time.time()
+    time.time()
 
-    print(f"\n{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
-    print(
-        f"\n{Fore.CYAN}Tool Execution Time: {end_time - start_time:.2f}s{Style.RESET_ALL}",
-    )
 
 
 def run_context_management_test(model: str = "gpt-4o") -> None:
@@ -252,18 +217,14 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
     registry.register_tool(QueryExecutorTool)
 
     # Initialize the assistant
-    print(f"{Fore.CYAN}Initializing Request-based Archivist...{Style.RESET_ALL}")
     assistant = RequestAssistant(model=model)
 
     # Create a conversation
     conversation = assistant.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(f"{Fore.GREEN}Assistant initialized.{Style.RESET_ALL}")
-    print(f"{Fore.GREEN}Created conversation: {conversation_id}{Style.RESET_ALL}")
 
     # Test schema summarization
-    print(f"\n{Fore.CYAN}Testing Schema Summarization:{Style.RESET_ALL}")
 
     # Get a complex schema to summarize
     complex_schema = {
@@ -319,16 +280,10 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
         }
 
     # Summarize the schema
-    summarized = assistant._summarize_schema(complex_schema, max_tokens=500)
+    assistant._summarize_schema(complex_schema, max_tokens=500)
 
-    print(f"Original schema size: {len(json.dumps(complex_schema))} characters")
-    print(f"Summarized schema size: {len(json.dumps(summarized))} characters")
-    print(
-        f"Reduction: {(1 - len(json.dumps(summarized)) / len(json.dumps(complex_schema))) * 100:.2f}%",
-    )
 
     # Test context refreshing
-    print(f"\n{Fore.CYAN}Testing Context Refreshing:{Style.RESET_ALL}")
 
     # Send a few messages to build up context (using simple messages that don't trigger tools)
     test_messages = [
@@ -339,8 +294,6 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
     ]
 
     for message in test_messages:
-        print(f"\n{Fore.BLUE}User: {message}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
         response = assistant.process_message(
             conversation_id=conversation_id,
@@ -350,23 +303,17 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
         # Show partial response to save space
         response_text = response.get("response", "No response")
         if len(response_text) > 100:
-            print(f"{Fore.GREEN}Archivist: {response_text[:100]}...{Style.RESET_ALL}")
+            pass
         else:
-            print(f"{Fore.GREEN}Archivist: {response_text}{Style.RESET_ALL}")
+            pass
 
     # Refresh the context
-    print(f"\n{Fore.YELLOW}Refreshing conversation context...{Style.RESET_ALL}")
 
-    refresh_result = assistant.refresh_context(conversation_id)
+    assistant.refresh_context(conversation_id)
 
-    print(f"{Fore.GREEN}Context refreshed successfully.{Style.RESET_ALL}")
-    print(f"Old thread: {refresh_result['old_thread_id']}")
-    print(f"New thread: {refresh_result['new_thread_id']}")
 
     # Test a message after refresh
     final_message = "Thanks for all that information. Can you summarize what we discussed?"
-    print(f"\n{Fore.BLUE}User: {final_message}{Style.RESET_ALL}")
-    print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
     response = assistant.process_message(
         conversation_id=conversation_id,
@@ -375,7 +322,6 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
 
     # Show response
     response_text = response.get("response", "No response")
-    print(f"{Fore.GREEN}Archivist: {response_text}{Style.RESET_ALL}")
 
 
 def main():
@@ -398,22 +344,21 @@ def main():
     args = parser.parse_args()
 
     try:
-        if args.test == "basic" or args.test == "all":
+        if args.test in {"basic", "all"}:
             run_basic_test(model=args.model, debug=args.debug)
 
-        if args.test == "conversation" or args.test == "all":
+        if args.test in {"conversation", "all"}:
             run_conversation_test(model=args.model, interactive=args.interactive)
 
-        if args.test == "tools" or args.test == "all":
+        if args.test in {"tools", "all"}:
             run_tool_usage_test(model=args.model)
 
-        if args.test == "context" or args.test == "all":
+        if args.test in {"context", "all"}:
             run_context_management_test(model=args.model)
 
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}Test interrupted.{Style.RESET_ALL}")
-    except Exception as e:
-        print(f"\n{Fore.RED}Error: {e}{Style.RESET_ALL}")
+        pass
+    except Exception:
         if args.debug:
             import traceback
 

@@ -27,10 +27,12 @@ import os
 import random
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 try:
     from icecream import ic
@@ -39,7 +41,7 @@ except ImportError:
     def ic(*args):
         """Fallback for icecream if not installed."""
         if args:
-            print(*args)
+            pass
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -55,6 +57,7 @@ from query.memory.cross_source_patterns import (
     CrossSourcePatternDetector,
 )
 from query.memory.pattern_types import DataSourceType
+
 
 # pylint: enable=wrong-import-position
 
@@ -172,7 +175,7 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
         )
 
     event_id_start = uncorrelated_count
-    for group in range(correlation_groups):
+    for _group in range(correlation_groups):
         # Pick a random pattern
         pattern = random.choice(patterns)
 
@@ -243,13 +246,11 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
 
 def test_with_synthetic_data(args):
     """Test the pattern detection with synthetic data."""
-    print("\nTesting with synthetic data...")
 
     # Create detector
     detector = CrossSourcePatternDetector(None)  # No DB needed for synthetic data
 
     # Generate synthetic events
-    print(f"Generating {args.event_count} synthetic events...")
     events = generate_synthetic_events(
         count=args.event_count,
         time_span_days=args.time_span,
@@ -264,8 +265,7 @@ def test_with_synthetic_data(args):
     detector.data.event_timeline = timeline
 
     # Update source statistics
-    print("Updating source statistics...")
-    for event_id, event in events.items():
+    for event in events.values():
         source_type = event.source_type
         stats = detector.data.source_statistics[source_type]
         stats["event_count"] += 1
@@ -277,29 +277,24 @@ def test_with_synthetic_data(args):
             stats["last_event"] = event.timestamp
 
     # Print event statistics
-    print("\nEvent statistics by source type:")
     for source_type, stats in detector.data.source_statistics.items():
         event_count = stats["event_count"]
         if event_count > 0:
-            print(f"- {source_type.value}: {event_count} events")
+            pass
 
     # Test pattern detection
     start_time = time.time()
 
-    print("\nDetecting patterns...")
     patterns = detector.detect_patterns(
         window_size=args.window_size,
         min_occurrences=args.min_occurrences,
     )
 
-    pattern_time = time.time() - start_time
-    print(f"Pattern detection took {pattern_time:.2f} seconds")
-    print(f"Detected {len(patterns)} patterns")
+    time.time() - start_time
 
     # Test correlation detection
     start_time = time.time()
 
-    print("\nDetecting correlations...")
     correlations = detector.detect_correlations(
         time_window_minutes=args.time_window,
         min_confidence=args.min_confidence,
@@ -307,48 +302,29 @@ def test_with_synthetic_data(args):
         adaptive_window=args.adaptive_window,
     )
 
-    correlation_time = time.time() - start_time
-    print(f"Correlation detection took {correlation_time:.2f} seconds")
-    print(f"Detected {len(correlations)} correlations")
+    time.time() - start_time
 
     # Show detected patterns
     if patterns:
-        print("\nDetected patterns:")
-        for i, pattern in enumerate(patterns[: min(5, len(patterns))], 1):
-            print(f"{i}. {pattern.pattern_name}")
-            print(f"   Description: {pattern.description}")
-            print(f"   Confidence: {pattern.confidence:.2f}")
-            print(
-                f"   Source types: {', '.join([s.value for s in pattern.source_types])}",
-            )
-            print(f"   Observation count: {pattern.observation_count}")
+        for _i, pattern in enumerate(patterns[: min(5, len(patterns))], 1):
 
             if pattern.attributes and args.verbose:
-                print("   Attributes:")
-                for key, value in pattern.attributes.items():
-                    print(f"     {key}: {value}")
+                for _key, _value in pattern.attributes.items():
+                    pass
 
         if len(patterns) > 5:
-            print(f"   ... and {len(patterns) - 5} more patterns")
+            pass
 
     # Show detected correlations
     if correlations:
-        print("\nDetected correlations:")
-        for i, correlation in enumerate(correlations[: min(5, len(correlations))], 1):
-            print(f"{i}. {correlation.description}")
-            print(f"   Confidence: {correlation.confidence:.2f}")
-            print(f"   Relationship type: {correlation.relationship_type}")
-            print(
-                f"   Source types: {', '.join([s.value for s in correlation.source_types])}",
-            )
+        for _i, correlation in enumerate(correlations[: min(5, len(correlations))], 1):
 
             if correlation.attributes and args.verbose:
-                print("   Attributes:")
-                for key, value in correlation.attributes.items():
-                    print(f"     {key}: {value}")
+                for _key, _value in correlation.attributes.items():
+                    pass
 
         if len(correlations) > 5:
-            print(f"   ... and {len(correlations) - 5} more correlations")
+            pass
 
     # Visualize results if requested
     if args.visualize:
@@ -411,7 +387,6 @@ def visualize_results(detector, patterns, correlations):
 
         plt.tight_layout()
         plt.savefig("pattern_correlation_analysis.png")
-        print("\nVisualization saved to 'pattern_correlation_analysis.png'")
 
         # Event timeline visualization
         plt.figure(figsize=(12, 6))
@@ -451,15 +426,13 @@ def visualize_results(detector, patterns, correlations):
 
         plt.tight_layout()
         plt.savefig("event_timeline.png")
-        print("Event timeline visualization saved to 'event_timeline.png'")
 
-    except Exception as e:
-        print(f"Error creating visualization: {e}")
+    except Exception:
+        pass
 
 
 def benchmark_performance(args):
     """Benchmark pattern and correlation detection performance."""
-    print("\nBenchmarking performance...")
 
     # Create detector
     detector = CrossSourcePatternDetector(None)  # No DB needed for synthetic data
@@ -473,7 +446,6 @@ def benchmark_performance(args):
     correlation_times = []
 
     for count in event_counts:
-        print(f"\nTesting with {count} events...")
 
         # Generate synthetic events
         events = generate_synthetic_events(
@@ -490,7 +462,7 @@ def benchmark_performance(args):
         detector.data.event_timeline = timeline
 
         # Update source statistics
-        for event_id, event in events.items():
+        for event in events.values():
             source_type = event.source_type
             stats = detector.data.source_statistics[source_type]
             stats["event_count"] += 1
@@ -503,7 +475,7 @@ def benchmark_performance(args):
 
         # Test pattern detection
         start_time = time.time()
-        patterns = detector.detect_patterns(
+        detector.detect_patterns(
             window_size=args.window_size,
             min_occurrences=args.min_occurrences,
         )
@@ -512,7 +484,7 @@ def benchmark_performance(args):
 
         # Test correlation detection
         start_time = time.time()
-        correlations = detector.detect_correlations(
+        detector.detect_correlations(
             time_window_minutes=args.time_window,
             min_confidence=args.min_confidence,
             min_entity_overlap=args.min_entity_overlap,
@@ -521,10 +493,6 @@ def benchmark_performance(args):
         correlation_time = time.time() - start_time
         correlation_times.append(correlation_time)
 
-        print(f"Pattern detection: {pattern_time:.2f}s, {len(patterns)} patterns found")
-        print(
-            f"Correlation detection: {correlation_time:.2f}s, {len(correlations)} correlations found",
-        )
 
     # Visualize benchmark results
     try:
@@ -545,10 +513,9 @@ def benchmark_performance(args):
 
         plt.tight_layout()
         plt.savefig("performance_benchmark.png")
-        print("\nBenchmark visualization saved to 'performance_benchmark.png'")
 
-    except Exception as e:
-        print(f"Error creating benchmark visualization: {e}")
+    except Exception:
+        pass
 
 
 def main():
@@ -647,7 +614,6 @@ def main():
     if args.benchmark:
         benchmark_performance(args)
 
-    print("\nAll tests completed.")
 
 
 if __name__ == "__main__":

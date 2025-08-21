@@ -35,7 +35,9 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -54,7 +56,7 @@ from activity.recorders.storage.ntfs.tiered.warm.recorder import NtfsWarmTierRec
 class StorageEfficiencyBenchmark:
     """Benchmark for evaluating the storage efficiency of the warm tier implementation."""
 
-    def __init__(self, db_config=None, debug=False):
+    def __init__(self, db_config=None, debug=False) -> None:
         """
         Initialize the benchmark.
 
@@ -165,7 +167,7 @@ class StorageEfficiencyBenchmark:
             return metrics
 
         except Exception as e:
-            self.logger.error(f"Error measuring storage efficiency: {e}")
+            self.logger.exception(f"Error measuring storage efficiency: {e}")
             metrics["error"] = str(e)
             return metrics
 
@@ -196,7 +198,7 @@ class StorageEfficiencyBenchmark:
             return metrics
 
         except Exception as e:
-            self.logger.error(f"Error measuring importance distribution: {e}")
+            self.logger.exception(f"Error measuring importance distribution: {e}")
             metrics["error"] = str(e)
             return metrics
 
@@ -214,7 +216,7 @@ class StorageEfficiencyBenchmark:
 
         try:
             # Get warm tier statistics
-            warm_stats = self.warm_tier.get_warm_tier_statistics()
+            self.warm_tier.get_warm_tier_statistics()
 
             # Get aggregated records by type
             if self.warm_tier._db and hasattr(self.warm_tier._db, "_arangodb"):
@@ -254,7 +256,7 @@ class StorageEfficiencyBenchmark:
             return metrics
 
         except Exception as e:
-            self.logger.error(f"Error measuring aggregation by type: {e}")
+            self.logger.exception(f"Error measuring aggregation by type: {e}")
             metrics["error"] = str(e)
             return metrics
 
@@ -357,24 +359,23 @@ class StorageEfficiencyBenchmark:
             return results
 
         except Exception as e:
-            self.logger.error(f"Error running benchmark: {e}")
+            self.logger.exception(f"Error running benchmark: {e}")
             results["error"] = str(e)
             return results
 
 
-def format_byte_size(size_bytes):
+def format_byte_size(size_bytes) -> str:
     """Format byte size to human-readable string."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
+    if size_bytes < 1024 * 1024:
         return f"{size_bytes / 1024:.2f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
+    if size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 
-def main():
+def main() -> int:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
         description="Storage Efficiency Benchmark for NTFS Warm Tier",
@@ -409,51 +410,30 @@ def main():
     )
 
     if not benchmark.ready:
-        print("Benchmark not ready. Please check database connection.")
         return 1
 
     results = benchmark.run_benchmark(output_file=args.output)
 
     # Print summary
-    print("\n=== Storage Efficiency Benchmark Results ===\n")
 
     if "error" in results:
-        print(f"Error: {results['error']}")
         return 1
 
     if "efficiency" in results["storage_efficiency"]:
         eff = results["storage_efficiency"]["efficiency"]
-        print("Storage Efficiency Metrics:")
-        print(f"  Hot Tier Size: {format_byte_size(eff.get('hot_tier_size_bytes', 0))}")
-        print(f"  Warm Tier Size: {format_byte_size(eff.get('warm_tier_size_bytes', 0))}")
-        print(f"  Equivalent Hot Tier Size: {format_byte_size(eff.get('equivalent_hot_tier_size_bytes', 0))}")
-        print(f"  Compression Ratio: {eff.get('compression_ratio', 1.0):.2f}x")
-        print(
-            f"  Space Saved: {format_byte_size(eff.get('space_saved_bytes', 0))} ({eff.get('percent_saved', 0.0):.1f}%)",
-        )
-        print(f"  Original Activities: {eff.get('original_activities', 0):,}")
-        print(f"  Aggregated Activities: {eff.get('aggregated_activities', 0):,}")
 
         if "aggregation_ratio" in eff:
-            print(f"  Aggregation Ratio: {eff['aggregation_ratio']:.2f} activities per record")
+            pass
 
     if "activity_types" in results["aggregation_by_type"]:
         types = results["aggregation_by_type"]["activity_types"]
         if types:
-            print("\nAggregation by Activity Type:")
-            for activity_type, metrics in types.items():
-                print(f"  {activity_type}:")
-                print(f"    Aggregated Count: {metrics.get('aggregated_count', 0):,}")
-                print(f"    Original Count: {metrics.get('original_count', 0):,}")
-                print(f"    Aggregation Ratio: {metrics.get('aggregation_ratio', 0):.2f}x")
+            for _metrics in types.values():
+                pass
 
     if "hot_tier" in results["transition_metrics"]:
-        hot = results["transition_metrics"]["hot_tier"]
-        print("\nTransition Status:")
-        print(f"  Ready for Transition: {hot.get('transition_ready', 0):,}")
-        print(f"  Already Transitioned: {hot.get('already_transitioned', 0):,}")
+        results["transition_metrics"]["hot_tier"]
 
-    print(f"\nDetailed results saved to: {args.output}")
 
     return 0
 

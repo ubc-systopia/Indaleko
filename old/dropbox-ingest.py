@@ -16,16 +16,15 @@ def get_dropbox_credentials(file: str = "data/dropbox-token.json"):
 def convert_to_serializable(data):
     if isinstance(data, (int, float, str, bool, type(None))):
         return data
-    elif isinstance(data, list):
+    if isinstance(data, list):
         return [convert_to_serializable(item) for item in data]
-    elif isinstance(data, dict):
+    if isinstance(data, dict):
         return {key: convert_to_serializable(value) for key, value in data.items()}
-    else:
-        # If data is an object with __dict__, convert it to a dictionary and recursively process
-        if hasattr(data, "__dict__"):
-            return convert_to_serializable(data.__dict__)
-        # If data is not serializable, skip it for now
-        return None
+    # If data is an object with __dict__, convert it to a dictionary and recursively process
+    if hasattr(data, "__dict__"):
+        return convert_to_serializable(data.__dict__)
+    # If data is not serializable, skip it for now
+    return None
 
 
 def get_dropbox_metadata():
@@ -49,12 +48,12 @@ def get_dropbox_metadata():
             if not result.has_more:
                 break
             cursor = result.cursor
-    except dropbox.exceptions.ApiError as e:
-        print(f"Error enumerating folder, exception {e}")
+    except dropbox.exceptions.ApiError:
+        pass
     return metadata_list
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output",

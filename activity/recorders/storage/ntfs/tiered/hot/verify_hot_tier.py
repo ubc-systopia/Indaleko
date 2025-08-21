@@ -29,8 +29,10 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import timedelta
 from typing import Any
+
 
 # Add parent directory to path to ensure imports work correctly
 sys.path.insert(
@@ -214,25 +216,17 @@ def verify_database_connection(recorder: NtfsHotTierRecorder) -> bool:
         True if connection is successful, False otherwise
     """
     if getattr(recorder, "_no_db", False):
-        print("Dry run mode: Database connection would be verified")
         return True
 
     try:
         # Check if we have a connection
         if not hasattr(recorder, "_db") or recorder._db is None:
-            print("ERROR: Recorder does not have a database connection")
             return False
 
         # Verify connection by checking database version
         version = recorder._db.properties()
-        if version and "version" in version:
-            print(f"Successfully connected to ArangoDB version {version['version']}")
-            return True
-        else:
-            print("ERROR: Could not verify ArangoDB version")
-            return False
-    except Exception as e:
-        print(f"ERROR: Failed to connect to database: {e}")
+        return bool(version and "version" in version)
+    except Exception:
         return False
 
 
@@ -270,7 +264,6 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, Any]:
                     else:
                         activity_counts["invalid_json"] = 1
     except Exception as e:
-        print(f"Error reading file {file_path}: {e}")
         return {"total_lines": 0, "activity_counts": {"error": str(e)}}
 
     return {"total_lines": total_lines, "activity_counts": activity_counts}
@@ -305,20 +298,15 @@ def load_data_to_database(
 
     for file_path in files:
         file_start_time = time.time()
-        file_name = os.path.basename(file_path)
-        print(f"Processing {file_name}...")
+        os.path.basename(file_path)
 
         # Get activity counts from file
         activity_counts = count_activities_in_jsonl(file_path)
-        print(f"File contains {activity_counts['total_lines']} activities")
 
         results["total_activities"] += activity_counts["total_lines"]
 
         # Handle simulation mode (dry run)
         if args.dry_run or getattr(recorder, "_no_db", False):
-            print(
-                f"Dry run: Would have processed {activity_counts['total_lines']} activities",
-            )
             success = activity_counts["total_lines"]
 
             # Generate some fake IDs
@@ -363,7 +351,6 @@ def load_data_to_database(
 
                 results["loaded_activities"] += success
             except Exception as e:
-                print(f"Error processing file: {e}")
                 import traceback
 
                 traceback.print_exc()
@@ -387,14 +374,9 @@ def load_data_to_database(
         processing_time = file_result["processing_time"]
         loaded = file_result["loaded_activities"]
 
-        print(
-            f"Processed {loaded}/{activity_counts['total_lines']} activities in {processing_time:.2f} seconds",
-        )
         if processing_time > 0 and loaded > 0:
-            print(f"Processing rate: {loaded / processing_time:.2f} activities/second")
+            pass
 
-        print(f"Progress: {results['processed_files']}/{results['total_files']} files")
-        print()
 
     # Calculate overall statistics
     results["processing_time"] = time.time() - start_time
@@ -419,7 +401,6 @@ def verify_entity_mapping(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]
         Dictionary with verification results
     """
     if args.dry_run or getattr(recorder, "_no_db", False):
-        print("Dry run: Would have verified entity mapping")
         return {
             "success": True,
             "message": "Dry run mode - entity mapping would be verified",
@@ -505,15 +486,13 @@ def verify_entity_mapping(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]
                 "verification_results": verification_results,
                 "mapping_verified": all_succeeded,
             }
-        else:
-            return {
-                "success": False,
-                "message": "No entities with multiple FRNs found - cannot verify mapping",
-                "entities_verified": 0,
-                "mapping_verified": False,
-            }
+        return {
+            "success": False,
+            "message": "No entities with multiple FRNs found - cannot verify mapping",
+            "entities_verified": 0,
+            "mapping_verified": False,
+        }
     except Exception as e:
-        print(f"Error verifying entity mapping: {e}")
         import traceback
 
         traceback.print_exc()
@@ -538,7 +517,6 @@ def test_ttl_expiration(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]:
         Dictionary with test results
     """
     if args.dry_run or getattr(recorder, "_no_db", False):
-        print("Dry run: Would have tested TTL expiration")
         return {
             "success": True,
             "message": "Dry run mode - TTL expiration would be tested",
@@ -590,13 +568,6 @@ def test_ttl_expiration(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]:
                 "ttl_verified": False,
             }
 
-        print(
-            f"Inserted test activity with expiration in 30 seconds. Activity key: {test_activity['_key']}",
-        )
-        print("Waiting for TTL index to process expiration...")
-        print(
-            "Note: ArangoDB typically processes TTL every 30 seconds, so this may take up to 60 seconds.",
-        )
 
         # Wait for expiration (with a bit of buffer)
         max_wait = 65  # seconds
@@ -614,13 +585,11 @@ def test_ttl_expiration(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]:
                 # If more than 30 seconds have passed, the document should be deleted
                 if i >= 30 and not still_exists:
                     ttl_verified = True
-                    print(f"TTL expiration verified after {i+1} seconds")
                     break
 
                 if i % 5 == 0:
-                    print(f"Waited {i} seconds, activity still exists...")
-            except Exception as e:
-                print(f"Error checking activity existence: {e}")
+                    pass
+            except Exception:
                 break
 
         return {
@@ -632,7 +601,6 @@ def test_ttl_expiration(recorder: NtfsHotTierRecorder, args) -> dict[str, Any]:
             "wait_time": i + 1 if "i" in locals() else 0,
         }
     except Exception as e:
-        print(f"Error testing TTL expiration: {e}")
         import traceback
 
         traceback.print_exc()
@@ -656,7 +624,6 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
         Dictionary with benchmark results
     """
     if args.dry_run or getattr(recorder, "_no_db", False):
-        print("Dry run: Would have run performance benchmarks")
         return {
             "success": True,
             "message": "Dry run mode - performance benchmarks would be run",
@@ -679,16 +646,12 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
                 "query": "get_recent_activities(limit=100)",
             }
 
-            print(
-                f"Benchmark: get_recent_activities - {query_time:.4f} seconds, {len(activities) if activities else 0} results",
-            )
         except Exception as e:
             benchmarks["recent_activities"] = {
                 "success": False,
                 "error": str(e),
                 "query": "get_recent_activities(limit=100)",
             }
-            print(f"Error in recent activities benchmark: {e}")
 
         # Benchmark 2: Query by entity
         # First, find an entity with activities
@@ -719,23 +682,18 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
                     "query": f"get_activities_by_entity('{entity_id}', limit=100)",
                 }
 
-                print(
-                    f"Benchmark: get_activities_by_entity - {query_time:.4f} seconds, {len(activities) if activities else 0} results",
-                )
             else:
                 benchmarks["entity_activities"] = {
                     "success": False,
                     "error": "No entities found for benchmark",
                     "query": "get_activities_by_entity",
                 }
-                print("No entities found for entity activities benchmark")
         except Exception as e:
             benchmarks["entity_activities"] = {
                 "success": False,
                 "error": str(e),
                 "query": "get_activities_by_entity",
             }
-            print(f"Error in entity activities benchmark: {e}")
 
         # Benchmark 3: Query by time range
         try:
@@ -760,16 +718,12 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
                 "query": f"get_activities_by_time_range(start={start_time_dt}, end={end_time}, limit=100)",
             }
 
-            print(
-                f"Benchmark: get_activities_by_time_range - {query_time:.4f} seconds, {len(activities) if activities else 0} results",
-            )
         except Exception as e:
             benchmarks["time_range_activities"] = {
                 "success": False,
                 "error": str(e),
                 "query": "get_activities_by_time_range",
             }
-            print(f"Error in time range activities benchmark: {e}")
 
         # Overall benchmark results
         successful_benchmarks = sum(1 for b in benchmarks.values() if b.get("success", False))
@@ -781,7 +735,6 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
             "benchmarks": benchmarks,
         }
     except Exception as e:
-        print(f"Error running performance benchmarks: {e}")
         import traceback
 
         traceback.print_exc()
@@ -805,7 +758,6 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
         Dictionary with test results
     """
     if args.dry_run or getattr(recorder, "_no_db", False):
-        print("Dry run: Would have tested query capabilities")
         return {
             "success": True,
             "message": "Dry run mode - query capabilities would be tested",
@@ -825,12 +777,8 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
                 "samples": activities[:2] if activities else [],
             }
 
-            print(
-                f"Query test: get_recent_activities - {len(activities) if activities else 0} results",
-            )
         except Exception as e:
             query_tests["recent_activities"] = {"success": False, "error": str(e)}
-            print(f"Error in recent activities query test: {e}")
 
         # Test 2: Query by activity type
         try:
@@ -858,18 +806,13 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
                     "samples": activities[:2] if activities else [],
                 }
 
-                print(
-                    f"Query test: get_activities_by_type - {len(activities) if activities else 0} results for type '{test_type}'",
-                )
             else:
                 query_tests["activity_type"] = {
                     "success": False,
                     "error": "No activity types found for test",
                 }
-                print("No activity types found for activity type query test")
         except Exception as e:
             query_tests["activity_type"] = {"success": False, "error": str(e)}
-            print(f"Error in activity type query test: {e}")
 
         # Test 3: Query by path
         try:
@@ -903,18 +846,13 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
                     "samples": activities[:2] if activities else [],
                 }
 
-                print(
-                    f"Query test: get_activities_by_path - {len(activities) if activities else 0} results for path '{dir_path}'",
-                )
             else:
                 query_tests["path"] = {
                     "success": False,
                     "error": "No paths found for test",
                 }
-                print("No paths found for path query test")
         except Exception as e:
             query_tests["path"] = {"success": False, "error": str(e)}
-            print(f"Error in path query test: {e}")
 
         # Overall test results
         successful_tests = sum(1 for t in query_tests.values() if t.get("success", False))
@@ -926,7 +864,6 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
             "query_tests": query_tests,
         }
     except Exception as e:
-        print(f"Error testing query capabilities: {e}")
         import traceback
 
         traceback.print_exc()
@@ -960,7 +897,6 @@ def run_full_verification(
     }
 
     # Step 1: Verify database connection
-    print("\n== Step 1: Verifying database connection ==\n")
     connection_result = verify_database_connection(recorder)
     results["steps"]["connection"] = {
         "success": connection_result,
@@ -968,15 +904,11 @@ def run_full_verification(
     }
 
     if not connection_result and not args.dry_run:
-        print(
-            "ERROR: Database connection verification failed. Cannot continue with verification.",
-        )
         results["success"] = False
         results["message"] = "Database connection verification failed"
         return results
 
     # Step 2: Load data to database
-    print("\n== Step 2: Loading data to database ==\n")
     if files:
         load_results = load_data_to_database(recorder, files, args)
         results["steps"]["load_data"] = {
@@ -985,7 +917,6 @@ def run_full_verification(
             "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
         }
     else:
-        print("No JSONL files found. Skipping data loading step.")
         results["steps"]["load_data"] = {
             "success": False,
             "message": "No JSONL files found",
@@ -993,7 +924,6 @@ def run_full_verification(
         }
 
     # Step 3: Verify entity mapping
-    print("\n== Step 3: Verifying entity mapping ==\n")
     entity_results = verify_entity_mapping(recorder, args)
     results["steps"]["entity_mapping"] = {
         "success": entity_results["success"],
@@ -1002,7 +932,6 @@ def run_full_verification(
     }
 
     # Step 4: Test TTL expiration
-    print("\n== Step 4: Testing TTL expiration ==\n")
     ttl_results = test_ttl_expiration(recorder, args)
     results["steps"]["ttl_expiration"] = {
         "success": ttl_results["success"],
@@ -1011,7 +940,6 @@ def run_full_verification(
     }
 
     # Step 5: Run performance benchmarks
-    print("\n== Step 5: Running performance benchmarks ==\n")
     benchmark_results = run_performance_benchmark(recorder, args)
     results["steps"]["benchmarks"] = {
         "success": benchmark_results["success"],
@@ -1020,7 +948,6 @@ def run_full_verification(
     }
 
     # Step 6: Test query capabilities
-    print("\n== Step 6: Testing query capabilities ==\n")
     query_results = test_query_capabilities(recorder, args)
     results["steps"]["query_tests"] = {
         "success": query_results["success"],
@@ -1039,31 +966,26 @@ def run_full_verification(
     return results
 
 
-def main():
+def main() -> int:
     """Main function for verifying NtfsHotTierRecorder implementation."""
     args = parse_arguments()
 
     # Find JSONL files
     if args.find_files or args.full_verification:
         files = find_jsonl_files(args.path)
-        print(f"Found {len(files)} JSONL files")
 
-        for i, file_path in enumerate(files):
-            print(f"{i+1}. {file_path}")
+        for _i, _file_path in enumerate(files):
+            pass
 
         if not files and args.full_verification:
-            print("ERROR: No JSONL files found. Cannot continue with verification.")
             return 1
     elif args.file:
         files = [args.file]
-        print(f"Using specified file: {args.file}")
     else:
         files = []
 
     # Create recorder
     recorder = create_recorder(args)
-    print(f"Created recorder: {recorder.get_recorder_name()}")
-    print(f"Recorder ID: {recorder.get_recorder_id()}")
 
     # Run requested verification steps
     results = {}
@@ -1099,24 +1021,17 @@ def main():
         results = run_full_verification(recorder, files, args)
 
     # Print summary
-    print("\n== Verification Summary ==\n")
 
     if "steps" in results:
         # Full verification summary
-        for step, result in results["steps"].items():
-            success = result.get("success", False)
-            status = "SUCCESS" if success else "FAILED"
-            print(f"{step}: {status}")
+        for result in results["steps"].values():
+            result.get("success", False)
 
-        print(f"\nOverall: {results['success_ratio']} steps successful")
-        print(f"Message: {results['message']}")
     else:
         # Individual steps summary
-        for step, result in results.items():
+        for result in results.values():
             if isinstance(result, dict) and "success" in result:
-                success = result["success"]
-                status = "SUCCESS" if success else "FAILED"
-                print(f"{step}: {status}")
+                result["success"]
 
     # Save results to file
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1125,7 +1040,6 @@ def main():
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\nSaved verification results to {results_file}")
 
     return 0 if results.get("success", True) else 1
 

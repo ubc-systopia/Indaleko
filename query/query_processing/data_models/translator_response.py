@@ -21,10 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
-from typing import Any
 
 from pydantic import Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 from data_models.base import IndalekoBaseModel
+
 
 # from icecream import ic
 
@@ -97,11 +99,9 @@ class TranslatorOutput(IndalekoBaseModel):
 
 def main() -> None:
     """This allows testing the data model."""
-    import json
     from icecream import ic
     ic("Testing TranslatorOutput")
     # TranslatorOutput.test_model_main()
-    print(json.dumps(TranslatorOutput.model_json_schema(), indent=2))
 
 
 if __name__ == "__main__":

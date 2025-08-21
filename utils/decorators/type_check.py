@@ -20,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from functools import wraps
 from typing import Any, Union, get_type_hints
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -91,7 +93,7 @@ class MyClass:
     pass
 
 
-def run_tests():
+def run_tests() -> None:
     # Correct calls
     assert test_func_int(10) == 10
     assert test_func_str("hello") == "hello"
@@ -122,10 +124,9 @@ def run_tests():
     except TypeError as e:
         assert str(e) == "Argument 'x' must be of type <class '__main__.MyClass'>"
 
-    print("All tests passed!")
 
 
-def main():
+def main() -> None:
     run_tests()
 
 

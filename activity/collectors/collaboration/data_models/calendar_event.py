@@ -23,9 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,7 +46,7 @@ from data_models.base import IndalekoBaseModel
 
 
 class EventRecurrence(str, Enum):
-    """Enum representing possible calendar event recurrence patterns"""
+    """Enum representing possible calendar event recurrence patterns."""
 
     NONE = "none"
     DAILY = "daily"
@@ -56,7 +58,7 @@ class EventRecurrence(str, Enum):
 
 
 class EventStatus(str, Enum):
-    """Enum representing possible calendar event status values"""
+    """Enum representing possible calendar event status values."""
 
     CONFIRMED = "confirmed"
     TENTATIVE = "tentative"
@@ -65,7 +67,7 @@ class EventStatus(str, Enum):
 
 
 class EventResponse(str, Enum):
-    """Enum representing possible responses to calendar event invitations"""
+    """Enum representing possible responses to calendar event invitations."""
 
     ACCEPTED = "accepted"
     TENTATIVE = "tentative"
@@ -75,7 +77,7 @@ class EventResponse(str, Enum):
 
 
 class EventAttendee(IndalekoBaseModel):
-    """Model representing a calendar event attendee"""
+    """Model representing a calendar event attendee."""
 
     email: str
     name: str | None = None
@@ -96,7 +98,7 @@ class EventAttendee(IndalekoBaseModel):
 
 
 class EventLocation(IndalekoBaseModel):
-    """Model representing a calendar event location"""
+    """Model representing a calendar event location."""
 
     display_name: str
     address: str | None = None
@@ -117,7 +119,7 @@ class EventLocation(IndalekoBaseModel):
 
 
 class RecurrencePattern(IndalekoBaseModel):
-    """Model representing a calendar event recurrence pattern"""
+    """Model representing a calendar event recurrence pattern."""
 
     type: EventRecurrence
     interval: int = 1  # How often the pattern repeats (e.g., every 2 weeks)
@@ -144,7 +146,7 @@ class RecurrencePattern(IndalekoBaseModel):
 
 
 class EventAttachment(IndalekoBaseModel):
-    """Model representing an attachment to a calendar event"""
+    """Model representing an attachment to a calendar event."""
 
     name: str
     content_type: str
@@ -225,7 +227,7 @@ class CalendarEvent(BaseCollaborationDataModel):
     # Indaleko specific
     event_uuid: UUID = None
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         # Ensure event_uuid is set
         if not self.event_uuid:

@@ -30,10 +30,12 @@ import sys
 import threading
 import time
 import uuid
+
 from datetime import UTC, datetime
 from pathlib import Path
 
 from icecream import ic
+
 
 # Standard Python check for Windows platform
 IS_WINDOWS = sys.platform.startswith("win")
@@ -149,7 +151,6 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
             if "machine_config_file" not in keys:
                 if is_mock:
-                    print("Warning: No machine_config_file specified")
                     return None
                 raise ValueError(
                     f"{inspect.currentframe().f_code.co_name}: " "machine_config_file must be specified",
@@ -164,11 +165,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     config_file=str(keys["machine_config_file"]),
                     offline=offline,
                 )
-            except Exception as e:
+            except Exception:
                 # If we're in mock mode, we can continue without a machine config
                 if is_mock:
-                    print(f"Warning: Could not load machine config: {e}")
-                    print("Continuing in mock mode without machine configuration.")
                     return None
                 # Otherwise, re-raise the exception
                 raise
@@ -210,7 +209,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         if not WINDOWS_AVAILABLE and not self._use_mock:
             self._logger.error("NtfsActivityCollector is only available on Windows")
             raise RuntimeError("NtfsActivityCollector is only available on Windows")
-        elif not WINDOWS_AVAILABLE:
+        if not WINDOWS_AVAILABLE:
             self._logger.warning(
                 "Running in mock mode because Windows is not available",
             )
@@ -253,7 +252,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                 self._start_volume_monitoring(volume)
                 started_volumes += 1
             except Exception as e:
-                self._logger.error(f"Failed to start monitoring volume {volume}: {e}")
+                self._logger.exception(f"Failed to start monitoring volume {volume}: {e}")
 
         # If no volumes could be monitored, use mock mode
         if started_volumes == 0 and self._volumes:
@@ -283,7 +282,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     self._logger.debug(f"Closing handle for volume {volume}")
                     win32file.CloseHandle(handle)
             except Exception as e:
-                self._logger.error(f"Error closing handle for volume {volume}: {e}")
+                self._logger.exception(f"Error closing handle for volume {volume}: {e}")
 
         # Clear thread list and handles
         self._monitoring_threads = []
@@ -299,7 +298,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             volume: Volume to monitor (e.g., "C:")
         """
         # Standardize volume format
-        if volume.endswith("\\") or volume.endswith("/"):
+        if volume.endswith(("\\", "/")):
             volume = volume[:-1]
         if ":" not in volume and not volume.startswith("\\\\?\\Volume{"):
             volume = f"{volume}:"
@@ -371,7 +370,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                     win32file.CloseHandle(handle)
                 except Exception as e:
-                    self._logger.error(f"Error closing handle: {e}")
+                    self._logger.exception(f"Error closing handle: {e}")
 
                 # Fall back to mock mode
                 self._use_mock = True
@@ -387,7 +386,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
             win32file.CloseHandle(handle)
         except Exception as e:
-            self._logger.error(f"Error closing handle: {e}")
+            self._logger.exception(f"Error closing handle: {e}")
 
         # Start monitoring thread for this volume
         thread = threading.Thread(
@@ -475,7 +474,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                 self._logger.info(f"Added {count} new mock activities")
             except Exception as e:
-                self._logger.error(f"Error in mock activity generator: {e}")
+                self._logger.exception(f"Error in mock activity generator: {e}")
                 time.sleep(5)  # Wait a bit before retrying
 
     def _monitor_usn_journal(self, volume: str):
@@ -632,14 +631,14 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                 f"Added activity for {file_name} of type {activity_type}",
                             )
                         except Exception as rec_err:
-                            self._logger.error(
+                            self._logger.exception(
                                 f"Error processing USN record: {rec_err}",
                             )
 
                 # Brief sleep to avoid hammering the system
                 time.sleep(self._monitor_interval)
             except Exception as e:
-                self._logger.error(f"Error in USN journal monitoring loop: {e}")
+                self._logger.exception(f"Error in USN journal monitoring loop: {e}")
                 time.sleep(5)  # Wait before retrying
 
         self._logger.info(f"Stopped monitoring USN journal on volume {volume}")
@@ -755,11 +754,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             )
             if debug:
                 ic(f"Loaded machine config: {type(machine_config)}")
-        except Exception as e:
+        except Exception:
             # If we're in mock mode, we can proceed without a machine config
             if args.mock:
-                print(f"Warning: Could not load machine config: {e}")
-                print("Continuing in mock mode without machine configuration.")
                 machine_config = None
             else:
                 # For non-mock mode, re-raise the exception
@@ -783,7 +780,6 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             ic(f"Created collector: {collector.get_collector_name()}")
 
         # Start monitoring
-        print(f"Starting NTFS activity monitoring on volume {args.volume}...")
         collector.start_monitoring()
 
         # Create a test file if not in mock mode
@@ -811,7 +807,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                 # Also try reading the file to generate additional USN activity
                 with open(test_file) as f:
-                    content = f.read()
+                    f.read()
 
                 # And modify it to generate more activity
                 with open(test_file, "a") as f:
@@ -819,16 +815,13 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     f.flush()
                     os.fsync(f.fileno())
 
-                print(f"Created test file: {test_file}")
             except Exception as e:
-                print(f"Error creating test file: {e}")
                 if debug:
                     ic(f"Test file error details: {e}")
 
         # Wait for the specified duration
         duration = getattr(args, "duration", 30)
         if duration > 0:
-            print(f"Monitoring for {duration} seconds...")
 
             # Create another file halfway through if not in mock mode
             if duration > 10 and IS_WINDOWS and not args.mock:
@@ -856,7 +849,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                     # Read the file
                     with open(test_file) as f:
-                        content = f.read()
+                        f.read()
 
                     # Modify it
                     with open(test_file, "a") as f:
@@ -874,17 +867,14 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     # And rename it back
                     os.rename(rename_file, test_file)
 
-                    print(f"Created second test file: {test_file}")
                     time.sleep(duration / 2)
                 except Exception as e:
-                    print(f"Error creating second test file: {e}")
                     if debug:
                         ic(f"Second test file error details: {e}")
                     time.sleep(duration)
             else:
                 time.sleep(duration)
         else:
-            print("Monitoring continuously. Press Ctrl+C to stop...")
             try:
                 # Create a test file every 30 seconds if not in mock mode
                 counter = 0
@@ -904,11 +894,10 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                     f"Periodic test file created at {datetime.now()}\n",
                                 )
 
-                            print(f"Created periodic test file: {test_file}")
-                        except Exception as e:
-                            print(f"Error creating periodic test file: {e}")
+                        except Exception:
+                            pass
             except KeyboardInterrupt:
-                print("\nMonitoring stopped by user.")
+                pass
 
         # Get activities and check if we have any
         activities = collector.get_activities()
@@ -923,8 +912,6 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             # Get updated activities
             activities = collector.get_activities()
 
-        print("\n=== Activity Summary ===")
-        print(f"Total activities collected: {len(activities)}")
 
         # Count by type
         activity_counts = {}
@@ -937,36 +924,27 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
         # Print type counts
         if activity_counts:
-            print("\nActivities by type:")
-            for activity_type, count in activity_counts.items():
-                print(f"  {activity_type}: {count}")
+            for activity_type in activity_counts:
+                pass
 
             # Show a few recent activities
-            print("\nMost recent activities:")
             recent = activities[-min(5, len(activities)) :]
-            for i, activity in enumerate(recent):
-                print(f"  {i+1}. {activity.activity_type} - {activity.file_name}")
-                print(f"     Path: {activity.file_path}")
+            for _i, activity in enumerate(recent):
+                pass
         else:
-            print("\nNo activities were detected.")
-            print("If running on Windows, check that the USN journal is working.")
-            print("If not on Windows, make sure you're using --mock mode.")
+            pass
 
         # Stop monitoring
         collector.stop_monitoring()
-        print("NTFS monitoring stopped.")
 
         # Save activities to file
         if activities:
             output_file = collector.save_activities_to_file()
             if output_file:
-                print(f"\nActivities saved to: {output_file}")
+                pass
 
         # When running on Windows with no activities, try to diagnose the issue
         if IS_WINDOWS and not activities and not args.mock:
-            print(
-                "\nNo activities were detected on a Windows system. Let's check USN journal status:",
-            )
             try:
                 # Try to check USN journal status
                 if debug:
@@ -974,7 +952,6 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                 # Get volume path for the drive
                 volume_path = f"\\\\.\\{args.volume}"
-                print(f"Checking USN journal on {volume_path}")
 
                 try:
                     # Try to open the volume directly
@@ -989,7 +966,6 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     )
 
                     # Try to query USN journal
-                    print("Successfully opened volume, querying USN journal...")
                     usn_data = win32file.DeviceIoControl(
                         handle,
                         FSCTL_QUERY_USN_JOURNAL,
@@ -998,24 +974,19 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     )
 
                     # Try to parse the USN journal info with better diagnostics
-                    print(f"USN journal information: {usn_data}")
                     # First 8 bytes should be the USN Journal ID
                     if len(usn_data) >= 8:
-                        journal_id = struct.unpack("<Q", usn_data[:8])[0]
-                        print(f"USN Journal ID: {journal_id}")
+                        struct.unpack("<Q", usn_data[:8])[0]
 
                     # Next 8 bytes should be First USN
                     if len(usn_data) >= 16:
                         first_usn = struct.unpack("<Q", usn_data[8:16])[0]
-                        print(f"First USN: {first_usn}")
 
                     # Next 8 bytes should be Next USN
                     if len(usn_data) >= 24:
-                        next_usn = struct.unpack("<Q", usn_data[16:24])[0]
-                        print(f"Next USN: {next_usn}")
+                        struct.unpack("<Q", usn_data[16:24])[0]
 
                     # Try to create a direct read request
-                    print("\nTrying direct USN journal read...")
                     try:
                         # Create read journal data structure for ENUM_USN_DATA
                         buffer_in = bytearray(28)  # 28 bytes for MFT_ENUM_DATA
@@ -1038,13 +1009,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                             65536,
                         )
 
-                        print(
-                            f"Successfully read {len(read_data)} bytes from USN journal",
-                        )
                         if len(read_data) > 8:
                             # Extract the next USN from the first 8 bytes
-                            next_usn_read = struct.unpack("<Q", read_data[:8])[0]
-                            print(f"Next USN from read: {next_usn_read}")
+                            struct.unpack("<Q", read_data[:8])[0]
 
                             # Check if there are any record data after the first 8 bytes
                             if len(read_data) > 12:
@@ -1057,47 +1024,22 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                             read_data[offset : offset + 4],
                                         )[0]
                                         if 0 < record_length < 1024 and offset + record_length <= len(read_data):
-                                            print(
-                                                f"Found potential record at offset {offset} with length {record_length}",
-                                            )
                                             offset += record_length
                                         else:
                                             offset += 4
                                     except:
                                         offset += 4
                         else:
-                            print("No record data returned from USN journal")
-                    except Exception as direct_err:
-                        print(f"Direct USN read error: {direct_err}")
+                            pass
+                    except Exception:
+                        pass
 
-                    print("\nUSN journal is available but no activities were detected.")
-                    print(
-                        "The issue may be with the record parsing or USN journal format.",
-                    )
-                    print("Consider the following:")
-                    print("1. Check for permission issues (run as Administrator)")
-                    print(
-                        "2. Try enabling basic file operations: `fsutil usn enablerawnotify C:`",
-                    )
-                    print(
-                        "3. Make sure antivirus software isn't blocking file system monitoring",
-                    )
 
                     win32file.CloseHandle(handle)
-                except Exception as e:
-                    print(f"Error querying USN journal: {e}")
-                    print("The USN journal might not be enabled on this volume.")
-                    print("Try the following steps:")
-                    print("1. Run 'fsutil usn createjournal m=1000 a=100 C:'")
-                    print(
-                        "2. Make sure you have sufficient privileges (run as Administrator)",
-                    )
-                    print(
-                        "3. Try running the test again with --mock flag to verify functionality",
-                    )
-            except Exception as e:
-                print(f"Error during USN journal diagnosis: {e}")
-                print("Could not diagnose USN journal status.")
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
         return None
 

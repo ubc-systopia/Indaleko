@@ -153,7 +153,6 @@ class IndalekoCollectionView:
         Returns:
             Dict[str, Any]: Result of the delete operation
         """
-
         # Delete the view
         try:
             self.db_config.get_arangodb().delete_view(view_name)
@@ -168,7 +167,7 @@ class IndalekoCollectionView:
             "status":
             "success",
             "message":
-            f"Deleted view '{view_name}'"
+            f"Deleted view '{view_name}'",
         }
 
     def get_views(self) -> list[dict[str, Any]]:
@@ -192,7 +191,6 @@ class IndalekoCollectionView:
         Returns:
             Optional[Dict[str, Any]]: View information or None if not found
         """
-
         return self._existing_views.get(view_name)
 
     @type_check

@@ -25,13 +25,13 @@ import logging
 import os
 import subprocess
 import sys
+
 from typing import Any
 
 from firecircle.entities.registry import EntityRegistry
 from firecircle.integration.archivist import ArchivistIntegration
 from firecircle.memory.context import CircleContext
 from firecircle.memory.persistence import ConversationMemory, InsightMemory
-
 from firecircle.protocol.orchestrator import CircleOrchestrator, ConversationPhase
 
 
@@ -43,7 +43,7 @@ class IndalekoIntegration:
     implementation and the broader Indaleko system.
     """
 
-    def __init__(self, logger: logging.Logger | None = None):
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         """
         Initialize the Indaleko integration.
 
@@ -131,7 +131,7 @@ class IndalekoIntegration:
             return result
 
         except Exception as e:
-            self.logger.error(f"Error executing query: {e}")
+            self.logger.exception(f"Error executing query: {e}")
             return {"error": str(e)}
 
     def explain_query(self, query: str) -> dict[str, Any]:
@@ -163,7 +163,7 @@ class IndalekoIntegration:
             return result
 
         except Exception as e:
-            self.logger.error(f"Error explaining query: {e}")
+            self.logger.exception(f"Error explaining query: {e}")
             return {"error": str(e)}
 
     def get_database_info(self) -> dict[str, Any]:
@@ -189,11 +189,11 @@ class IndalekoIntegration:
             return info
 
         except ImportError:
-            self.logger.error("Could not import db.db_info module")
+            self.logger.exception("Could not import db.db_info module")
             return {"error": "Could not import database info module"}
 
         except Exception as e:
-            self.logger.error(f"Error getting database info: {e}")
+            self.logger.exception(f"Error getting database info: {e}")
             return {"error": str(e)}
 
     def export_circle_insights(
@@ -307,7 +307,7 @@ class IndalekoIntegration:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error initializing from continuation: {e}")
+            self.logger.exception(f"Error initializing from continuation: {e}")
             return False
 
     def run_indaleko_command(self, command: list[str]) -> tuple[int, str, str]:
@@ -352,5 +352,5 @@ class IndalekoIntegration:
             return (return_code, stdout, stderr)
 
         except Exception as e:
-            self.logger.error(f"Error running command: {e}")
+            self.logger.exception(f"Error running command: {e}")
             return (1, "", str(e))

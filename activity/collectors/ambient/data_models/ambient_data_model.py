@@ -66,6 +66,7 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
             "example": generate_example(),
         }
 
+
 def main() -> None:
     """This allows testing the data model."""
     BaseAmbientConditionDataModel.test_model_main()

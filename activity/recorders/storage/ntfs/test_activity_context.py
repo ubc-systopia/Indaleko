@@ -28,7 +28,9 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,6 +50,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from activity.recorders.storage.ntfs.ntfs_recorder import NtfsStorageActivityRecorder
+
 
 # pylint: enable=wrong-import-position
 
@@ -152,7 +155,7 @@ def test_integration_with_recorder(use_hot_tier: bool = False):
     logging.info(f"Stored {len(activity_ids)} activities")
 
     # Verify context integration
-    service = IndalekoActivityContextService()
+    IndalekoActivityContextService()
     context_data = IndalekoActivityContextService.get_latest_db_update_dict()
     if context_data:
         logging.info(f"Retrieved context with handle: {context_data.get('Handle')}")
@@ -201,25 +204,18 @@ def main():
     )
 
     # Print banner
-    print("=" * 70)
-    print("NTFS Activity Context Integration Test")
-    print("=" * 70)
 
     # Run tests
     if args.all or args.direct:
-        print("\nTesting direct integration...")
         test_integration_directly()
 
     if args.all or args.recorder:
-        print("\nTesting with standard recorder...")
         test_integration_with_recorder(use_hot_tier=False)
 
     if args.all or args.hot_tier:
-        print("\nTesting with hot tier recorder...")
         test_integration_with_recorder(use_hot_tier=True)
 
     # Summary
-    print("\nAll tests completed")
 
 
 if __name__ == "__main__":

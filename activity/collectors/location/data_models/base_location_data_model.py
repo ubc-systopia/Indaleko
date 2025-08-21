@@ -23,6 +23,7 @@ import sys
 
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.location_data_model import LocationDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -47,7 +49,7 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
     class Config:
         @staticmethod
         def generate_example():
-            """Generate an example for the data model"""
+            """Generate an example for the data model."""
             example = IndalekoActivityDataModel.Config.json_schema_extra["example"]
             example["Location"] = LocationDataModel.Config.json_schema_extra["example"]
             return example
@@ -57,8 +59,8 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     BaseLocationDataModel.test_model_main()
 
 

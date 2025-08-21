@@ -26,8 +26,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -41,6 +43,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.context.service import IndalekoActivityContextService
 from db.db_collections import IndalekoDBCollections
 from query.context.data_models.query_activity import QueryActivityData
+
 
 # pylint: enable=wrong-import-position
 
@@ -57,7 +60,7 @@ class QueryActivityProvider:
     # Provider ID for query activity context
     QUERY_CONTEXT_PROVIDER_ID = uuid.UUID("a7b4c3d2-e5f6-4708-b9a1-f2e3d4c5b6a7")
 
-    def __init__(self, db_config=None, debug=False):
+    def __init__(self, db_config=None, debug=False) -> None:
         """
         Initialize the QueryActivityProvider.
 
@@ -160,7 +163,7 @@ class QueryActivityProvider:
             return query_id, current_context_handle
 
         except Exception as e:
-            self._logger.error(f"Error recording query activity: {e}")
+            self._logger.exception(f"Error recording query activity: {e}")
             return uuid.uuid4(), None
 
     def _build_query_attributes(
@@ -232,10 +235,7 @@ class QueryActivityProvider:
             Summary string
         """
         # Truncate long queries
-        if len(query_text) > 50:
-            summary = f"Query: {query_text[:50]}..."
-        else:
-            summary = f"Query: {query_text}"
+        summary = f"Query: {query_text[:50]}..." if len(query_text) > 50 else f"Query: {query_text}"
 
         # Add result count if available
         if results is not None:
@@ -262,25 +262,24 @@ class QueryActivityProvider:
             return "refinement"
 
         # Check for broadening (previous query includes current query and adds constraints)
-        elif current_query in previous_query and len(previous_query) > len(
+        if current_query in previous_query and len(previous_query) > len(
             current_query,
         ):
             return "broadening"
 
         # Check for pivot (queries share significant words but have different focus)
-        else:
-            # Simple word overlap calculation
-            prev_words = set(previous_query.lower().split())
-            curr_words = set(current_query.lower().split())
+        # Simple word overlap calculation
+        prev_words = set(previous_query.lower().split())
+        curr_words = set(current_query.lower().split())
 
-            # Calculate Jaccard similarity
-            overlap = len(prev_words.intersection(curr_words))
-            union = len(prev_words.union(curr_words))
+        # Calculate Jaccard similarity
+        overlap = len(prev_words.intersection(curr_words))
+        union = len(prev_words.union(curr_words))
 
-            similarity = overlap / union if union > 0 else 0
+        similarity = overlap / union if union > 0 else 0
 
-            if similarity > 0.5:
-                return "pivot"
+        if similarity > 0.5:
+            return "pivot"
 
         return "unrelated"
 
@@ -316,7 +315,7 @@ class QueryActivityProvider:
 
             return None
         except Exception as e:
-            self._logger.error(f"Error retrieving query: {e}")
+            self._logger.exception(f"Error retrieving query: {e}")
             return None
 
     def get_recent_queries(self, limit: int = 10) -> list[dict[str, Any]]:
@@ -354,7 +353,7 @@ class QueryActivityProvider:
 
             return queries
         except Exception as e:
-            self._logger.error(f"Error retrieving recent queries: {e}")
+            self._logger.exception(f"Error retrieving recent queries: {e}")
             return []
 
     def get_recent_query_activities(self, limit: int = 10) -> list[Any]:
@@ -442,11 +441,11 @@ class QueryActivityProvider:
                 return activities
 
             except Exception as e:
-                self._logger.error(f"Error executing query for recent activities: {e}")
+                self._logger.exception(f"Error executing query for recent activities: {e}")
                 return []
 
         except Exception as e:
-            self._logger.error(f"Error retrieving recent query activities: {e}")
+            self._logger.exception(f"Error retrieving recent query activities: {e}")
             return []
 
     def get_query_activity(self, query_id: uuid.UUID) -> Any | None:
@@ -511,7 +510,7 @@ class QueryActivityProvider:
                 # Convert result to query activity object
                 if result and "attributes" in result and result["attributes"]:
                     attributes = result["attributes"]
-                    activity = QueryActivityData(
+                    return QueryActivityData(
                         query_id=uuid.UUID(str(result["query_id"])),
                         query_text=attributes.get("query_text", ""),
                         execution_time=(
@@ -533,20 +532,19 @@ class QueryActivityProvider:
                             else datetime.fromisoformat(result["timestamp"])
                         ),
                     )
-                    return activity
 
                 return None
 
             except Exception as e:
-                self._logger.error(f"Error executing query for activity: {e}")
+                self._logger.exception(f"Error executing query for activity: {e}")
                 return None
 
         except Exception as e:
-            self._logger.error(f"Error retrieving query activity: {e}")
+            self._logger.exception(f"Error retrieving query activity: {e}")
             return None
 
 
-def main():
+def main() -> None:
     """Test functionality of QueryActivityProvider."""
     logging.basicConfig(level=logging.DEBUG)
 
@@ -554,7 +552,6 @@ def main():
     provider = QueryActivityProvider(debug=True)
 
     if not provider.is_context_available():
-        print("Activity context service not available. Exiting.")
         return
 
     # Record a sequence of queries
@@ -564,15 +561,10 @@ def main():
 
     # Record queries and check relationships
     q1_id, ctx1 = provider.record_query(query1)
-    print(f"Recorded query 1: {q1_id}, context: {ctx1}")
 
     q2_id, ctx2 = provider.record_query(query2)
-    print(f"Recorded query 2: {q2_id}, context: {ctx2}")
-    print(f"Relationship: {provider._detect_relationship(query1, query2)}")
 
     q3_id, ctx3 = provider.record_query(query3)
-    print(f"Recorded query 3: {q3_id}, context: {ctx3}")
-    print(f"Relationship: {provider._detect_relationship(query2, query3)}")
 
 
 if __name__ == "__main__":

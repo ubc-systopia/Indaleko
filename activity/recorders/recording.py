@@ -1,6 +1,4 @@
-"""
-This module handles recording of activity data from the various providers.
-"""
+"""This module handles recording of activity data from the various providers."""
 
 import argparse
 import datetime
@@ -8,6 +6,7 @@ import os
 import sys
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -19,15 +18,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig
 
+
 # pylint: enable=wrong-import-position
 
 
 class Recording:
-    """
-    This class handles the recording of data from the various providers.
-    """
+    """This class handles the recording of data from the various providers."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self._db_config = IndalekoDBConfig()
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -40,23 +38,21 @@ class RecordingInterface:
     """
 
     @staticmethod
-    def list_command(args):
-        """List the current recordings"""
-        print("List")
+    def list_command(args) -> None:
+        """List the current recordings."""
         recording_agent = Recording()
         ic(recording_agent)
 
     @staticmethod
-    def test_db_command(args):
-        """Test the database connection"""
-        print("Test DB")
+    def test_db_command(args) -> None:
+        """Test the database connection."""
         db = IndalekoDBConfig()
         ic(db)
 
 
-def main():
-    """This allows testing the data model"""
-    now = datetime.datetime.now(datetime.UTC)
+def main() -> None:
+    """This allows testing the data model."""
+    datetime.datetime.now(datetime.UTC)
     parser = argparse.ArgumentParser(description="Recording interface CLI for testing")
     command_subparser = parser.add_subparsers(dest="command", help="Command to execute")
     parser_list = command_subparser.add_parser("list", help="List the recordings")

@@ -25,6 +25,7 @@ import sys
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -43,7 +44,7 @@ class ToolRegistry:
     def __new__(cls):
         """Ensure singleton instance."""
         if cls._instance is None:
-            cls._instance = super(ToolRegistry, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._tools = {}
             cls._instance._tool_instances = {}
             cls._instance._progress_callback = None
@@ -118,7 +119,7 @@ class ToolRegistry:
         self,
         name: str,
         parameters: dict,
-        progress_callback: callable = None,
+        progress_callback: callable | None = None,
     ) -> ToolOutput:
         """
         Execute a tool with the given parameters.
@@ -143,7 +144,7 @@ class ToolRegistry:
     def execute_tool_input(
         self,
         input_data: ToolInput,
-        progress_callback: callable = None,
+        progress_callback: callable | None = None,
     ) -> ToolOutput:
         """
         Execute a tool with the given input.

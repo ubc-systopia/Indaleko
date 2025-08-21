@@ -23,6 +23,7 @@ import logging
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -39,13 +40,10 @@ from utils import IndalekoLogging
 def list_views(view_manager):
     """List all views in the database."""
     views = view_manager.get_views()
-    print(f"\nFound {len(views)} views:")
     for view in views:
-        view_name = view["name"]
-        view_type = view.get("type", "unknown")
-        collections = list(view.get("links", {}).keys())
-        print(f"  - {view_name} (type: {view_type})")
-        print(f"    Collections: {', '.join(collections)}")
+        view["name"]
+        view.get("type", "unknown")
+        list(view.get("links", {}).keys())
 
 
 def create_test_view(view_manager):
@@ -54,7 +52,6 @@ def create_test_view(view_manager):
     import time
 
     test_view_name = f"TestSearchView_{int(time.time())}"
-    print(f"\nCreating view with unique name: '{test_view_name}'")
 
     # Create test view definition with field-specific analyzers
     test_view = IndalekoViewDefinition(
@@ -77,41 +74,36 @@ def create_test_view(view_manager):
     )
 
     # Create the view
-    print(f"\nCreating test view '{test_view_name}'...")
     result = view_manager.create_view(test_view)
 
     if result["status"] == "success":
-        print(f"✅ Successfully created view '{test_view_name}'")
+        pass
     else:
-        print(f"❌ Failed to create view: {result['message']}")
+        pass
 
 
 def delete_test_view(view_manager):
     """Delete the test view if it exists."""
     test_view_name = "TestSearchView"
     if not view_manager.view_exists(test_view_name):
-        print(f"\nTest view '{test_view_name}' does not exist.")
         return
 
     # Ask for confirmation
     confirm = input(f"\nConfirm deletion of test view '{test_view_name}'? (y/n): ")
     if confirm.lower() != "y":
-        print("Deletion cancelled.")
         return
 
     # Delete the view
-    print(f"Deleting test view '{test_view_name}'...")
     result = view_manager.delete_view(test_view_name)
 
     if result["status"] == "success":
-        print(f"✅ Successfully deleted view '{test_view_name}'")
+        pass
     else:
-        print(f"❌ Failed to delete view: {result['message']}")
+        pass
 
 
 def ensure_views(clear_existing=False):
     """Create or update all views defined in IndalekoDBCollections."""
-    print("\nCreating/updating views defined in IndalekoDBCollections...")
 
     # Get the view manager
     view_manager = IndalekoCollectionView()
@@ -121,23 +113,20 @@ def ensure_views(clear_existing=False):
         views = view_manager.get_views()
         for view in views:
             view_name = view["name"]
-            print(f"Deleting existing view '{view_name}'...")
             result = view_manager.delete_view(view_name)
             if result["status"] == "success":
-                print(f"  ✅ Deleted view '{view_name}'")
+                pass
             else:
-                print(f"  ❌ Failed to delete view: {result['message']}")
+                pass
 
     # Create collections, which will also create the views
-    collections = IndalekoCollections()
+    IndalekoCollections()
 
     # Verify views were created
     views = view_manager.get_views()
-    print(f"\nVerified {len(views)} views after initialization:")
     for view in views:
         view_name = view["name"]
-        collections = list(view.get("links", {}).keys())
-        print(f"  - {view_name} (collections: {', '.join(collections)})")
+        list(view.get("links", {}).keys())
 
 
 def execute_test_query(view_manager, query, analyzer=None):
@@ -149,7 +138,6 @@ def execute_test_query(view_manager, query, analyzer=None):
         query: The query string to search for
         analyzer: Optional analyzer name to use (if None, tests multiple analyzers)
     """
-    print(f"\nExecuting search query: '{query}'")
 
     # Get database connection
     from db.db_config import IndalekoDBConfig
@@ -180,10 +168,8 @@ def execute_test_query(view_manager, query, analyzer=None):
         if view.get("type") != "arangosearch":
             continue
 
-        print(f"\nSearching in view '{view_name}':")
 
         for current_analyzer in analyzers_to_test:
-            print(f"\n  Using analyzer: {current_analyzer}")
 
             # Construct AQL query with the current analyzer
             aql_query = f"""
@@ -211,28 +197,23 @@ def execute_test_query(view_manager, query, analyzer=None):
                 results = list(cursor)
 
                 # Print results
-                total = cursor.count() if cursor.has_more() else len(results)
-                print(f"  Found {total} results:")
+                cursor.count() if cursor.has_more() else len(results)
 
-                for i, result in enumerate(results):
-                    print(
-                        f"    {i+1}. {result.get('label', '[No Label]')} (key: {result.get('key')})",
-                    )
+                for _i, result in enumerate(results):
                     if result.get("score"):
-                        print(f"       Score: {result.get('score')}")
+                        pass
 
                 if not results:
-                    print("    No matching results found")
+                    pass
 
-            except Exception as e:
-                print(f"    ❌ Error executing query: {e!s}")
+            except Exception:
+                pass
 
 
 def test_tokenized_search(view_manager):
     """Test search with tokenized fields."""
     from storage.recorders.tokenization import tokenize_filename
 
-    print("\n=== Testing tokenized search ===")
 
     # Define test filenames
     test_filenames = [
@@ -244,12 +225,7 @@ def test_tokenized_search(view_manager):
 
     # Tokenize and show the results
     for filename in test_filenames:
-        print(f"\nTokenizing: {filename}")
-        tokens = tokenize_filename(filename)
-        print(f"  Original filename: {filename}")
-        print(f"  CamelCase tokenized: {tokens['CamelCaseTokenizedName']}")
-        print(f"  snake_case tokenized: {tokens['SnakeCaseTokenizedName']}")
-        print(f"  Search tokenized: {tokens['SearchTokenizedName']}")
+        tokenize_filename(filename)
 
     # Test search queries for different tokenization patterns
     test_queries = ["Indaleko", "Object", "Data", "Model", "Example", "snake", "case"]
@@ -261,11 +237,9 @@ def test_tokenized_search(view_manager):
 def list_analyzers(view_manager):
     """List all analyzers in the database."""
     analyzers = view_manager.get_analyzers()
-    print(f"\nFound {len(analyzers)} analyzers:")
     for analyzer in analyzers:
-        name = analyzer.get("name", "unknown")
-        type = analyzer.get("type", "unknown")
-        print(f"  - {name} (type: {type})")
+        analyzer.get("name", "unknown")
+        analyzer.get("type", "unknown")
 
     return len(analyzers) > 0
 
@@ -358,7 +332,6 @@ def main():
         test_tokenized_search(view_manager)
 
     if args.test_camel_case:
-        print("\n=== Testing CamelCase filenames ===")
         camel_queries = [
             "Indaleko",
             "Object",
@@ -370,13 +343,11 @@ def main():
             execute_test_query(view_manager, query, "indaleko_camel_case")
 
     if args.test_snake_case:
-        print("\n=== Testing snake_case filenames ===")
         snake_queries = ["indaleko", "object", "indaleko_object", "data_model"]
         for query in snake_queries:
             execute_test_query(view_manager, query, "indaleko_snake_case")
 
     if args.test_complex:
-        print("\n=== Testing complex filenames ===")
         complex_queries = ["this-is", "the_file", "%2efor", "Claude"]
         for query in complex_queries:
             execute_test_query(view_manager, query, "indaleko_filename")

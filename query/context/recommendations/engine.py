@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import uuid
+
 from typing import Any
 
 from icecream import ic
@@ -55,7 +56,7 @@ class RecommendationEngine:
         self,
         settings: RecommendationSettings | None = None,
         debug: bool = False,
-    ):
+    ) -> None:
         """
         Initialize the recommendation engine.
 
@@ -77,8 +78,8 @@ class RecommendationEngine:
         self.recent_suggestions = {}  # {suggestion_id: QuerySuggestion}
 
         # Statistics
-        self.suggestion_counts = {source: 0 for source in RecommendationSource}
-        self.acceptance_counts = {source: 0 for source in RecommendationSource}
+        self.suggestion_counts = dict.fromkeys(RecommendationSource, 0)
+        self.acceptance_counts = dict.fromkeys(RecommendationSource, 0)
 
     def _initialize_providers(self) -> None:
         """Initialize recommendation providers."""
@@ -207,7 +208,7 @@ class RecommendationEngine:
 
         # Then ensure diversity by limiting same-source suggestions
         diversified_suggestions = []
-        source_counts = {source: 0 for source in RecommendationSource}
+        source_counts = dict.fromkeys(RecommendationSource, 0)
 
         for suggestion in sorted_suggestions:
             source = suggestion.source
@@ -284,11 +285,10 @@ class RecommendationEngine:
             acceptances = self.acceptance_counts.get(source_type, 0)
 
             return acceptances / suggestions if suggestions > 0 else 0.0
-        else:
-            total_suggestions = sum(self.suggestion_counts.values())
-            total_acceptances = sum(self.acceptance_counts.values())
+        total_suggestions = sum(self.suggestion_counts.values())
+        total_acceptances = sum(self.acceptance_counts.values())
 
-            return total_acceptances / total_suggestions if total_suggestions > 0 else 0.0
+        return total_acceptances / total_suggestions if total_suggestions > 0 else 0.0
 
     def get_feedback_stats(self) -> dict[str, Any]:
         """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Indaleko Project - CLI Integration for Semantic Performance Monitoring
+Indaleko Project - CLI Integration for Semantic Performance Monitoring.
 
 This module integrates the semantic performance monitoring framework with
 the Indaleko command-line interface, allowing users to run and analyze
@@ -13,6 +13,7 @@ where they're stored.
 """
 
 import json
+
 from datetime import UTC, datetime
 
 from semantic.experiments.experiment_driver import SemanticExtractorExperiment
@@ -293,5 +294,4 @@ def register_semantic_performance_cli(
 
 if __name__ == "__main__":
     # Quick test for the CLI integration
-    print("This module is designed to be imported by the Indaleko CLI.")
-    print("Run 'python -m query.cli --semantic-performance' to use it.")
+    pass

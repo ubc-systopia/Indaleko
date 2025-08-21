@@ -27,8 +27,10 @@ import math
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -46,6 +48,7 @@ from query.context.data_models.recommendation import (
 )
 from query.context.recommendations.base import RecommendationProvider
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -60,7 +63,7 @@ class TemporalPattern:
         time_window: dict[str, Any],
         confidence: float = 0.5,
         observation_count: int = 1,
-    ):
+    ) -> None:
         """
         Initialize the temporal pattern.
 
@@ -178,10 +181,7 @@ class TemporalPattern:
                 scores.append(1.0)
             else:
                 # Outside range, calculate distance to range
-                if hour < hour_range[0]:
-                    distance = hour_range[0] - hour
-                else:
-                    distance = hour - hour_range[1]
+                distance = hour_range[0] - hour if hour < hour_range[0] else hour - hour_range[1]
 
                 # Normalize distance (max possible distance is 12 hours)
                 hour_score = max(0.0, 1.0 - (distance / 12.0))
@@ -222,7 +222,7 @@ class TemporalPatternRecommender(RecommendationProvider):
     and other temporal factors.
     """
 
-    def __init__(self, db_config=None, debug: bool = False):
+    def __init__(self, db_config=None, debug: bool = False) -> None:
         """
         Initialize the temporal pattern recommender.
 
@@ -503,9 +503,8 @@ class TemporalPatternRecommender(RecommendationProvider):
         normalized = re.sub(time_pattern, "{time}", normalized)
 
         # Replace numbers
-        normalized = re.sub(r"\b\d+\b", "{number}", normalized)
+        return re.sub(r"\b\d+\b", "{number}", normalized)
 
-        return normalized
 
     def generate_suggestions(
         self,
@@ -701,13 +700,10 @@ class TemporalPatternRecommender(RecommendationProvider):
         return True
 
 
-def main():
+def main() -> None:
     """Test the TemporalPatternRecommender."""
     logging.basicConfig(level=logging.DEBUG)
 
-    print("=" * 80)
-    print("Testing TemporalPatternRecommender")
-    print("=" * 80)
 
     # Create recommender
     recommender = TemporalPatternRecommender(debug=True)
@@ -727,7 +723,6 @@ def main():
     ]
 
     for test_time in test_times:
-        print(f"\nTesting time: {test_time.strftime('%A, %I:%M %p')}")
 
         # Create context with current time
         context_data = {"current_time": test_time.isoformat()}
@@ -738,59 +733,38 @@ def main():
             max_suggestions=3,
         )
 
-        print(f"Generated {len(suggestions)} suggestions:")
-        for i, suggestion in enumerate(suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(suggestions):
 
             # Show time window
             time_window = suggestion.source_context.get("time_window", {})
             if "days_of_week" in time_window:
-                days = [calendar.day_name[d] for d in time_window["days_of_week"]]
-                print(f"   Days: {', '.join(days)}")
+                [calendar.day_name[d] for d in time_window["days_of_week"]]
             if "hour_range" in time_window:
-                hr = time_window["hour_range"]
-                print(f"   Hours: {hr[0]}:00 - {hr[1]}:00")
+                time_window["hour_range"]
 
-            print(
-                f"   Match score: {suggestion.source_context.get('match_score', 0):.2f}",
-            )
-            print(f"   Tags: {suggestion.tags}")
-            print()
 
     # Test feedback
     if suggestions:
-        print("\nTesting feedback:")
         recommender.update_from_feedback(
             suggestion=suggestions[0],
             feedback=FeedbackType.ACCEPTED,
             result_count=7,
         )
-        print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
-        print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
             context_data=context_data,
             max_suggestions=3,
         )
 
-        print(f"Generated {len(new_suggestions)} suggestions after feedback:")
-        for i, suggestion in enumerate(new_suggestions):
-            print(
-                f"{i+1}. {suggestion.query_text} (confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   Rationale: {suggestion.rationale}")
+        for _i, suggestion in enumerate(new_suggestions):
 
             # Check if this matches an original suggestion to see confidence change
             for orig in suggestions:
                 if suggestion.query_text == orig.query_text:
                     confidence_change = suggestion.confidence - orig.confidence
                     if abs(confidence_change) > 0.01:
-                        print(f"   Confidence change: {confidence_change:+.2f}")
-            print()
+                        pass
 
 
 if __name__ == "__main__":

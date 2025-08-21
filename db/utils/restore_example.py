@@ -23,7 +23,9 @@ import logging
 import os
 import sys
 import time
+
 from pathlib import Path
+
 
 # Handle imports for when the module is run directly
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -35,63 +37,64 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.utils.arango_commands import ArangoRestoreGenerator
+
+
 # pylint: enable=wrong-import-position
 
 
-def format_time(seconds):
+def format_time(seconds) -> str:
     """Format seconds into a human-readable time string."""
     if seconds < 60:
         return f"{seconds:.1f} seconds"
-    elif seconds < 3600:
+    if seconds < 3600:
         minutes = seconds / 60
         return f"{minutes:.1f} minutes"
-    else:
-        hours = seconds / 3600
-        return f"{hours:.1f} hours"
+    hours = seconds / 3600
+    return f"{hours:.1f} hours"
 
 
-def main():
+def main() -> None:
     """Main function for the ArangoRestore example."""
     parser = argparse.ArgumentParser(description="Restore an ArangoDB backup")
     parser.add_argument(
         "--input-directory",
         "-i",
         required=True,
-        help="Path to the backup directory containing dump files"
+        help="Path to the backup directory containing dump files",
     )
     parser.add_argument(
         "--collections",
         "-c",
-        help="Optional comma-separated list of collections to restore (default: all collections)"
+        help="Optional comma-separated list of collections to restore (default: all collections)",
     )
     parser.add_argument(
         "--create",
         action="store_true",
         default=True,
-        help="Create collections if they don't exist (default: true)"
+        help="Create collections if they don't exist (default: true)",
     )
     parser.add_argument(
         "--overwrite",
         action="store_true",
         default=False,
-        help="Overwrite existing data (default: false)"
+        help="Overwrite existing data (default: false)",
     )
     parser.add_argument(
         "--timeout-hours",
         type=float,
         default=5.0,
-        help="Timeout in hours (default: 5.0)"
+        help="Timeout in hours (default: 5.0)",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show the command without executing it"
+        help="Show the command without executing it",
     )
     parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
-        help="Enable verbose logging"
+        help="Enable verbose logging",
     )
 
     args = parser.parse_args()
@@ -100,7 +103,7 @@ def main():
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     # Parse collections if provided
@@ -122,21 +125,14 @@ def main():
     restore_gen.with_timeout_hours(args.timeout_hours)
 
     # Build the command
-    cmd_string = restore_gen.build_command()
+    restore_gen.build_command()
 
     # Print the command
-    print("\n=== ArangoDB Restore Command ===")
-    print(cmd_string)
-    print()
 
     if args.dry_run:
-        print("Dry run mode - command not executed")
         return
 
     # Execute the command with timing
-    print(f"Starting restore operation (timeout: {args.timeout_hours} hours)...")
-    print("This may take a long time for large databases.")
-    print("Press Ctrl+C to cancel...")
 
     start_time = time.time()
 
@@ -144,21 +140,18 @@ def main():
         result = restore_gen.execute()
 
         end_time = time.time()
-        elapsed = end_time - start_time
+        end_time - start_time
 
-        print(f"\nRestore completed in {format_time(elapsed)}")
-        print(f"Exit code: {result.returncode}")
 
         if result.returncode != 0:
-            print("Restore operation failed!")
-            print(f"Error output: {result.stderr}")
+            pass
         else:
-            print("Restore operation successful!")
+            pass
 
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user")
-    except Exception as e:
-        print(f"\nError during restore: {e}")
+        pass
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

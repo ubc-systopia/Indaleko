@@ -1,7 +1,7 @@
 """
 This package defines service constants used in Indaleko.  It cannot
 depend on anything else (it exists to break circular dependencies that seem
-to arise in the code base.)
+to arise in the code base.).
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

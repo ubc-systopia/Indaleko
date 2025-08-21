@@ -25,9 +25,10 @@ import sys
 import tempfile
 import uuid
 
-from icecream import ic
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
+from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -160,7 +161,7 @@ def test_process_directory(temp_dir):
     # Count the number of entries
     entry_count = 0
     with open(output_file, encoding="utf-8") as f:
-        for line in f:
+        for _line in f:
             entry_count += 1
 
     # We should have entries for images with EXIF data (not all images will have it)
@@ -199,7 +200,7 @@ def test_batch_processing(temp_dir, files):
     # Count the number of entries
     entry_count = 0
     with open(output_file, encoding="utf-8") as f:
-        for line in f:
+        for _line in f:
             entry_count += 1
 
     # We should have entries for images with EXIF data (not all images will have it)
@@ -216,13 +217,12 @@ def main():
 
     try:
         # Run tests
-        single_file_result = test_process_single_file(temp_dir, files)
+        test_process_single_file(temp_dir, files)
         test_process_directory(temp_dir)
         test_batch_processing(temp_dir, files)
 
         # Display a sample result
         ic("Sample output:")
-        print(json.dumps(single_file_result, indent=2, cls=IndalekoJSONEncoder))
 
         ic("All tests passed!")
 

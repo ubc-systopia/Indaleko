@@ -1,5 +1,5 @@
 """
-Settings component for Indaleko Streamlit GUI
+Settings component for Indaleko Streamlit GUI.
 
 This module provides configuration settings for the application.
 
@@ -26,9 +26,9 @@ import streamlit as st
 from utils.gui.streamlit.components.connection import connect_to_db
 
 
-def render_settings():
+def render_settings() -> None:
     """
-    Render the settings page with configuration options
+    Render the settings page with configuration options.
 
     Includes tabs for:
     - Database configuration

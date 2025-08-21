@@ -1,5 +1,5 @@
 """
-Sidebar component for Indaleko Streamlit GUI
+Sidebar component for Indaleko Streamlit GUI.
 
 This module provides the navigation sidebar for the application.
 
@@ -30,9 +30,9 @@ from utils.gui.streamlit.components.connection import (
 from utils.gui.streamlit.services.config import get_config_files
 
 
-def render_sidebar():
+def render_sidebar() -> None:
     """
-    Render the navigation sidebar for the application
+    Render the navigation sidebar for the application.
 
     Includes:
     - Logo/title
@@ -82,20 +82,19 @@ def render_sidebar():
             )
 
         # Connection button - full width
-        if config_files:
-            if st.button("Connect", use_container_width=True):
-                db_service, db_info = connect_to_db(selected_config)
-                if db_service:
-                    st.session_state.db_connected = True
-                    st.session_state.db_service = db_service
-                    st.session_state.db_info = db_info
-                    if st.session_state.using_real_db:
-                        st.success("Connected to real database!")
-                    else:
-                        st.warning("Connected to mock database.")
-                    st.experimental_rerun()
+        if config_files and st.button("Connect", use_container_width=True):
+            db_service, db_info = connect_to_db(selected_config)
+            if db_service:
+                st.session_state.db_connected = True
+                st.session_state.db_service = db_service
+                st.session_state.db_info = db_info
+                if st.session_state.using_real_db:
+                    st.success("Connected to real database!")
                 else:
-                    st.error("Failed to connect to database.")
+                    st.warning("Connected to mock database.")
+                st.experimental_rerun()
+            else:
+                st.error("Failed to connect to database.")
 
         # Navigation section
         st.subheader("Navigation")

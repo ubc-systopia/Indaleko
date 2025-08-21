@@ -26,6 +26,7 @@ import os
 import sys
 import uuid
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,6 +49,7 @@ from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
 from utils.misc.file_name_management import generate_file_name
+
 
 # pylint: enable=wrong-import-position
 
@@ -92,8 +94,8 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             if kwargs["machine_id"] != self.machine_config.machine_id:
                 logging.warning(
                     "Warning: machine ID of collector file "
-                    + f'({kwargs["machine"]}) does not match machine ID of recorder '
-                    + f"({self.machine_config.machine_id}.)",
+                     f'({kwargs["machine"]}) does not match machine ID of recorder '
+                     f"({self.machine_config.machine_id}.)",
                 )
         if "timestamp" not in kwargs:
             kwargs["timestamp"] = datetime.datetime.now(
@@ -115,9 +117,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
         self.source = {"Identifier": self.linux_local_recorder_uuid, "Version": "1.0"}
 
     def find_collector_files(self) -> list:
-        """
-        Find the collector files in the data directory.
-        """
+        """Find the collector files in the data directory."""
         if self.data_dir is None:
             raise ValueError("data_dir must be specified")
         return [
@@ -138,10 +138,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             raise ValueError("Data cannot be None")
         if not isinstance(data, dict):
             raise ValueError("Data must be a dictionary")
-        if "ObjectIdentifier" in data:
-            oid = data["ObjectIdentifier"]
-        else:
-            oid = str(uuid.uuid4())
+        oid = data["ObjectIdentifier"] if "ObjectIdentifier" in data else str(uuid.uuid4())
         timestamps = []
         if "st_birthtime" in data:
             timestamps.append(
@@ -236,7 +233,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
         return file_name
 
 
-def main():
+def main() -> None:
     """This is the CLI handler for the Linux local storage recorder."""
     BaseLocalStorageRecorder.local_recorder_runner(
         IndalekoLinuxLocalStorageCollector,

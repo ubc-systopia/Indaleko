@@ -1,4 +1,5 @@
 """Generate POSIX metadata."""
+
 import random
 import re
 import string
@@ -27,6 +28,7 @@ class PosixMetadata(Metadata):
 
     Generates Posix Metadata based on the given dictionary of queries.
     """
+
     ALL_EXTENSIONS = (
         ".pdf",
         ".doc",
@@ -53,12 +55,12 @@ class PosixMetadata(Metadata):
     )
 
     def __init__(
-            self,
-            selected_posix_md,
-            default_lower_filesize=1,
-            default_upper_filesize=10737418240,
-            default_lower_timestamp=None,
-            default_upper_timestamp=None,
+        self,
+        selected_posix_md,
+        default_lower_filesize=1,
+        default_upper_filesize=10737418240,
+        default_lower_timestamp=None,
+        default_upper_timestamp=None,
     ) -> None:
         """Initialize the object."""
         super().__init__(selected_posix_md)
@@ -67,23 +69,23 @@ class PosixMetadata(Metadata):
         selected_posix_md = self.preprocess_dictionary_timestamps(False)  # noqa: FBT003
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
-        
+
         # Set default timestamp values if none provided
         if default_lower_timestamp is None:
             self.default_lower_timestamp = datetime(2000, 10, 25, tzinfo=UTC)
         else:
             self.default_lower_timestamp = default_lower_timestamp
-            
+
         if default_upper_timestamp is None:
             self.default_upper_timestamp = datetime.now(UTC)
         else:
             self.default_upper_timestamp = default_upper_timestamp
-            
+
         # Initialize the directory path
         self.saved_directory_path = self.initialize_local_dir()
 
     def generate_metadata(self, **kwargs: dict) -> IndalekoObjectDataModel:
-        """"Generates metadata specific to the subclass."""
+        """ "Generates metadata specific to the subclass."""
         record_data = kwargs["record_data"]
         io_uuid = kwargs["IO_UUID"]
         timestamps = kwargs["timestamps"]
@@ -104,7 +106,6 @@ class PosixMetadata(Metadata):
             local_identifier,
             path,
         )
-
 
     def generate_file_info(
         self,
@@ -189,33 +190,34 @@ class PosixMetadata(Metadata):
         )
 
     def _generate_i_object_data(
-            self,
-            record_data: IndalekoRecordDataModel,
-            io_uuid: str,
-            timestamps: dict[str, str],
-            uri: str,
-            file_size: int,
-            _semantic_attributes_data: list[dict[str, Any]],
-            key_name: str,
-            local_identifier: str,
-            local_path: str,
-            ) -> IndalekoObjectDataModel:
+        self,
+        record_data: IndalekoRecordDataModel,
+        io_uuid: str,
+        timestamps: dict[str, str],
+        uri: str,
+        file_size: int,
+        _semantic_attributes_data: list[dict[str, Any]],
+        key_name: str,
+        local_identifier: str,
+        local_path: str,
+    ) -> IndalekoObjectDataModel:
         """Returns the Indaleko object created form the data model."""
         timestamp_data = self._create_timestamp_data(io_uuid, timestamps)
 
         return IndalekoObjectDataModel(
-                Record=record_data,
-                URI = uri,
-                ObjectIdentifier=uuid.uuid4(),
-                Timestamps=timestamp_data,
-                Size = file_size,
-                SemanticAttributes= None,
-                Label = key_name,
-                LocalPath= local_path,
-                LocalIdentifier=str(local_identifier),
-                Volume=uuid.uuid4(),
-                PosixFileAttributes="S_IFREG",
-                WindowsFileAttributes="FILE_ATTRIBUTE_ARCHIVE")
+            Record=record_data,
+            URI=uri,
+            ObjectIdentifier=uuid.uuid4(),
+            Timestamps=timestamp_data,
+            Size=file_size,
+            SemanticAttributes=None,
+            Label=key_name,
+            LocalPath=local_path,
+            LocalIdentifier=str(local_identifier),
+            Volume=uuid.uuid4(),
+            PosixFileAttributes="S_IFREG",
+            WindowsFileAttributes="FILE_ATTRIBUTE_ARCHIVE",
+        )
 
     def initialize_local_dir(self) -> dict[str, Any]:
         """
@@ -273,7 +275,7 @@ class PosixMetadata(Metadata):
         # List to store generated paths
         generated_paths = []
 
-        def create_dir_recursive(current_dir: Path | str , current_depth: int) -> None:
+        def create_dir_recursive(current_dir: Path | str, current_depth: int) -> None:
             """Create directories recursively."""
             nonlocal directory_count
             if current_depth > max_depth or directory_count >= num_directories:
@@ -292,9 +294,7 @@ class PosixMetadata(Metadata):
                         break
                     # Generate a random subdirectory name or choose truth file path name
                     subdir_name = "".join(
-                        random.choices(  # noqa: S311
-                            string.ascii_lowercase,
-                            k=random.randint(1, 8)),  # noqa: S311
+                        random.choices(string.ascii_lowercase, k=random.randint(1, 8)),  # noqa: S311  # noqa: S311
                     )
                     subdir_path = Path(current_dir) / subdir_name
                     generated_paths.append(subdir_path)
@@ -314,8 +314,8 @@ class PosixMetadata(Metadata):
     def _generate_file_name(  # noqa: PLR0912
         self,
         is_truth_file: bool,  # noqa: FBT001
-        has_semantic_truth: bool, # noqa: FBT001
-        has_semantic_filler: bool, # noqa: FBT001
+        has_semantic_truth: bool,  # noqa: FBT001
+        has_semantic_filler: bool,  # noqa: FBT001
     ) -> str:
         """
         Generates a file_name for given file.
@@ -332,9 +332,9 @@ class PosixMetadata(Metadata):
         default_command = "exactly"
         # if the file name is part of the query,
         # extract the appropriate attributes and generate title
-        if "file.name" in self.selected_md :
-            if "pattern" in self.selected_md ["file.name"]:
-                pattern = self.selected_md ["file.name"]["pattern"]
+        if "file.name" in self.selected_md:
+            if "pattern" in self.selected_md["file.name"]:
+                pattern = self.selected_md["file.name"]["pattern"]
                 command = self.selected_md["file.name"].get("command", default_command)
                 avail_text_file_extension = Metadata.TEXT_FILE_EXTENSIONS
 
@@ -364,14 +364,17 @@ class PosixMetadata(Metadata):
                     true_extension = random.choice(file_extension)  # noqa: S311
 
                 # create file name based on commands
-                return_pattern = "".join(
+                return_pattern = (
+                    "".join(
                         random.choices(  # noqa: S311
                             string.ascii_letters,
                             k=n_filler_letters,
                         ),
-                ) + true_extension
+                    )
+                    + true_extension
+                )
 
-                match(command):
+                match (command):
                     case "exactly":
                         return_pattern = pattern + true_extension
                     case "starts":
@@ -423,11 +426,15 @@ class PosixMetadata(Metadata):
             allowed_pattern = list(
                 set(string.ascii_letters) - set(pattern.upper()) - set(pattern.lower()),
             )
-            return "".join(
+            return (
+                "".join(
                     random.choices(  # noqa: S311
-                    allowed_pattern, k=n_filler_letters,
-                ),
-            ) + extension
+                        allowed_pattern,
+                        k=n_filler_letters,
+                    ),
+                )
+                + extension
+            )
 
         # if no query specified for title, but semantic context exists, choose a text file extension
         if has_semantic_filler or (is_truth_file and has_semantic_truth):
@@ -457,9 +464,9 @@ class PosixMetadata(Metadata):
             "local": "file:/",
         }
         # RUN after initialization:
-        if "file.directory" in self.selected_md  and is_truth_file:
-            truth_parent_loc = self.selected_md ["file.directory"]["location"]
-            if truth_parent_loc == "local": # if file dir specified, create truth file at that dir
+        if "file.directory" in self.selected_md and is_truth_file:
+            truth_parent_loc = self.selected_md["file.directory"]["location"]
+            if truth_parent_loc == "local":  # if file dir specified, create truth file at that dir
                 file_counter = self.saved_directory_path["truth.directory"]["files"]
                 path = self.saved_directory_path["truth.directory"]["path"] + "/"
                 counter_key = path + file_name
@@ -477,9 +484,7 @@ class PosixMetadata(Metadata):
                 uri = file_locations[truth_parent_loc] + path
                 return [path, uri, file_name]
 
-            if (
-                is_truth_file and truth_parent_loc in file_locations
-            ):  # if remote dir specified, create file at that dir
+            if is_truth_file and truth_parent_loc in file_locations:  # if remote dir specified, create file at that dir
                 path = self._generate_remote_path(truth_parent_loc, file_name)
                 uri = file_locations[truth_parent_loc] + path
             return [path, uri, file_name]
@@ -491,7 +496,7 @@ class PosixMetadata(Metadata):
 
         # not queried at this point and file type doesn't matter;
         # generate any file path (local or remote)
-        random_location = random.choice(list(file_locations.keys()))   # noqa: S311
+        random_location = random.choice(list(file_locations.keys()))  # noqa: S311
         if random_location == "local":
             file_counter = self.saved_directory_path["filler.directory"]["files"]
             chosen_path = random.choice(  # noqa: S311
@@ -517,7 +522,7 @@ class PosixMetadata(Metadata):
 
         return path, uri, file_name
 
-    def _change_name(self, file_name:str, count:int) -> str:
+    def _change_name(self, file_name: str, count: int) -> str:
         """Change name.
 
         Changes name to avoid duplicate files in the same path in the
@@ -533,7 +538,7 @@ class PosixMetadata(Metadata):
         """Generates path to a remote file location e.g., google drive, dropbox, icloud."""
         list_alphanum = string.ascii_letters + string.digits
         # Randomly choose characters to form the id
-        file_id = "".join(random.choices(list_alphanum, k=random.randint(3, 6)))   # noqa: S311
+        file_id = "".join(random.choices(list_alphanum, k=random.randint(3, 6)))  # noqa: S311
         local_file_locations = {
             "google_drive": "/file/d/{file_id}/view/view?name={file_name}",
             "dropbox": "/s/{file_id}/{file_name}?dl=0",
@@ -560,8 +565,8 @@ class PosixMetadata(Metadata):
         return self._generate_timestamps(is_truth_file)
 
     def _generate_timestamps(
-            self,
-            is_truth_file: bool = True, # noqa: FBT001,FBT002
+        self,
+        is_truth_file: bool = True,  # noqa: FBT001,FBT002
     ) -> dict[str, datetime]:
         """Generate timestamps.
 
@@ -576,12 +581,10 @@ class PosixMetadata(Metadata):
         timestamps = {}
         # check whether the query is pertaining to specific timestamp queries
         if "timestamps" in self.selected_md:
-            query = self.selected_md ["timestamps"]
+            query = self.selected_md["timestamps"]
             selected_timestamps = set(query.keys())
             non_selected_timestamps = stamp_labels - selected_timestamps
-            if (
-                "birthtime" in query
-            ):  #  checks for birthtime: other timestamps shouldn't be earlier than the birthtime
+            if "birthtime" in query:  #  checks for birthtime: other timestamps shouldn't be earlier than the birthtime
                 birthtime_query = query["birthtime"]
                 birthtime = self._generate_queried_timestamp(
                     birthtime_query["starttime"],
@@ -717,8 +720,7 @@ class PosixMetadata(Metadata):
             )
         if self.default_lower_timestamp == starttime and self.default_upper_timestamp == endtime:
             raise ValueError(
-                "Invalid range, please increase the bounds or "
-                "decrease the range to within the bounds",
+                "Invalid range, please increase the bounds or decrease the range to within the bounds",
             )
         if is_birthtime and starttime > self.earliest_endtime[0]:
             raise ValueError(
@@ -747,16 +749,14 @@ class PosixMetadata(Metadata):
                 # the earliest starttime is within the bounds:
                 if (
                     is_birthtime
-                    and self.default_lower_timestamp + time_delta
-                        <= self.earliest_starttime[0] <= starttime
+                    and self.default_lower_timestamp + time_delta <= self.earliest_starttime[0] <= starttime
                 ):
                     timestamp = faker.date_time_between(
                         start_date=self.default_lower_timestamp,
                         end_date=self.earliest_starttime[0] - time_delta,
                     )
                 # the earliest starttime is not within the bounds
-                elif is_birthtime and (self.default_lower_timestamp + time_delta
-                                       <= self.earliest_starttime[0]):
+                elif is_birthtime and (self.default_lower_timestamp + time_delta <= self.earliest_starttime[0]):
                     timestamp = faker.date_time_between(
                         start_date=starttime + time_delta,
                         end_date=self._find_next_earliest_endtime(starttime) - time_delta,
@@ -835,9 +835,7 @@ class PosixMetadata(Metadata):
                 if (
                     is_birthtime
                     and self.default_lower_timestamp <= starttime - time_delta
-                    and (self.default_lower_timestamp + time_delta <=
-                         self.earliest_starttime[0] <=
-                         starttime)
+                    and (self.default_lower_timestamp + time_delta <= self.earliest_starttime[0] <= starttime)
                 ):
                     timestamp = faker.date_time_between(
                         start_date=self.default_lower_timestamp,
@@ -863,9 +861,7 @@ class PosixMetadata(Metadata):
                     timestamp = faker.date_time_between(start_date=endtime)
                 elif not is_birthtime and starttime <= default_startdate <= endtime:
                     timestamp = upper
-                elif not is_birthtime and (
-                    self.default_lower_timestamp <= default_startdate <= starttime
-                ):
+                elif not is_birthtime and (self.default_lower_timestamp <= default_startdate <= starttime):
                     timestamp = random.choice([lower, upper])  # noqa: S311
                 elif not is_birthtime and not is_truth_file:
                     raise ValueError("Cannot generate timestamps for filler files")
@@ -882,9 +878,9 @@ class PosixMetadata(Metadata):
             raise ValueError("there are no times that work")
         return None
 
-    def _generate_file_size( # noqa: PLR0911,PLR0912
-            self,
-            is_truth_file: bool = True,# noqa: FBT001,FBT002
+    def _generate_file_size(  # noqa: PLR0911,PLR0912
+        self,
+        is_truth_file: bool = True,  # noqa: FBT001,FBT002
     ) -> int:
         """
         Creates random file size given the is_truth_file.
@@ -899,10 +895,7 @@ class PosixMetadata(Metadata):
             target_max = self.selected_md["file.size"]["target_max"]
             command = self.selected_md["file.size"]["command"]
 
-            if target_max == (
-                self.default_upper_filesize and
-                target_min == self.default_lower_filesize
-            ):
+            if target_max == (self.default_upper_filesize and target_min == self.default_lower_filesize):
                 raise ValueError(
                     "The range cannot be the whole boundary from ",
                     target_min,
@@ -1047,8 +1040,8 @@ class PosixMetadata(Metadata):
         )
 
     def preprocess_dictionary_timestamps(
-            self,
-            to_timestamp: bool,   # noqa: FBT001
+        self,
+        to_timestamp: bool,  # noqa: FBT001
     ) -> dict[str, Any]:
         """
         Convert time to posix timstamps given a dictionary to run data generator.
@@ -1071,9 +1064,9 @@ class PosixMetadata(Metadata):
 
     # Helper function for convert_dictionary_times()
     def _convert_time_timestamp(
-            self,
-            timestamps: dict,
-            to_timestamp: bool,  # noqa: FBT001
+        self,
+        timestamps: dict,
+        to_timestamp: bool,  # noqa: FBT001
     ) -> tuple[Any | datetime, Any | datetime]:
         """Converts the time from string to timestamps."""
         starttime = timestamps["starttime"]

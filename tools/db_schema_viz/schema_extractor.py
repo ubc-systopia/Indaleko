@@ -24,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import os
 import sys
+
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 
 # Add the root directory to the path to ensure imports work correctly
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,6 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
+
+
 # pylint: enable=wrong-import-position
 
 # Collection type constants
@@ -67,11 +71,11 @@ COLLECTION_DESCRIPTIONS = {
     "FeedbackRecords": "User feedback and ratings",
     "LearningEvents": "System learning event records",
     "KnowledgePatterns": "Learned knowledge patterns",
-    "ArchivistMemory": "Archivist conversation and memory data"
+    "ArchivistMemory": "Archivist conversation and memory data",
 }
 
 
-def extract_collections() -> List[Dict[str, Any]]:
+def extract_collections() -> list[dict[str, Any]]:
     """
     Extract collection information from the ArangoDB database.
 
@@ -89,7 +93,7 @@ def extract_collections() -> List[Dict[str, Any]]:
         db_config = IndalekoDBConfig()
         db = db_config.get_arangodb()
     except Exception as e:
-        logging.error(f"Failed to connect to ArangoDB: {e}")
+        logging.exception(f"Failed to connect to ArangoDB: {e}")
         return []
 
     collections_info = []
@@ -129,7 +133,7 @@ def extract_collections() -> List[Dict[str, Any]]:
             # Get description
             description = COLLECTION_DESCRIPTIONS.get(
                 collection_name,
-                f"{collection_type.capitalize()} collection"
+                f"{collection_type.capitalize()} collection",
             )
 
             # If it's an ActivityProviderData collection with UUID, use a generic description
@@ -141,18 +145,18 @@ def extract_collections() -> List[Dict[str, Any]]:
                 "type": collection_type,
                 "description": description,
                 "indexes": indexes,
-                "count": count
+                "count": count,
             })
 
         logging.info(f"Extracted information for {len(collections_info)} collections")
         return collections_info
 
     except Exception as e:
-        logging.error(f"Error extracting collections: {e}")
+        logging.exception(f"Error extracting collections: {e}")
         return []
 
 
-def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def extract_relationships(collections: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Extract relationships between collections.
 
@@ -172,9 +176,9 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
 
     try:
         db_config = IndalekoDBConfig()
-        db = db_config.get_arangodb()
+        db_config.get_arangodb()
     except Exception as e:
-        logging.error(f"Failed to connect to ArangoDB: {e}")
+        logging.exception(f"Failed to connect to ArangoDB: {e}")
         return []
 
     # Find edge collections
@@ -195,14 +199,14 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
                         "from": "Relationships",
                         "to": "Objects",
                         "type": "contains",
-                        "description": "Relationship contains or links objects"
+                        "description": "Relationship contains or links objects",
                     },
                     {
                         "from": "Relationships",
                         "to": "NamedEntities",
                         "type": "references",
-                        "description": "Relationship references named entities"
-                    }
+                        "description": "Relationship references named entities",
+                    },
                 ])
             elif collection_name == "EntityEquivalenceRelations":
                 # Entity equivalence relationships
@@ -211,14 +215,14 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
                         "from": "EntityEquivalenceGroups",
                         "to": "EntityEquivalenceRelations",
                         "type": "connects",
-                        "description": "Group connects through relations"
+                        "description": "Group connects through relations",
                     },
                     {
                         "from": "EntityEquivalenceNodes",
                         "to": "EntityEquivalenceRelations",
                         "type": "connects",
-                        "description": "Node connects through relations"
-                    }
+                        "description": "Node connects through relations",
+                    },
                 ])
         except Exception as e:
             logging.warning(f"Failed to process relationships for {collection_name}: {e}")
@@ -229,80 +233,80 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
             "from": "SemanticData",
             "to": "Objects",
             "type": "enriches",
-            "description": "Semantic data enriches objects"
+            "description": "Semantic data enriches objects",
         },
         {
             "from": "ActivityContext",
             "to": "Objects",
             "type": "contextualizes",
-            "description": "Activity context provides context for objects"
+            "description": "Activity context provides context for objects",
         },
         {
             "from": "ActivityContext",
             "to": "TempActivityContext",
             "type": "specializes",
-            "description": "Temperature activity extends base activity"
+            "description": "Temperature activity extends base activity",
         },
         {
             "from": "ActivityContext",
             "to": "GeoActivityContext",
             "type": "specializes",
-            "description": "Geographic activity extends base activity"
+            "description": "Geographic activity extends base activity",
         },
         {
             "from": "ActivityContext",
             "to": "MusicActivityContext",
             "type": "specializes",
-            "description": "Music activity extends base activity"
+            "description": "Music activity extends base activity",
         },
         {
             "from": "NamedEntities",
             "to": "EntityEquivalenceGroups",
             "type": "groups",
-            "description": "Entities are grouped by equivalence"
+            "description": "Entities are grouped by equivalence",
         },
         {
             "from": "ActivityDataProviders",
             "to": "ActivityContext",
             "type": "provides",
-            "description": "Providers supply activity context data"
+            "description": "Providers supply activity context data",
         },
         {
             "from": "QueryHistory",
             "to": "PerformanceData",
             "type": "generates",
-            "description": "Queries generate performance data"
+            "description": "Queries generate performance data",
         },
         {
             "from": "QueryHistory",
             "to": "LearningEvents",
             "type": "triggers",
-            "description": "Queries trigger learning events"
+            "description": "Queries trigger learning events",
         },
         {
             "from": "Users",
             "to": "IdentityDomains",
             "type": "belongs-to",
-            "description": "Users belong to identity domains"
+            "description": "Users belong to identity domains",
         },
         {
             "from": "Users",
             "to": "FeedbackRecords",
             "type": "provides",
-            "description": "Users provide feedback records"
+            "description": "Users provide feedback records",
         },
         {
             "from": "LearningEvents",
             "to": "KnowledgePatterns",
             "type": "creates",
-            "description": "Learning events create knowledge patterns"
+            "description": "Learning events create knowledge patterns",
         },
         {
             "from": "ArchivistMemory",
             "to": "QueryHistory",
             "type": "enhances",
-            "description": "Archivist memory enhances query history"
-        }
+            "description": "Archivist memory enhances query history",
+        },
     ]
     relationships.extend(semantic_relationships)
 
@@ -310,7 +314,7 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
     return relationships
 
 
-def extract_collection_schema(collection_name: str) -> Dict[str, Any]:
+def extract_collection_schema(collection_name: str) -> dict[str, Any]:
     """
     Extract schema information for a specific collection.
 
@@ -340,11 +344,11 @@ def extract_collection_schema(collection_name: str) -> Dict[str, Any]:
         return schema
 
     except Exception as e:
-        logging.error(f"Failed to extract schema for {collection_name}: {e}")
+        logging.exception(f"Failed to extract schema for {collection_name}: {e}")
         return {}
 
 
-def _extract_schema_from_document(document: Dict[str, Any], schema: Dict[str, Any], prefix: str = "") -> None:
+def _extract_schema_from_document(document: dict[str, Any], schema: dict[str, Any], prefix: str = "") -> None:
     """
     Helper function to recursively extract schema from a document.
 

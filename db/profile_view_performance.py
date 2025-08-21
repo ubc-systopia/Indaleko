@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ArangoDB View Performance Profiler
+ArangoDB View Performance Profiler.
 
 This script profiles the performance of various approaches to working with
 ArangoDB views to help diagnose and optimize the slow operations.
@@ -14,7 +14,9 @@ import os
 import statistics
 import sys
 import time
+
 from collections.abc import Callable
+
 
 # Set up path
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -29,6 +31,7 @@ from db.collection_view import IndalekoCollectionView
 from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
+
 
 # Configure logging
 logging.basicConfig(
@@ -56,26 +59,19 @@ def time_execution(func: Callable, *args, **kwargs) -> tuple:
     return result, execution_time
 
 
-def profile_view_operations():
+def profile_view_operations() -> None:
     """Profile various view operations to identify performance bottlenecks."""
-    print("\n=== ArangoDB View Performance Profiler ===\n")
-
     # Initialize database connection
-    print("Initializing database connection...")
-    start_time = time.perf_counter()
+    time.perf_counter()
     db_config = IndalekoDBConfig()
     db_config.start()
-    end_time = time.perf_counter()
-    print(f"Database connection initialized in {end_time - start_time:.4f} seconds")
+    time.perf_counter()
 
     # Test 1: Initialize view manager
-    print("\nTest 1: Initialize view manager")
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(IndalekoCollectionView, db_config=db_config)
-        print(f"  Run {i+1}: {duration:.4f} seconds")
 
     # Test 2: Get existing views using AQL
-    print("\nTest 2: Get views using AQL")
     view_manager = IndalekoCollectionView(db_config=db_config)
 
     def _get_views_with_aql():
@@ -85,12 +81,10 @@ def profile_view_operations():
         except Exception as e:
             return {"error": str(e)}
 
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_get_views_with_aql)
-        print(f"  Run {i+1}: {duration:.4f} seconds")
 
     # Test 3: Get views using API directly
-    print("\nTest 3: Get views using API directly")
 
     def _get_views_with_api():
         try:
@@ -98,12 +92,10 @@ def profile_view_operations():
         except Exception as e:
             return {"error": str(e)}
 
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_get_views_with_api)
-        print(f"  Run {i+1}: {duration:.4f} seconds")
 
     # Test 4: Initialize IndalekoCollections with and without skip_views
-    print("\nTest 4: Initialize IndalekoCollections with and without skip_views")
 
     def _init_collections_with_views():
         return IndalekoCollections(skip_views=False)
@@ -111,18 +103,13 @@ def profile_view_operations():
     def _init_collections_without_views():
         return IndalekoCollections(skip_views=True)
 
-    print("  With views:")
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_init_collections_with_views)
-        print(f"    Run {i+1}: {duration:.4f} seconds")
 
-    print("  Without views:")
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_init_collections_without_views)
-        print(f"    Run {i+1}: {duration:.4f} seconds")
 
     # Test 5: Get collection with and without skip_views
-    print("\nTest 5: Get collection with and without skip_views")
     collection_name = IndalekoDBCollections.Indaleko_MachineConfig_Collection
 
     def _get_collection_with_views():
@@ -131,18 +118,13 @@ def profile_view_operations():
     def _get_collection_without_views():
         return IndalekoCollections.get_collection(collection_name, skip_views=True)
 
-    print("  With views:")
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_get_collection_with_views)
-        print(f"    Run {i+1}: {duration:.4f} seconds")
 
-    print("  Without views:")
-    for i in range(3):
+    for _i in range(3):
         _, duration = time_execution(_get_collection_without_views)
-        print(f"    Run {i+1}: {duration:.4f} seconds")
 
     # Test 6: Profile individual view operations
-    print("\nTest 6: Profile individual view operations")
     view_manager = IndalekoCollectionView(db_config=db_config)
 
     operations = [
@@ -152,44 +134,17 @@ def profile_view_operations():
         ("get_view", lambda: view_manager.get_view("ObjectsTextView")),
     ]
 
-    for name, operation in operations:
-        print(f"  Operation: {name}")
+    for _name, operation in operations:
         times = []
-        for i in range(3):
+        for _i in range(3):
             _, duration = time_execution(operation)
             times.append(duration)
-            print(f"    Run {i+1}: {duration:.4f} seconds")
-        avg = statistics.mean(times)
-        print(f"    Average: {avg:.4f} seconds")
-
-    print("\n=== Profiling Complete ===\n")
+        statistics.mean(times)
 
 
-def analyze_results():
+
+def analyze_results() -> None:
     """Analyze profiling results and suggest optimizations."""
-    print("\n=== Optimization Suggestions ===\n")
-
-    print("1. Add caching for view information")
-    print("   - Cache view and analyzer information with TTL")
-    print("   - Use environment variables to control caching behavior")
-
-    print("2. Skip view operations when not needed")
-    print("   - Add skip_views parameter to relevant functions")
-    print(
-        "   - Create specialized variants of functions for performance-sensitive operations",
-    )
-
-    print("3. Optimize ArangoDB connection")
-    print("   - Review connection pooling settings")
-    print("   - Consider server-side view optimizations")
-
-    print("4. Add instrumentation")
-    print("   - Implement detailed logging for view operations")
-    print("   - Consider adding performance monitoring hooks")
-
-    print("5. Architectural improvements")
-    print("   - Consider lazy loading of view functionality")
-    print("   - Decouple view management from core database operations")
 
 
 if __name__ == "__main__":
@@ -198,4 +153,3 @@ if __name__ == "__main__":
         analyze_results()
     except Exception as e:
         logger.exception(f"Error during profiling: {e}")
-        print(f"Error during profiling: {e}")

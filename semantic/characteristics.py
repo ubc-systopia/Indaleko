@@ -26,6 +26,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,16 +36,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class SemanticDataCharacteristics:
-    """
-    Define the semantic data characteristics for our semantic metadata extractors.
-    """
+    """Define the semantic data characteristics for our semantic metadata extractors."""
 
     SEMANTIC_DATA_CONTENTS = "31764240-1397-4cd2-9c74-b332a0ff1b72"
     SEMANTIC_DATA_CHECKSUMS = "8f4654e9-1a36-45ef-95bb-4e4600f2f46a"
 
     _characteristic_prefix = "SEMANTIC_DATA_"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the semantic extractor characteristics."""
         self.uuid_to_label = {}
         for label, value in SemanticDataCharacteristics.__dict__.items():
@@ -67,7 +66,7 @@ class SemanticDataCharacteristics:
         return SemanticDataCharacteristics().uuid_to_label.get(uuid_value, None)
 
 
-def main():
+def main() -> None:
     """Main entry point for this module."""
     ic("SemanticDataCharacteristics module test.")
     for (

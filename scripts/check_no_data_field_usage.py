@@ -7,7 +7,7 @@ import re
 import sys
 
 
-def main(argv=None):
+def main(argv=None) -> int:
     argv = argv or sys.argv[1:]
     pattern = re.compile(r"\bRecord\.Data\.")
     failed = False
@@ -19,8 +19,7 @@ def main(argv=None):
         except Exception:
             continue
         for match in pattern.finditer(text):
-            lineno = text.count("\n", 0, match.start()) + 1
-            print(f"{filename}:{lineno}: Direct access to Record.Data.* is forbidden. Use model fields instead.")
+            text.count("\n", 0, match.start()) + 1
             failed = True
     return 1 if failed else 0
 

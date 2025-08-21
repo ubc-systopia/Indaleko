@@ -1,5 +1,5 @@
 """
-Indaleko Search CLI
+Indaleko Search CLI.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -24,7 +24,7 @@ from icecream import ic
 
 
 class CLI:
-    def __init__(self):
+    def __init__(self) -> None:
         """
         This implements a simple command-line interface for the user to
         interact with Indaleko.
@@ -32,9 +32,7 @@ class CLI:
         self.prompt = "Indaleko Search> "
 
     def initialize(self) -> None:
-        """
-        Initializes the CLI interface.
-        """
+        """Initializes the CLI interface."""
 
     def get_query(self) -> str:
         """
@@ -54,20 +52,17 @@ class CLI:
             facets (List[str]): Suggested facets for query refinement
         """
         if not results:
-            print("No results found.")
             return
 
-        print("\nSearch Results:")
         ic(len(results))
         if len(results) < 10:
-            for i, result in enumerate(results, 1):
+            for _i, result in enumerate(results, 1):
                 doc = result["original"]["result"]
                 ic(doc["Record"]["Attributes"]["Path"])
 
         if facets:
-            print("Suggested refinements:")
-            for facet in facets:
-                print(f"- {facet}")
+            for _facet in facets:
+                pass
 
     def continue_session(self) -> bool:
         """
@@ -86,7 +81,6 @@ class CLI:
         Args:
             error_message (str): The error message to display
         """
-        print(f"Error: {error_message}")
 
     def get_result_selection(self, max_results: int) -> int:
         """
@@ -108,10 +102,8 @@ class CLI:
                 selection = int(selection)
                 if 1 <= selection <= max_results:
                     return selection - 1
-                else:
-                    print(f"Please enter a number between 1 and {max_results}")
             except ValueError:
-                print("Please enter a valid number")
+                pass
 
     def display_result_details(self, result: dict[str, Any]) -> None:
         """
@@ -120,9 +112,8 @@ class CLI:
         Args:
             result (Dict[str, Any]): The result to display in detail
         """
-        print("\nDetailed Result:")
-        for key, value in result.items():
-            print(f"{key.capitalize()}: {value}")
+        for _key, _value in result.items():
+            pass
 
     def get_facet_selection(self, facets: list[str]) -> str:
         """
@@ -137,9 +128,8 @@ class CLI:
         if not facets:
             return ""
 
-        print("\nAvailable facets for refinement:")
-        for i, facet in enumerate(facets, 1):
-            print(f"{i}. {facet}")
+        for _i, _facet in enumerate(facets, 1):
+            pass
 
         while True:
             try:
@@ -151,7 +141,5 @@ class CLI:
                 selection = int(selection)
                 if 1 <= selection <= len(facets):
                     return facets[selection - 1]
-                else:
-                    print(f"Please enter a number between 1 and {len(facets)}")
             except ValueError:
-                print("Please enter a valid number")
+                pass

@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from typing import Any
 
 # from icecream import ic
 from pydantic import BaseModel
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.db_index import IndalekoCollectionIndexDataModel
+
 
 # pylint: enable=wrong-import-position
 

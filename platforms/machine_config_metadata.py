@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from textwrap import dedent
+
 
 # from typing import Any
 
@@ -41,6 +43,7 @@ from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from utils import IndalekoSingleton
+
 
 # pylint: enable=wrong-import-position
 
@@ -112,10 +115,9 @@ class MachineConfigCollectionMetadata(IndalekoSingleton):
     )
 
 
-def main():
+def main() -> None:
     """Main entry point for the module."""
-    metadata = MachineConfigCollectionMetadata()
-    print(metadata.default_metadata.model_dump_json(indent=4))
+    MachineConfigCollectionMetadata()
 
 
 if __name__ == "__main__":

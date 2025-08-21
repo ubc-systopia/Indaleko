@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -330,7 +332,7 @@ class ConversationState(BaseModel):
     def start_topic_segment(
         self,
         topic: str,
-        entities: list[str] = None,
+        entities: list[str] | None = None,
     ) -> TopicSegment:
         """
         Start a new topic segment in the conversation.
@@ -360,7 +362,7 @@ class ConversationState(BaseModel):
 
         return segment
 
-    def end_topic_segment(self, summary: str = None) -> TopicSegment | None:
+    def end_topic_segment(self, summary: str | None = None) -> TopicSegment | None:
         """
         End the active topic segment.
 
@@ -391,8 +393,8 @@ class ConversationState(BaseModel):
         memory_id: str,
         memory_type: str,
         relevance_score: float = 0.7,
-        summary: str = None,
-        message_id: str = None,
+        summary: str | None = None,
+        message_id: str | None = None,
     ) -> ReferencedMemory:
         """
         Add a reference to a memory item retrieved during the conversation.

@@ -23,11 +23,13 @@ import json
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,11 +39,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoDBCollections, IndalekoDBConfig
 from utils.misc.data_management import encode_binary_data
+
 
 # Import Query Context Integration components if available
 try:
@@ -309,7 +314,7 @@ class ArchivistMemory:
     archivist_memory_version = "2025.04.20.01"  # Updated version for conversation support
     archivist_memory_description = "Archivist persistent memory across sessions"
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         """Initialize the Archivist memory manager."""
         self.db_config = db_config
         self.ensure_collection_exists()
@@ -388,7 +393,7 @@ class ArchivistMemory:
     def load_latest_memory(self) -> ArchivistMemoryData | None:
         """Load the most recent Archivist memory from the database."""
         collection_name = IndalekoDBCollections.Indaleko_Archivist_Memory_Collection
-        collection = self.db_config._arangodb.collection(collection_name)
+        self.db_config._arangodb.collection(collection_name)
 
         # Query for the most recent memory entry
         try:
@@ -398,7 +403,7 @@ class ArchivistMemory:
                 aql,
                 bind_vars={"@collection": collection_name},
             )
-            documents = [doc for doc in cursor]
+            documents = list(cursor)
 
             if not documents:
                 return None
@@ -567,7 +572,7 @@ class ArchivistMemory:
                 location_queries / len(recent_queries),
             )
 
-    def _add_or_update_pattern(self, pattern_type, description, examples, frequency):
+    def _add_or_update_pattern(self, pattern_type, description, examples, frequency) -> None:
         """Add a new pattern or update an existing one."""
         # Check if pattern already exists
         for pattern in self.memory.search_patterns:
@@ -615,7 +620,7 @@ class ArchivistMemory:
             "code": ["code", "program", "script", "py", "js", "java", "c++", "source"],
         }
 
-        type_counts = {t: 0 for t in content_types}
+        type_counts = dict.fromkeys(content_types, 0)
 
         for query in recent_queries:
             query_text = query.OriginalQuery.lower()
@@ -719,7 +724,7 @@ class ArchivistMemory:
                 broad_success_rate,
             )
 
-    def _add_or_update_strategy(self, name, description, contexts, success_rate):
+    def _add_or_update_strategy(self, name, description, contexts, success_rate) -> None:
         """Add a new strategy or update an existing one."""
         # Check if strategy already exists
         for strategy in self.memory.effective_strategies:
@@ -820,7 +825,7 @@ class ArchivistMemory:
         }
 
         # Count topic mentions
-        topic_counts = {topic: 0 for topic in topic_keywords}
+        topic_counts = dict.fromkeys(topic_keywords, 0)
 
         for query in recent_queries:
             query_text = query.OriginalQuery.lower()
@@ -987,7 +992,7 @@ class ArchivistMemory:
         if "TOPICS OF INTEREST" in sections:
             self._extract_topics(sections["TOPICS OF INTEREST"])
 
-    def _extract_user_profile(self, profile_text):
+    def _extract_user_profile(self, profile_text) -> None:
         """Extract user preferences from profile text."""
         for line in profile_text.split("\n"):
             if line.startswith("-"):
@@ -1011,10 +1016,8 @@ class ArchivistMemory:
                         pref_text = parts[0].strip()
                         conf_part = parts[1].split(")")[0]
                         if "confidence:" in conf_part:
-                            try:
+                            with contextlib.suppress(ValueError):
                                 confidence = float(conf_part.split(":")[1].strip())
-                            except ValueError:
-                                pass
                     else:
                         pref_text = line
 
@@ -1022,7 +1025,7 @@ class ArchivistMemory:
                     if pref_text:
                         self._add_or_update_preference("general", pref_text, confidence)
 
-    def _add_or_update_preference(self, category, preference, confidence):
+    def _add_or_update_preference(self, category, preference, confidence) -> None:
         """Add or update a user preference."""
         # Check if preference already exists
         for pref in self.memory.user_preferences:
@@ -1042,7 +1045,7 @@ class ArchivistMemory:
             ),
         )
 
-    def _extract_strategies(self, strategies_text):
+    def _extract_strategies(self, strategies_text) -> None:
         """Extract effective search strategies from text."""
         for line in strategies_text.split("\n"):
             if line.startswith("-"):
@@ -1067,7 +1070,7 @@ class ArchivistMemory:
                     # Add or update strategy
                     self._add_or_update_strategy(name, description, [], success_rate)
 
-    def _extract_goals(self, goals_text):
+    def _extract_goals(self, goals_text) -> None:
         """Extract long-term goals from text."""
         for line in goals_text.split("\n"):
             if line and line[0].isdigit() and '. "' in line:
@@ -1084,10 +1087,8 @@ class ArchivistMemory:
                         progress = 0.0
                         if "(" in progress_part and "%" in progress_part:
                             progress_str = progress_part.split("(")[1].split("%")[0].strip()
-                            try:
+                            with contextlib.suppress(ValueError):
                                 progress = float(progress_str) / 100.0
-                            except ValueError:
-                                pass
 
                         # Add or update goal
                         self.add_long_term_goal(name, description)
@@ -1095,7 +1096,7 @@ class ArchivistMemory:
                 except Exception as e:
                     ic(f"Error parsing goal: {e}")
 
-    def _extract_insights(self, insights_text):
+    def _extract_insights(self, insights_text) -> None:
         """Extract search insights from text."""
         for line in insights_text.split("\n"):
             if line.startswith("-"):
@@ -1107,10 +1108,8 @@ class ArchivistMemory:
                     insight_text = insight_text.strip()
 
                     # Extract impact
-                    impact = "medium"
                     if "impact" in impact_part:
-                        impact_str = impact_part.split()[0].strip()
-                        impact = impact_str
+                        impact_part.split()[0].strip()
 
                     # Add insight
                     self.add_insight("general", insight_text, 0.7)
@@ -1118,7 +1117,7 @@ class ArchivistMemory:
                     # Simple insight without metadata
                     self.add_insight("general", line, 0.5)
 
-    def _extract_topics(self, topics_text):
+    def _extract_topics(self, topics_text) -> None:
         """Extract semantic topics from text."""
         for line in topics_text.split("\n"):
             if line.startswith("-"):
@@ -1133,10 +1132,8 @@ class ArchivistMemory:
                     importance = 0.5
                     if "importance:" in imp_part:
                         imp_str = imp_part.split(":")[1].replace(")", "").strip()
-                        try:
+                        with contextlib.suppress(ValueError):
                             importance = float(imp_str)
-                        except ValueError:
-                            pass
 
                     # Add to semantic topics
                     self.memory.semantic_topics[topic] = importance
@@ -1598,7 +1595,7 @@ class ArchivistMemory:
                     )
 
 
-def main():
+def main() -> None:
     """Test the Archivist memory system."""
     memory = ArchivistMemory()
 
@@ -1621,8 +1618,7 @@ def main():
     )
 
     # Generate and print a forward prompt
-    forward_prompt = memory.generate_forward_prompt()
-    print(forward_prompt)
+    memory.generate_forward_prompt()
 
     # Save to database
     memory.save_memory()

@@ -25,7 +25,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 # Set up path for Indaleko imports
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -41,13 +43,14 @@ from activity.recorders.template import TemplateRecorder
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class SimpleActivity:
     """Simple activity data class for example purposes."""
 
-    def __init__(self, name, activity_type, timestamp=None, details=None):
+    def __init__(self, name, activity_type, timestamp=None, details=None) -> None:
         """Initialize a simple activity."""
         self.name = name
         self.activity_type = activity_type
@@ -69,14 +72,14 @@ class SimpleActivity:
 class SimpleCollector:
     """Simple collector class for example purposes."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the collector."""
         self.version = "1.0.0"
         self.name = "Simple Activity Collector"
 
     def collect_data(self):
         """Collect some sample data."""
-        activities = [
+        return [
             SimpleActivity(
                 name="Sample Activity 1",
                 activity_type="login",
@@ -93,7 +96,6 @@ class SimpleCollector:
                 details={"source": "web", "device": "laptop"},
             ),
         ]
-        return activities
 
 
 class SimpleActivityRecorder(TemplateRecorder):
@@ -108,7 +110,7 @@ class SimpleActivityRecorder(TemplateRecorder):
     ACTIVITY_NAME_UUID = uuid.UUID("71a3b5c7-d8e9-4f0a-b1c2-d3e4f5a6b7c8")
     ACTIVITY_TYPE_UUID = uuid.UUID("82b4c6d8-e9f0-a1b2-c3d4-e5f6a7b8c9d0")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the simple activity recorder."""
         # Set defaults specific to this recorder
         kwargs.setdefault("name", "Simple Activity Recorder")
@@ -222,7 +224,7 @@ class SimpleActivityRecorder(TemplateRecorder):
         return source_ids, schema_ids
 
 
-def main():
+def main() -> None:
     """Test the simple activity recorder."""
     # Set up logging
     logging.basicConfig(
@@ -234,27 +236,20 @@ def main():
     recorder = SimpleActivityRecorder(auto_connect=False, register_service=False)
 
     # Show information about the recorder
-    print(f"Recorder ID: {recorder.get_recorder_id()}")
-    print(f"Recorder Name: {recorder.get_recorder_name()}")
-    print(f"Recorder Description: {recorder.get_description()}")
-    print(f"Collection Name: {recorder._collection_name}")
 
     # Show the JSON schema
-    print("\nJSON Schema:")
-    print(recorder.get_json_schema())
 
     # Collect and process data (if database connection is available)
     try:
         activities = recorder.collect_and_process_data()
-        print(f"\nCollected {len(activities)} activities:")
-        for activity in activities:
-            print(f"  - {activity.name} ({activity.activity_type})")
+        for _activity in activities:
+            pass
 
         # To actually store in database, uncomment these lines
         # recorder._connect_to_db()
         # recorder.update_data()
-    except Exception as e:
-        print(f"Error collecting data: {e}")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

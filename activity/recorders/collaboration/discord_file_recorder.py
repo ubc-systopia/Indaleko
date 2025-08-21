@@ -23,10 +23,12 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 from activity.collectors.collaboration.discord.data_models.file_share_data_model import (
@@ -54,8 +58,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -87,8 +89,8 @@ class DiscordFileShareRecorder(RecorderBase):
         "timestamp": "c5d6e7f8-a90b-1c2d-3e4f-5a6b7c8d9e0f",
     }
 
-    def __init__(self, collector: DiscordFileShareCollector | None = None, **kwargs):
-        """Initialize the Discord file sharing recorder"""
+    def __init__(self, collector: DiscordFileShareCollector | None = None, **kwargs) -> None:
+        """Initialize the Discord file sharing recorder."""
         # Initialize database connection
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, "Failed to get the database configuration"
@@ -151,15 +153,15 @@ class DiscordFileShareRecorder(RecorderBase):
             self.logger.setLevel(logging.INFO)
 
     def get_recorder_name(self) -> str:
-        """Get the name of the recorder"""
+        """Get the name of the recorder."""
         return "discord_file_share_recorder"
 
     def get_recorder_id(self) -> uuid.UUID:
-        """Get the ID of the recorder"""
+        """Get the ID of the recorder."""
         return self.source_data["Identifier"]
 
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the recorder"""
+        """Get the characteristics of the recorder."""
         if self.collector:
             return self.collector.get_collector_characteristics()
         return [
@@ -169,11 +171,11 @@ class DiscordFileShareRecorder(RecorderBase):
         ]
 
     def get_collector_class_model(self) -> dict[str, type]:
-        """Get the class model for the collector"""
+        """Get the class model for the collector."""
         return {"DiscordDataModel": DiscordDataModel, "SharedFileData": SharedFileData}
 
     def get_description(self) -> str:
-        """Get the description of the recorder"""
+        """Get the description of the recorder."""
         return self.source_data["Description"]
 
     def create_semantic_attributes(
@@ -323,15 +325,14 @@ class DiscordFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "url": f"%{url}%"}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         if len(entries) == 0:
             return None
 
         # Decode the binary data
         doc = entries[0]
-        attachment_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
-        return attachment_data
+        return Indaleko.decode_binary_data(doc["Record"]["Data"])
 
     def get_all_attachments(self, limit: int = 100) -> list[dict]:
         """
@@ -357,7 +358,7 @@ class DiscordFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "limit": limit}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         # Decode the binary data for each entry
         attachments = []
@@ -366,7 +367,7 @@ class DiscordFileShareRecorder(RecorderBase):
                 attachment_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
                 attachments.append(attachment_data)
             except Exception as e:
-                self.logger.error(f"Error decoding attachment data: {e}")
+                self.logger.exception(f"Error decoding attachment data: {e}")
 
         return attachments
 
@@ -430,7 +431,7 @@ class DiscordFileShareRecorder(RecorderBase):
         bind_vars = {"@collection": self.collection.name, "filename": f"%{filename}%"}
 
         results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        entries = list(results)
 
         # Decode the binary data for each entry
         attachments = []
@@ -439,7 +440,7 @@ class DiscordFileShareRecorder(RecorderBase):
                 attachment_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
                 attachments.append(attachment_data)
             except Exception as e:
-                self.logger.error(f"Error decoding attachment data: {e}")
+                self.logger.exception(f"Error decoding attachment data: {e}")
 
         return attachments
 
@@ -467,8 +468,8 @@ class DiscordFileShareRecorder(RecorderBase):
         return mapping
 
 
-def main():
-    """Main function for testing the recorder"""
+def main() -> None:
+    """Main function for testing the recorder."""
     # Set up logging
     logging.basicConfig(level=logging.INFO)
 
@@ -480,25 +481,19 @@ def main():
         recorder = DiscordFileShareRecorder(collector=collector)
 
         # Sync attachments
-        count = recorder.sync_attachments()
-        print(f"\nSynced {count} new attachments to the database")
+        recorder.sync_attachments()
 
         # Get all attachments
         attachments = recorder.get_all_attachments(limit=10)
-        print(f"\nRetrieved {len(attachments)} attachments from the database:")
 
         # Print attachment details
-        for i, attachment in enumerate(attachments[:5]):
-            print(f"\nAttachment {i+1}:")
-            print(f"  Filename: {attachment.get('filename')}")
-            print(f"  URL: {attachment.get('url')}")
-            print(f"  From: {attachment.get('sender', 'Unknown')}")
+        for _i, _attachment in enumerate(attachments[:5]):
+            pass
 
         # Generate filename to URL mapping
         mapping = recorder.generate_filename_to_url_mapping()
-        print("\nFilename to URL mapping:")
-        for filename, urls in list(mapping.items())[:5]:
-            print(f"  {filename}: {len(urls)} URLs")
+        for _filename, _urls in list(mapping.items())[:5]:
+            pass
 
     except Exception as e:
         logging.exception(f"Error in main: {e}")

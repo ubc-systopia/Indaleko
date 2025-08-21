@@ -122,11 +122,11 @@ class MockWriter(IWriter):
 
 
 class TestCompactRecord(unittest.TestCase):
-    def generate_random_string(length=5):
+    def generate_random_string(self=5):
         letters = string.ascii_letters
-        return "".join(random.choice(letters) for _ in range(length))
+        return "".join(random.choice(letters) for _ in range(self))
 
-    def test_basic(self):
+    def test_basic(self) -> None:
         cr = CompactRecord()
 
         cr.add_procname("test_procname")
@@ -141,14 +141,9 @@ class TestCompactRecord(unittest.TestCase):
             "test_path",
             ["event1|today_ts1", "event2|today_ts2"],
         ]
-        self.assertEqual(
-            cr.to_list(),
-            expect,
-            f"compact record doesn't match; expected={
-                         expect}, got={cr.to_list()}",
-        )
+        assert cr.to_list() == expect, f"compact record doesn't match; expected={expect}, got={cr.to_list()}"
 
-    def test_multiple_events(self):
+    def test_multiple_events(self) -> None:
 
         def ops(x):
             return [
@@ -182,8 +177,7 @@ class TestCompactRecord(unittest.TestCase):
             ]
 
         # shuffle the ops and run them for a few iterations
-        for iter in range(1):
-            print(f"running iter={iter}")
+        for _iter in range(1):
             cr = CompactRecord()
 
             all_ops = ops(cr)
@@ -192,7 +186,6 @@ class TestCompactRecord(unittest.TestCase):
             events = []
             for op in all_ops[3:]:
                 events += op[0]
-            print("events", events)
 
             expect = [
                 all_ops[0][0][0],
@@ -209,12 +202,7 @@ class TestCompactRecord(unittest.TestCase):
             for args, func_call in all_ops:
                 func_call(*args)
 
-            self.assertEqual(
-                expect,
-                cr.to_list(),
-                f"expect={
-                             expect}, got={cr.to_list()}",
-            )
+            assert expect == cr.to_list(), f"expect={expect}, got={cr.to_list()}"
 
 
 class TestLogCompactor(unittest.TestCase):
@@ -237,7 +225,7 @@ class TestLogCompactor(unittest.TestCase):
 
         return sha256.hexdigest()
 
-    def run_helper(self, test_num: int):
+    def run_helper(self, test_num: int) -> bool:
         expects = None
         expected_log_length = 4
 
@@ -349,10 +337,7 @@ class TestLogCompactor(unittest.TestCase):
             log_compactor.execute(record)
 
         state = None
-        if test_num not in (1, 2, 7, 8):
-            state = log_compactor.get_state()
-        else:
-            state = writer.get_state()
+        state = log_compactor.get_state() if test_num not in (1, 2, 7, 8) else writer.get_state()
 
         for log_record in state:
             assert (
@@ -392,26 +377,26 @@ class TestLogCompactor(unittest.TestCase):
 
         return True
 
-    def test_open_close(self):
-        self.assertTrue(self.run_helper(1))
+    def test_open_close(self) -> None:
+        assert self.run_helper(1)
 
-    def test_open_close_with_rw(self):
-        self.assertTrue(self.run_helper(2))
+    def test_open_close_with_rw(self) -> None:
+        assert self.run_helper(2)
 
-    def test_rw_no_open_close(self):
-        self.assertTrue(self.run_helper(3))
+    def test_rw_no_open_close(self) -> None:
+        assert self.run_helper(3)
 
-    def test_neg_fd(self):
-        self.assertTrue(self.run_helper(4))
+    def test_neg_fd(self) -> None:
+        assert self.run_helper(4)
 
-    def test_only_open(self):
-        self.assertTrue(self.run_helper(5))
+    def test_only_open(self) -> None:
+        assert self.run_helper(5)
 
-    def test_rename_mkdir_mmap(self):
-        self.assertTrue(self.run_helper(6))
+    def test_rename_mkdir_mmap(self) -> None:
+        assert self.run_helper(6)
 
-    def test_close_wo_open(self):
-        self.assertTrue(self.run_helper(7))
+    def test_close_wo_open(self) -> None:
+        assert self.run_helper(7)
 
-    def test_multiple_close(self):
-        self.assertTrue(self.run_helper(8))
+    def test_multiple_close(self) -> None:
+        assert self.run_helper(8)

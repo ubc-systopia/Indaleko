@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -38,6 +39,7 @@ from query.memory.archivist_memory import ArchivistMemory
 from query.memory.cli_integration import ArchivistCliIntegration
 from query.memory.proactive_archivist import ProactiveArchivist
 from query.memory.proactive_cli import ProactiveCliIntegration
+
 
 # Import Query Context Integration if available
 try:
@@ -142,16 +144,16 @@ def register_archivist_components(
         )
 
     # Register memory commands
-    for cmd, handler in memory_integration.commands.items():
+    for cmd in memory_integration.commands:
         cli_instance.register_command(cmd, memory_integration.handle_command)
 
     # Register optimizer commands
-    for cmd, handler in optimizer_integration.commands.items():
+    for cmd in optimizer_integration.commands:
         cli_instance.register_command(cmd, optimizer_integration.handle_command)
 
     # Register proactive commands if enabled
     if enable_proactive and proactive_integration:
-        for cmd, handler in proactive_integration.commands.items():
+        for cmd in proactive_integration.commands:
             cli_instance.register_command(cmd, proactive_integration.handle_command)
 
     # Register recommendation commands if enabled

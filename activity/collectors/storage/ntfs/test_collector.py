@@ -26,12 +26,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
+import contextlib
 import logging
 import os
 import random
 import sys
 import time
 import traceback
+
 
 # Standard Python check for Windows platform
 IS_WINDOWS = sys.platform.startswith("win")
@@ -51,11 +53,7 @@ try:
     from activity.collectors.storage.ntfs.ntfs_collector import (
         NtfsStorageActivityCollector,
     )
-except ImportError as e:
-    print(f"ERROR: Could not import required modules: {e}")
-    print(
-        "Make sure you're running from the right directory or check your Python path.",
-    )
+except ImportError:
     sys.exit(1)
 
 
@@ -80,10 +78,8 @@ def create_test_file(volume_path):
             f.write(f"Test file created at {time.time()}\n")
             f.write(f"Random data: {random.randint(1000, 9999)}\n")
 
-        print(f"Created test file: {filename}")
         return filename
-    except Exception as e:
-        print(f"Error creating test file: {e}")
+    except Exception:
         return None
 
 
@@ -109,13 +105,6 @@ def main():
     )
 
     # Print configuration
-    print("=== NTFS Collector Test ===")
-    print(f"Volume: {args.volume}")
-    print(f"Duration: {args.duration} seconds")
-    print(f"Mock mode: {args.mock}")
-    print(f"Debug logging: {args.debug}")
-    print(f"Running on Windows: {IS_WINDOWS}")
-    print("-------------------------")
 
     try:
         # Create the collector
@@ -127,49 +116,38 @@ def main():
         )
 
         # Start monitoring
-        print("Starting NTFS activity monitoring...")
         collector.start_monitoring()
 
         # Create a test file to ensure some activity
         if IS_WINDOWS and not args.mock:
-            try:
+            with contextlib.suppress(Exception):
                 create_test_file(args.volume)
-            except Exception as e:
-                print(f"Warning: Could not create test file: {e}")
 
         # Wait for specified duration or run continuously
         if args.duration > 0:
-            print(f"Monitoring for {args.duration} seconds...")
             time.sleep(args.duration / 2)  # Sleep for half the time
 
             # Create another test file halfway through
             if IS_WINDOWS and not args.mock:
-                try:
+                with contextlib.suppress(Exception):
                     create_test_file(args.volume)
-                except Exception as e:
-                    print(f"Warning: Could not create second test file: {e}")
 
             time.sleep(args.duration / 2)  # Sleep for the remaining time
         else:
-            print("Monitoring continuously. Press Ctrl+C to stop...")
             try:
                 while True:
                     time.sleep(10)
                     # Create a test file every 10 seconds if on Windows
                     if IS_WINDOWS and not args.mock:
-                        try:
+                        with contextlib.suppress(Exception):
                             create_test_file(args.volume)
-                        except Exception:
-                            pass
             except KeyboardInterrupt:
-                print("\nMonitoring stopped by user.")
+                pass
 
         # Get the activities
         activities = collector.get_activities()
 
         # Print activity summary
-        print("\n=== Activity Summary ===")
-        print(f"Total activities collected: {len(activities)}")
 
         # Count by type
         activity_counts = {}
@@ -182,30 +160,23 @@ def main():
 
         # Print type counts
         if activity_counts:
-            print("\nActivities by type:")
-            for activity_type, count in activity_counts.items():
-                print(f"  {activity_type}: {count}")
+            for activity_type in activity_counts:
+                pass
 
         # Show some recent activities
         if activities:
-            print("\nMost recent activities:")
-            for i, activity in enumerate(activities[-min(5, len(activities)) :]):
+            for _i, activity in enumerate(activities[-min(5, len(activities)) :]):
                 activity_type = getattr(activity, "activity_type", "Unknown")
-                file_name = getattr(activity, "file_name", "Unknown")
-                print(f"  {i+1}. {activity_type} - {file_name}")
+                getattr(activity, "file_name", "Unknown")
                 if hasattr(activity, "file_path"):
-                    print(f"     Path: {activity.file_path}")
+                    pass
         else:
-            print("\nNo activities were detected.")
-            print("If running on Windows, check that the USN journal is working.")
-            print("If not on Windows, make sure you're using --mock mode.")
+            pass
 
         # Stop monitoring
         collector.stop_monitoring()
-        print("\nNTFS monitoring stopped.")
 
-    except Exception as e:
-        print(f"Error running collector test: {e}")
+    except Exception:
         traceback.print_exc()
         return 1
 
@@ -215,8 +186,7 @@ def main():
 if __name__ == "__main__":
     # Check if we're on Windows or using mock mode
     if not IS_WINDOWS:
-        print("WARNING: This script is designed for Windows systems with NTFS.")
-        print("         Use --mock when running on non-Windows platforms.")
+        pass
 
     # Check for required Windows dependencies if on Windows
     if IS_WINDOWS:
@@ -226,8 +196,6 @@ if __name__ == "__main__":
             import win32con
             import win32file
         except ImportError:
-            print("ERROR: This test requires the pywin32 package on Windows.")
-            print("       Please install it using: pip install pywin32")
             sys.exit(1)
 
     # Run the main function

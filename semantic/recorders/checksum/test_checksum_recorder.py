@@ -24,6 +24,7 @@ import os
 import sys
 import tempfile
 import uuid
+
 from datetime import datetime
 
 from icecream import ic
@@ -114,7 +115,7 @@ def test_process_single_file(temp_dir, files):
     object_id = uuid.uuid4()
 
     # Direct computation for comparison
-    expected_checksums = compute_checksums(file_path)
+    compute_checksums(file_path)
 
     # Process with recorder
     result = recorder.process_file(file_path, object_id)
@@ -153,7 +154,7 @@ def test_process_directory(temp_dir):
     # Count the number of entries
     entry_count = 0
     with open(output_file, encoding="utf-8") as f:
-        for line in f:
+        for _line in f:
             entry_count += 1
 
     ic(f"Directory processing generated {entry_count} entries")
@@ -191,7 +192,7 @@ def test_batch_processing(temp_dir, files):
     # Count the number of entries
     entry_count = 0
     with open(output_file, encoding="utf-8") as f:
-        for line in f:
+        for _line in f:
             entry_count += 1
 
     assert entry_count == len(
@@ -210,13 +211,12 @@ def main():
 
     try:
         # Run tests
-        single_file_result = test_process_single_file(temp_dir, files)
+        test_process_single_file(temp_dir, files)
         test_process_directory(temp_dir)
         test_batch_processing(temp_dir, files)
 
         # Display a sample result
         ic("Sample output:")
-        print(json.dumps(single_file_result, indent=2, cls=IndalekoJSONEncoder))
 
         ic("All tests passed!")
 

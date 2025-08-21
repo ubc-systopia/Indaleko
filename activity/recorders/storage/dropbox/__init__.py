@@ -24,4 +24,5 @@ from activity.recorders.storage.dropbox.dropbox_recorder import (
     DropboxStorageActivityRecorder,
 )
 
+
 __all__ = ["DropboxStorageActivityRecorder"]

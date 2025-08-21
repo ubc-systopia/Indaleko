@@ -27,11 +27,13 @@ import json
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from icecream import ic
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -52,6 +54,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageProviderType,
 )
 from activity.collectors.storage.ntfs.bar import UsnJournalReader, is_admin
+
 
 # pylint: enable=wrong-import-position
 

@@ -26,10 +26,12 @@ import os
 import socket
 import sys
 import uuid
+
 from datetime import timedelta
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -59,6 +61,7 @@ from activity.collectors.storage.semantic_attributes import (
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from db.utils.query_performance import timed_aql_execute
+
 
 # pylint: enable=wrong-import-position
 
@@ -274,7 +277,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         document = self._build_gdrive_activity_document(activity_data)
 
         # Store in database
-        result = self._collection.add_document(document)
+        self._collection.add_document(document)
 
         return activity_data.activity_id
 
@@ -316,7 +319,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_mime_type(
         self,
@@ -356,7 +359,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_folder(
         self,
@@ -396,7 +399,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_shared_activities(self, limit: int = 100, offset: int = 0) -> list[dict]:
         """
@@ -514,7 +517,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
                 gdrive_stats["sharing_percentage"] = 0
 
         except (KeyError, ValueError, RuntimeError) as e:
-            self._logger.error(f"Error generating Google Drive statistics: {e}")
+            self._logger.exception(f"Error generating Google Drive statistics: {e}")
 
         return gdrive_stats
 

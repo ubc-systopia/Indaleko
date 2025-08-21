@@ -11,6 +11,7 @@ import sys
 
 import docker
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -22,7 +23,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from Indaleko import Indaleko
 import utils.misc.directory_management
 import utils.misc.file_name_management
+
 from utils.i_logging import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 
@@ -30,7 +33,7 @@ from utils.i_logging import IndalekoLogging
 class IndalekoDocker:
     """Indaleko Class for managing Docker components."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize a new instance of the IndalekoDocker class object."""
         self.container_name = None
         if "container_name" in kwargs:
@@ -42,11 +45,7 @@ class IndalekoDocker:
             self.docker_client = docker.from_env()
         except docker.errors.DockerException as error:
             logging.exception("Failed to connect to Docker: %s", error)
-            print(f"Failed to connect to Docker: {error}")
-            print(
-                "Please make sure Docker is running and you have the correct permissions.",
-            )
-            exit(1)
+            sys.exit(1)
         self.docker_client.ping()
         logging.info("IndalekoDocker initialized, Docker connection instantiated.")
 
@@ -65,9 +64,8 @@ class IndalekoDocker:
         if current_image_id == new_image_id:
             logging.info("ArangoDB image did not change.")
             return False
-        else:
-            logging.info("ArangoDB image updated.")
-            return True
+        logging.info("ArangoDB image updated.")
+        return True
 
     def list_containers(self, all: bool = False) -> list:
         """List the Indaleko related Docker containers."""
@@ -89,9 +87,9 @@ class IndalekoDocker:
 
     def create_container(
         self,
-        container_name: str = None,
-        volume_name: str = None,
-        password: str = None,
+        container_name: str | None = None,
+        volume_name: str | None = None,
+        password: str | None = None,
     ) -> None:
         """Add a new Indaleko related Docker container."""
         if container_name is not None:
@@ -136,7 +134,6 @@ class IndalekoDocker:
             raise ValueError("volume_name must be provided")
         if volume_name not in self.list_volumes():
             logging.warning("Volume %s does not exist, cannot delete", volume_name)
-            print(f"Volume {volume_name} does not exist, cannot delete")
             return
         self.docker_client.volumes.get(volume_name).remove()
         logging.info("Deleted volume %s", volume_name)
@@ -150,7 +147,6 @@ class IndalekoDocker:
                 "Container %s does not exist, cannot delete",
                 container_name,
             )
-            print(f"Container {container_name} does not exist, cannot delete")
             return
         if container_name in self.list_containers() and stop:
             logging.info("Stopping container %s (before deletion)", container_name)
@@ -159,9 +155,6 @@ class IndalekoDocker:
             logging.info(
                 "Container %s is running, cannot stop, so cannot delete.",
                 container_name,
-            )
-            print(
-                f"Container {container_name} is running, cannot stop, so cannot delete.",
             )
             return
         self.docker_client.containers.get(container_name).remove()
@@ -181,11 +174,10 @@ class IndalekoDocker:
         return self.docker_client.containers.get(container_name).start()
 
     def update_container(self, container_name: str) -> None:
-        """Update the Indaleko ArangoDB container"""
+        """Update the Indaleko ArangoDB container."""
         # First, find the info about the container
         if not self.update_arango_image():
             logging.info("ArangoDB image did not change, no need to update container.")
-            print("ArangoDB image did not change, no need to update container.")
             return
         container = self.docker_client.containers.get(container_name)
         logging.debug(
@@ -226,7 +218,6 @@ class IndalekoDocker:
             volume_name=db_mount,
             password=db_password,
         )
-        print(f"Updated container {container_name} to latest image.")
 
     def create_volume(self, volume_name: str) -> None:
         """Add a new Indaleko related Docker volume."""
@@ -250,7 +241,6 @@ class IndalekoDocker:
                 "Container %s does not exist, cannot reset volume",
                 container_name,
             )
-            print(f"Container {container_name} does not exist, cannot reset volume")
             return
         container = self.docker_client.containers.get(container_name)
         logging.debug(
@@ -263,14 +253,12 @@ class IndalekoDocker:
                 "Container %s has no HostConfig, cannot reset volume",
                 container_name,
             )
-            print(f"Container {container_name} has no HostConfig, cannot reset volume")
             return
         if "Mounts" not in container.attrs["HostConfig"]:
             logging.warning(
                 "Container %s has no mounts, cannot reset volume",
                 container_name,
             )
-            print(f"Container {container_name} has no mounts, cannot reset volume")
             return
         mounts = container.attrs["HostConfig"]["Mounts"]
         db_mount = None
@@ -312,9 +300,8 @@ def list_volumes(args: argparse.Namespace) -> None:
     """List the Indaleko related Docker volumes."""
     assert hasattr(args, "indaleko_docker"), "args does not have indaleko_docker"
     volumes = args.indaleko_docker.list_volumes()
-    print("Indaleko volumes:")
-    for volume in volumes:
-        print(f"  {volume}")
+    for _volume in volumes:
+        pass
 
 
 def list_containers(args: argparse.Namespace) -> None:
@@ -324,16 +311,12 @@ def list_containers(args: argparse.Namespace) -> None:
     running_containers = args.indaleko_docker.list_containers()
     if not hasattr(args, "all"):
         args.all = False
-    if args.all:
-        containers = all_containers
-    else:
-        containers = running_containers
-    print("Indaleko containers:")
+    containers = all_containers if args.all else running_containers
     for container in containers:
         if container in running_containers:
-            print(f"  {container} (running)")
+            pass
         else:
-            print(f"  {container} (stopped)")
+            pass
 
 
 def stop_command(args: argparse.Namespace) -> None:
@@ -341,7 +324,6 @@ def stop_command(args: argparse.Namespace) -> None:
     assert hasattr(args, "indaleko_docker"), "args does not have indaleko_docker"
     containers = args.indaleko_docker.list_containers()
     for container in containers:
-        print(f"Stopping container {container}")
         args.indaleko_docker.stop_container(container)
 
 
@@ -352,43 +334,34 @@ def start_command(args: argparse.Namespace) -> None:
     running_containers = args.indaleko_docker.list_containers()
     if len(running_containers) > 0:
         logging.warning("Indaleko containers already running: %s", running_containers)
-        print("Indaleko containers already running:")
-        for container in running_containers:
-            print(f"  {container}")
+        for _container in running_containers:
+            pass
         return
-    container = all_containers[-1]  # newest one
-    print(
-        f"Starting container {container} returns {args.indaleko_docker.start_container(container)}",
-    )
+    all_containers[-1]  # newest one
 
 
 def update_command(args: argparse.Namespace) -> None:
     """Update the Indaleko related Docker containers."""
-    print("Updating ArangoDB and containers depending upon it.")
     assert hasattr(args, "indaleko_docker"), "args does not have indaleko_docker"
     containers = args.indaleko_docker.list_containers(all=args.all)
     for container in containers:
         logging.info("Updating container %s", container)
-        print(f"Updating container {container}")
         args.indaleko_docker.update_container(container)
 
 
 def reset_command(args: argparse.Namespace) -> None:
     """Reset the Indaleko related Docker containers."""
-    print("Resetting ArangoDB and containers depending upon it.")
     assert hasattr(args, "indaleko_docker"), "args does not have indaleko_docker"
     if not hasattr(args, "all"):
         args.all = False
     containers = args.indaleko_docker.list_containers(all=args.all)
     for container in containers:
         logging.info("Resetting container %s", container)
-        print(f"Resetting container {container}")
         args.indaleko_docker.reset_container_volume(container)
 
 
-def main():
+def main() -> None:
     """Main function for the IndalekoDocker class."""
-    print("Welcome to Indaleko Docker Management")
     parser = argparse.ArgumentParser(description="Indaleko docker management")
     parser.add_argument(
         "--log-level",

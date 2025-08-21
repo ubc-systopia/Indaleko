@@ -28,6 +28,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -51,13 +52,12 @@ from utils.misc.file_name_management import (
     find_candidate_files,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
-    """
-    This class provides the OneDrive Ingester for Indaleko.
-    """
+    """This class provides the OneDrive Ingester for Indaleko."""
 
     onedrive_recorder_uuid = "c15afa0f-5e5a-4a5b-82ab-8adb0311dfaf"
     onedrive_recorder_service = {
@@ -81,7 +81,7 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     )
 
     def __init__(self, **kwargs: dict) -> None:
-        """Initialize the OneDrive Drive Ingester"""
+        """Initialize the OneDrive Drive Ingester."""
         for key, value in self.onedrive_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
@@ -121,7 +121,7 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
 
     @staticmethod
     def extract_uuid_from_etag(etag: str) -> uuid.UUID:
-        """Extract the UUID from the eTag"""
+        """Extract the UUID from the eTag."""
         if etag is None:
             raise ValueError("etag is required")
         if not isinstance(etag, str):
@@ -250,8 +250,8 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         return IndalekoObject(**kwargs)
 
 
-def main():
-    """Main entry point for the OneDrive recorder"""
+def main() -> None:
+    """Main entry point for the OneDrive recorder."""
     BaseCloudStorageRecorder.cloud_recorder_runner(
         IndalekoOneDriveCloudStorageCollector,
         IndalekoOneDriveCloudStorageRecorder,

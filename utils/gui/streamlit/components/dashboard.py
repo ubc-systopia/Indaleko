@@ -1,5 +1,5 @@
 """
-Dashboard component for Indaleko Streamlit GUI
+Dashboard component for Indaleko Streamlit GUI.
 
 This module provides the dashboard view with metrics and charts.
 
@@ -32,9 +32,9 @@ from utils.gui.streamlit.services.database import (
 from utils.gui.streamlit.services.query import execute_query
 
 
-def render_dashboard():
+def render_dashboard() -> None:
     """
-    Render the main dashboard with overview metrics and charts
+    Render the main dashboard with overview metrics and charts.
 
     Shows database stats, storage distribution, file types, and activity timeline.
     Also includes a quick search function.

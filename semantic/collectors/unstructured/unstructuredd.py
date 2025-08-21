@@ -29,6 +29,7 @@ import uuid
 # third-party imports
 from icecream import ic
 
+
 #  Find Indaleko Root
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +46,7 @@ from retrieve import UnstructuredRetrieval
 from Indaleko import Indaleko
 from semantic.collectors.semantic_collector import SemanticCollector
 from utils.i_logging import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 
@@ -90,8 +92,8 @@ class IndalekoUnstructured(SemanticCollector):
 
     config_file_name = "unstructured_config.ini"
 
-    def __init__(self, **kwargs):
-        """Initialize the unstructured data collector"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the unstructured data collector."""
         self._name = "Unstructured Data Collector"
         self._provider_id = uuid.UUID("19de2525-fd76-4339-b600-a7bff4d9c47a")
         if "config_file" in kwargs:
@@ -117,7 +119,7 @@ class IndalekoUnstructured(SemanticCollector):
             setattr(self, key, values)
 
     def load_config_file(self) -> configparser.ConfigParser:
-        """Load the configuration file for the unstructured data collector"""
+        """Load the configuration file for the unstructured data collector."""
         if self.config_file is None:
             self.config_file = os.path.join(
                 Indaleko.default_config_dir,
@@ -130,41 +132,39 @@ class IndalekoUnstructured(SemanticCollector):
         return config
 
     def get_collector_characteristics(self) -> list:
-        """Get the characteristics of the unstructured data collector"""
+        """Get the characteristics of the unstructured data collector."""
         return []
 
     def get_collector_name(self) -> str:
-        """Get the name of the unstructured data collector"""
+        """Get the name of the unstructured data collector."""
         return self._name
 
     def get_collector_id(self) -> str:
-        """Get the UUID for the unstructured data collector"""
+        """Get the UUID for the unstructured data collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
-        """Retrieve the data for the unstructured data collector"""
+        """Retrieve the data for the unstructured data collector."""
         unstructured_retrieve = UnstructuredRetrieval()
-        print("Processing files through unstructured")
         unstructured_retrieve.retrieve("unstructured_1")
 
     def get_collector_description(self) -> str:
-        """Get the description of the unstructured data collector"""
+        """Get the description of the unstructured data collector."""
         return """This collector provides unstructured data from files."""
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the unstructured data collector"""
+        """Get the JSON schema for the unstructured data collector."""
         # TODO
         return {}
 
     def lookup_files(self, args) -> None:
-        """Lookup the file objects for the unstructured data collector"""
+        """Lookup the file objects for the unstructured data collector."""
         lookup = UnstructuredLookup()
-        print("Looking up files")
         lookup.generate_input()
 
 
-def main():
-    """This is the main handler for the Indaleko Unstructured Data Collector"""
+def main() -> None:
+    """This is the main handler for the Indaleko Unstructured Data Collector."""
     ic("Unstructured Data Collector")
     unstructured = IndalekoUnstructured()
     ic(unstructured.config)

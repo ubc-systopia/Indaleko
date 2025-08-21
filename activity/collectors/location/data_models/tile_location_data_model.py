@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 
 from pydantic import AwareDatetime, Field, field_validator
+
 
 # from icecream import ic
 
@@ -36,6 +38,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.location_data_model import BaseLocationDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -63,7 +66,7 @@ class TileLocationDataModel(BaseLocationDataModel):
         'ring_state', # current ring state
         'uuid', # unique identifier for the Tile device: note, this isn't a UUID.
         'visible', # boolean indicating if the Tile device is visible (in app?)
-        'voip_state' # state of the voip connection (only seen 'OFFLINE')
+        'voip_state' # state of the voip connection (only seen 'OFFLINE').
     """
 
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
@@ -102,7 +105,7 @@ class TileLocationDataModel(BaseLocationDataModel):
         return value
 
     class Config:
-        """Define configuraiton info for the data model"""
+        """Define configuraiton info for the data model."""
 
         json_schema_extra = {
             "example": {
@@ -131,8 +134,8 @@ class TileLocationDataModel(BaseLocationDataModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     TileLocationDataModel.test_model_main()
 
 

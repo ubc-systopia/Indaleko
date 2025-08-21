@@ -22,6 +22,7 @@ import argparse
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from query.assistants.conversation import ConversationManager
 from query.assistants.state import ConversationState
 from query.memory.archivist_memory import ArchivistMemory
+
 
 # pylint: enable=wrong-import-position
 
@@ -46,7 +48,6 @@ def test_conversation_basics():
     conversation = manager.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(f"Created conversation: {conversation_id}")
 
     # Exchange messages
     messages = [
@@ -58,21 +59,15 @@ def test_conversation_basics():
     ]
 
     for message in messages:
-        response = manager.process_message(conversation_id, message)
-        print(f"\nUser: {message}")
-        print(f"Assistant: {response['response']}")
+        manager.process_message(conversation_id, message)
 
     # Check conversation state
-    print("\nConversation Summary:")
-    print(f"Topic segments: {len(conversation.topic_segments)}")
-    for i, segment in enumerate(conversation.topic_segments):
-        print(f"  Segment {i+1}: {segment.topic}")
+    for _i, _segment in enumerate(conversation.topic_segments):
+        pass
 
-    print(f"Total messages: {len(conversation.messages)}")
     if conversation.conversation_summary:
-        print(f"Summary: {conversation.conversation_summary}")
+        pass
 
-    print(f"Importance score: {conversation.importance_score}")
 
     return conversation
 
@@ -83,8 +78,7 @@ def test_topic_segmentation():
     conversation = ConversationState()
 
     # Start with general topic
-    general_segment = conversation.start_topic_segment("general")
-    print(f"Started general segment: {general_segment.segment_id}")
+    conversation.start_topic_segment("general")
 
     # Add messages
     conversation.add_message("user", "Hello, I need help with my files.")
@@ -95,11 +89,10 @@ def test_topic_segmentation():
 
     # Switch to file organization topic
     conversation.end_topic_segment("Initial greeting and request for help.")
-    files_segment = conversation.start_topic_segment(
+    conversation.start_topic_segment(
         "file organization",
         entities=["files", "organization"],
     )
-    print(f"Started file organization segment: {files_segment.segment_id}")
 
     # Add messages
     conversation.add_message("user", "I have many PDF documents I need to organize.")
@@ -108,11 +101,10 @@ def test_topic_segmentation():
 
     # Switch to UPI topic
     conversation.end_topic_segment("Discussion about organizing PDF files by project.")
-    upi_segment = conversation.start_topic_segment(
+    conversation.start_topic_segment(
         "UPI",
         entities=["UPI", "Unified Personal Index"],
     )
-    print(f"Started UPI segment: {upi_segment.segment_id}")
 
     # Add messages
     conversation.add_message("user", "Tell me about the UPI architecture.")
@@ -122,11 +114,8 @@ def test_topic_segmentation():
     conversation.end_topic_segment("Introduction to UPI architecture.")
 
     # Print segment summaries
-    print("\nTopic Segments:")
     for segment in conversation.topic_segments:
-        print(f"- {segment.topic}: {segment.summary}")
-        segment_messages = conversation.get_segment_messages(segment.segment_id)
-        print(f"  Messages: {len(segment_messages)}")
+        conversation.get_segment_messages(segment.segment_id)
 
     return conversation
 
@@ -155,7 +144,6 @@ def test_memory_integration():
     conversation = manager.create_conversation()
     conversation_id = conversation.conversation_id
 
-    print(f"Created conversation with memory integration: {conversation_id}")
 
     # Exchange messages with memory references
     messages = [
@@ -167,12 +155,10 @@ def test_memory_integration():
 
     for message in messages:
         response = manager.process_message(conversation_id, message)
-        print(f"\nUser: {message}")
-        print(f"Assistant: {response['response']}")
 
         # Check if memory was referenced
         if response.get("referenced_memories"):
-            print(f"Referenced memories: {response['referenced_memories']}")
+            pass
 
     # Store conversation state
     if hasattr(memory, "store_conversation_state"):
@@ -189,11 +175,9 @@ def test_memory_integration():
             },
         )
 
-        print(f"\nStored conversation state with continuation ID: {continuation_id}")
 
         # Retrieve continuation context
-        context = memory.get_continuation_context(continuation_id)
-        print(f"Retrieved continuation context: {context}")
+        memory.get_continuation_context(continuation_id)
 
     return conversation
 
@@ -253,7 +237,7 @@ class EnhancedConversationManager(ConversationManager):
 
             if memory_type == "insight":
                 return f"{prefix}Based on what I've learned, {summary}"
-            elif memory_type == "goal":
+            if memory_type == "goal":
                 return f"{prefix}I remember your goal about {summary}"
 
         # Topic-specific responses
@@ -261,9 +245,9 @@ class EnhancedConversationManager(ConversationManager):
 
         if topic == "UPI":
             return f"{prefix}UPI (Unified Personal Index) is a core architecture that enables cross-source data integration. What specific aspect would you like to discuss?"
-        elif topic == "Archivist":
+        if topic == "Archivist":
             return f"{prefix}Archivist serves as a demonstration vehicle for UPI capabilities, providing persistent memory and context management across sessions."
-        elif "thesis" in topic.lower():
+        if "thesis" in topic.lower():
             return f"{prefix}Your thesis work focuses on demonstrating how UPI provides the foundation for intelligent data management tools like Archivist."
 
         # Default contextual response
@@ -280,7 +264,6 @@ def test_conversation_continuity():
     conversation1 = manager1.create_conversation()
     conversation_id1 = conversation1.conversation_id
 
-    print(f"Created first conversation: {conversation_id1}")
 
     # Start a topic about the thesis
     conversation1.start_topic_segment("thesis")
@@ -293,9 +276,7 @@ def test_conversation_continuity():
     ]
 
     for message in messages1:
-        response = manager1.process_message(conversation_id1, message)
-        print(f"\nUser: {message}")
-        print(f"Assistant: {response['response']}")
+        manager1.process_message(conversation_id1, message)
 
     # Add key takeaways
     conversation1.add_key_takeaway("Thesis focus is on UPI capabilities")
@@ -323,14 +304,12 @@ def test_conversation_continuity():
         },
     )
 
-    print(f"\nStored first conversation with continuation ID: {continuation_id}")
 
     # Create second conversation with continuation
     manager2 = EnhancedConversationManager(archivist_memory=memory)
     conversation2 = manager2.create_conversation()
     conversation_id2 = conversation2.conversation_id
 
-    print(f"\nCreated second conversation: {conversation_id2}")
 
     # Continue from previous conversation
     context = {"continuation_pointer": continuation_id}
@@ -345,25 +324,23 @@ def test_conversation_continuity():
     for i, message in enumerate(messages2):
         # Special handling for first message to ensure context is applied
         if i == 0:
-            response = manager2.process_message(conversation_id2, message, context)
+            manager2.process_message(conversation_id2, message, context)
         else:
-            response = manager2.process_message(conversation_id2, message)
+            manager2.process_message(conversation_id2, message)
 
-        print(f"\nUser: {message}")
-        print(f"Assistant: {response['response']}")
 
     # Check for continuation info
     if conversation2.continuation_pointer:
-        print(f"\nContinuation recognized: {conversation2.continuation_pointer}")
+        pass
 
     # Check for context variables from previous conversation
     thesis_topic = conversation2.get_context_variable("thesis_topic")
     demo_vehicle = conversation2.get_context_variable("demo_vehicle")
 
     if thesis_topic:
-        print(f"Recovered thesis topic: {thesis_topic}")
+        pass
     if demo_vehicle:
-        print(f"Recovered demo vehicle: {demo_vehicle}")
+        pass
 
     return conversation2
 
@@ -395,19 +372,15 @@ def main():
 
     # Run tests
     if args.all or args.basics:
-        print("\n===== Testing Basic Conversation Functionality =====")
         test_conversation_basics()
 
     if args.all or args.topics:
-        print("\n===== Testing Topic Segmentation =====")
         test_topic_segmentation()
 
     if args.all or args.memory:
-        print("\n===== Testing Memory Integration =====")
         test_memory_integration()
 
     if args.all or args.continuity:
-        print("\n===== Testing Conversation Continuity =====")
         test_conversation_continuity()
 
 

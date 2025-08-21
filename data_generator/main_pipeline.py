@@ -4,6 +4,7 @@ Main script to run the validation tool.
 Required files:
     1) /config/openai-key.ini
 """
+
 import configparser
 import copy
 import json
@@ -28,7 +29,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-from data_generator.scripts.s1_metadata_generator import Dataset_Generator, MetadataResults
+from data_generator.scripts.s1_metadata_generator import (
+    Dataset_Generator,
+    MetadataResults,
+)
 from data_generator.scripts.s2_store_metadata import MetadataStorer
 from data_generator.scripts.s3_translate_query import QueryExtractor
 from data_generator.scripts.s4_translate_AQL import AQLQueryConverter
@@ -37,13 +41,14 @@ from data_generator.scripts.s6_log_result import ResultLogger
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
-from query.search_execution.query_executor.aql_executor import AQLExecutor
-from query.query_processing.nl_parser import NLParser
-from query.utils.llm_connector.openai_connector import OpenAIConnector
 from query.cli import IndalekoQueryCLI
+from query.query_processing.nl_parser import NLParser
+from query.search_execution.query_executor.aql_executor import AQLExecutor
+from query.utils.llm_connector.openai_connector import OpenAIConnector
 
 
 # pylint: enable=wrong-import-position
+
 
 class DataGenerator:
     """This is the main class to run the data generator."""
@@ -67,16 +72,16 @@ class DataGenerator:
         # Read config files
         self.config = self.get_config_file(self.config_path / "dg_config.json")
         self.logger = ResultLogger(result_path=self.file_path)
-        
+
         # Initialize the database config with proper connection
         self.db_config = IndalekoDBConfig()
-        
+
         # Make sure the database is accessible before proceeding
         self.db_config.start()
-        
+
         # Check if database is properly connected
         assert self.db_config._arangodb is not None, "Database connection failed"
-        
+
         # Setup the database if needed
         self.db_config.setup_database(self.db_config.config["database"]["database"])
 
@@ -93,7 +98,6 @@ class DataGenerator:
         self.query_executor = AQLExecutor()
         self.collections_md = IndalekoDBCollectionsMetadata()
         self.cli = IndalekoQueryCLI()
-
 
         self.dynamic_activity_providers = {}
         self.result_dictionary = {}
@@ -121,8 +125,7 @@ class DataGenerator:
         Returns:
             str: The API key.
         """
-        assert os.path.exists(api_key_file), \
-            f"API key file ({api_key_file}) not found"
+        assert os.path.exists(api_key_file), f"API key file ({api_key_file}) not found"
         config = configparser.ConfigParser()
         config.read(api_key_file, encoding="utf-8-sig")
         openai_key = config["openai"]["api_key"]
@@ -155,11 +158,17 @@ class DataGenerator:
         """
         self.result_dictionary[key] = value
 
-    def run(self, non_interactive=False, create_dictionary=False, use_existing_dictionary=False, 
-             generate_query=False, use_existing_query=False) -> None:
+    def run(
+        self,
+        non_interactive=False,
+        create_dictionary=False,
+        use_existing_dictionary=False,
+        generate_query=False,
+        use_existing_query=False,
+    ) -> None:
         """
         Run function for the validator tool.
-        
+
         Args:
             non_interactive: Whether to run in non-interactive mode
             create_dictionary: Create a new dictionary in non-interactive mode
@@ -186,7 +195,7 @@ class DataGenerator:
                 intial_selection = 1
         else:
             intial_selection = click.prompt("Type (1) to create a new dictionary or (0) to use existing", type=int)
-        
+
         if intial_selection == 1:
             selected_md_attributes = self.generate_dictionary(query, non_interactive)
         elif intial_selection == 0:
@@ -207,7 +216,7 @@ class DataGenerator:
         # STORE ALL METADATA DATASET:
         self.store_all_metadata(results_obj)
 
-        #PREPARE FOR QUERY GENERATION:
+        # PREPARE FOR QUERY GENERATION:
         translated_query = self.prepare_query_generation(copy_selected_md)
 
         # GENERATE/SUBMIT AQL QUERY:
@@ -224,8 +233,11 @@ class DataGenerator:
                 # Default to generating a new query in non-interactive mode
                 translate_query = 1
         else:
-            translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
-        
+            translate_query = click.prompt(
+                "Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.",
+                type=int,
+            )
+
         if translate_query == 0:
             try:
                 aql = self.read_aql(self.config_path / aql_text)
@@ -243,7 +255,7 @@ class DataGenerator:
         # ENSURES THAT AQL FORMAT IS IN CORRECT SYNTAX:
         is_valid_query = False
 
-        while(not is_valid_query):
+        while not is_valid_query:
             try:
                 # ASK FOR AQL QUERY REVIEW:
                 if non_interactive:
@@ -252,7 +264,8 @@ class DataGenerator:
                     aql_selection = click.prompt(
                         "Please review the AQL_query.aql file and query_info.json and make any necessary changes. \
                         \n Type (1) to continue, or any number to exit",
-                        type=int)
+                        type=int,
+                    )
 
                 if aql_selection != 1:
                     sys.exit()
@@ -288,19 +301,20 @@ class DataGenerator:
             "collections": query_attributes["providers"],
             "geo_coordinates": query_attributes["geo_coords"],
             "n_truth": self.expected_truth_number,
-            "llm_connector": self.llm_connector
+            "llm_connector": self.llm_connector,
         }
-        
+
         translate_query_time, translated_query = self.time_operation(
             self.query_translator.translate,
-            input_data=translate_input)
+            input_data=translate_input,
+        )
         self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
         return translated_query
 
-    def generate_dictionary(self, query:str, non_interactive=False):
+    def generate_dictionary(self, query: str, non_interactive=False):
         """
         Generate the dictionary from scratch.
-        
+
         Args:
             query: The natural language query to process
             non_interactive: Whether to run in non-interactive mode
@@ -314,9 +328,9 @@ class DataGenerator:
         entities = self.cli.map_entities(ner_metadata)
         dictionary_generation_time, selected_md_attributes = self.time_operation(
             self.query_extractor.extract,
-            query = query,
-            named_entities = entities,
-            llm_connector = self.llm_connector,
+            query=query,
+            named_entities=entities,
+            llm_connector=self.llm_connector,
         )
         self.logger.log_process_result("translated_query", dictionary_generation_time, selected_md_attributes)
         self.write_as_json(self.config_path, json_name, selected_md_attributes)
@@ -325,8 +339,11 @@ class DataGenerator:
             # Automatically continue in non-interactive mode
             dictionary_selection = 1
         else:
-            dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
-        
+            dictionary_selection = click.prompt(
+                "Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit",
+                type=int,
+            )
+
         if dictionary_selection != 1:
             sys.exit()
         return self.read_json(self.config_path / json_name)
@@ -340,14 +357,16 @@ class DataGenerator:
         self.add_result_to_dict("n_total_truth", self.expected_truth_number)
         self.add_result_to_dict("n_metadata", self.n_total_md)
 
-    def _store_general_metadata(self, collection_name, data, key_required = True) -> None:
+    def _store_general_metadata(self, collection_name, data, key_required=True) -> None:
         """Helper function to store general metadata like for objects, semantic, machineconfig."""
         self.logger.log_process(f"storing {collection_name} metadata...")
-        record_storage_time = self.time_operation(self.data_storer.add_records_to_collection,
-                                                    collections=self.db_config.collections,
-                                                    collection_name=collection_name,
-                                                    records=data,
-                                                    key_required = key_required)
+        record_storage_time = self.time_operation(
+            self.data_storer.add_records_to_collection,
+            collections=self.db_config.collections,
+            collection_name=collection_name,
+            records=data,
+            key_required=key_required,
+        )
         ic(f"Storing time for record metadata: {record_storage_time}")
         self.logger.log_process_result(f"stored {collection_name} :", record_storage_time[0])
 
@@ -357,7 +376,11 @@ class DataGenerator:
         # Use the collection name directly instead of calling get_activity_collection_name
         self.dynamic_activity_providers[collection_name] = collection.name
 
-        storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=collection, activity_contexts=data)
+        storage_time = self.time_operation(
+            self.data_storer.add_records_with_activity_provider,
+            collection=collection,
+            activity_contexts=data,
+        )
         self.logger.log_process(f"storing {collection_name} activity context...")
         ic(f"Storing time for {collection_name} activity metadata: {storage_time}")
         self.logger.log_process_result(f"stored {collection_name} data:", storage_time[0])
@@ -375,10 +398,12 @@ class DataGenerator:
     def generate_dataset(self, selected_md_attributes):
         """Generate the metadata dataset:"""
         self.logger.log_process("generating record and activity metadata...")
-        generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset,
-                                                        selected_md_attributes=selected_md_attributes,
-                                                        save_files = True,
-                                                        path = self.stored_file_path)
+        generation_time, results = self.time_operation(
+            self.data_generator.generate_metadata_dataset,
+            selected_md_attributes=selected_md_attributes,
+            save_files=True,
+            path=self.stored_file_path,
+        )
         self.logger.log_process_result("metadata_generation_time", generation_time)
         results_obj = MetadataResults(*results)
         self.add_result_to_dict("metadata_stats", results_obj.stats)
@@ -406,24 +431,35 @@ class DataGenerator:
         translated_query["converted_selected_md_attributes"] = copy_selected_md
 
         self.logger.log_process("translating query to aql...")
-        self.logger.log_process_result("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
-        self.add_result_to_dict("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
+        self.logger.log_process_result(
+            "converted_selected_md_attributes",
+            translated_query["converted_selected_md_attributes"],
+        )
+        self.add_result_to_dict(
+            "converted_selected_md_attributes",
+            translated_query["converted_selected_md_attributes"],
+        )
 
         return translated_query
 
-
-    def generate_stats(self, raw_results: dict[str,Any]) -> None:
+    def generate_stats(self, raw_results: dict[str, Any]) -> None:
         """Generates necessary stats:"""
         self.logger.log_process("calculating precision and recall")
-        calculation_time, calculation_result = self.time_operation(self.result_calculator.run,
-                                                                    truth_list = self.data_generator.truth_list,
-                                                                    filler_list = self.data_generator.filler_list,
-                                                                    raw_results = raw_results,
-                                                                    expected_truth_number = self.expected_truth_number)
+        calculation_time, calculation_result = self.time_operation(
+            self.result_calculator.run,
+            truth_list=self.data_generator.truth_list,
+            filler_list=self.data_generator.filler_list,
+            raw_results=raw_results,
+            expected_truth_number=self.expected_truth_number,
+        )
         results: Results = calculation_result
         self.add_result_to_dict("results", results)
         self.logger.log_process("precision and recall calculated")
-        self.logger.log_process_result("calculated precision and recall", calculation_time, f"precision: {results.precision}, recall: {results.recall}")
+        self.logger.log_process_result(
+            "calculated precision and recall",
+            calculation_time,
+            f"precision: {results.precision}, recall: {results.recall}",
+        )
 
     def run_search(self, query: str):
         """Run Indaleko Search:"""
@@ -441,9 +477,11 @@ class DataGenerator:
         total = 0
         for collection in self.db_config.db.collections():
             name = collection["name"]
-            collection_count = self.db_config.db.aql.execute(f"""
+            collection_count = self.db_config.db.aql.execute(
+                f"""
                 RETURN COLLECTION_COUNT('{name}')
-            """).next()
+            """,
+            ).next()
             total += collection_count
         return total
 
@@ -467,23 +505,40 @@ class DataGenerator:
         with open(path / title, "w") as file:
             json.dump(result_dict, file, indent=4)
 
+
 def main() -> None:
     """Main function for the validator tool."""
     import argparse
-    
+
     # Create command-line argument parser
     parser = argparse.ArgumentParser(description="Indaleko Data Generator for Testing")
     parser.add_argument("--non-interactive", action="store_true", help="Run in non-interactive mode")
-    parser.add_argument("--create-dictionary", action="store_true", help="Create a new dictionary in non-interactive mode")
-    parser.add_argument("--use-existing-dictionary", action="store_true", help="Use existing dictionary in non-interactive mode")
-    parser.add_argument("--generate-query", action="store_true", help="Generate a new AQL query in non-interactive mode")
-    parser.add_argument("--use-existing-query", action="store_true", help="Use existing AQL query in non-interactive mode")
-    
+    parser.add_argument(
+        "--create-dictionary",
+        action="store_true",
+        help="Create a new dictionary in non-interactive mode",
+    )
+    parser.add_argument(
+        "--use-existing-dictionary",
+        action="store_true",
+        help="Use existing dictionary in non-interactive mode",
+    )
+    parser.add_argument(
+        "--generate-query",
+        action="store_true",
+        help="Generate a new AQL query in non-interactive mode",
+    )
+    parser.add_argument(
+        "--use-existing-query",
+        action="store_true",
+        help="Use existing AQL query in non-interactive mode",
+    )
+
     args = parser.parse_args()
-    
+
     # Initialize the data generator
     validator_tool = DataGenerator()
-    
+
     # Pass the command-line arguments to the run method
     total_epoch = validator_tool.time_operation(
         validator_tool.run,
@@ -491,11 +546,10 @@ def main() -> None:
         create_dictionary=args.create_dictionary,
         use_existing_dictionary=args.use_existing_dictionary,
         generate_query=args.generate_query,
-        use_existing_query=args.use_existing_query
+        use_existing_query=args.use_existing_query,
     )
-    
-    validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
 
+    validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
 
 
 if __name__ == "__main__":

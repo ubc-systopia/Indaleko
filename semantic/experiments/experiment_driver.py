@@ -44,11 +44,14 @@ import socket
 import sys
 import time
 import uuid
+
 from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
 from tqdm import tqdm
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -66,6 +69,7 @@ from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
 from semantic.performance_monitor import SemanticExtractorPerformance, get_machine_id
 from utils.db.db_file_picker import IndalekoFilePicker
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -78,7 +82,7 @@ class SemanticExtractorExperiment:
     comparisons, and scaling analysis.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the experiment framework."""
         self.experiment_id = kwargs.get("experiment_id", str(uuid.uuid4()))
         self.output_dir = kwargs.get(
@@ -187,7 +191,7 @@ class SemanticExtractorExperiment:
         self,
         count: int = 10,
         size_range: tuple[int, int] = (1024, 1024 * 1024),
-        types: list[str] = ["text", "image", "binary"],
+        types: list[str] | None = None,
     ) -> list[str]:
         """
         Generate test files for experiments.
@@ -200,6 +204,8 @@ class SemanticExtractorExperiment:
         Returns:
             List of file paths
         """
+        if types is None:
+            types = ["text", "image", "binary"]
         test_files_dir = os.path.join(self.output_dir, "test_files")
         os.makedirs(test_files_dir, exist_ok=True)
 
@@ -327,7 +333,7 @@ class SemanticExtractorExperiment:
                 processed_bytes += file_size
 
             except Exception as e:
-                self.logger.error(f"Error processing file {file_path}: {e}")
+                self.logger.exception(f"Error processing file {file_path}: {e}")
                 errors += 1
 
                 # Stop monitoring with failure
@@ -370,7 +376,7 @@ class SemanticExtractorExperiment:
     def run_file_type_comparison(
         self,
         extractor_type: str,
-        file_types: list[str] = None,
+        file_types: list[str] | None = None,
         count_per_type: int = 20,
     ) -> dict[str, Any]:
         """
@@ -458,7 +464,7 @@ class SemanticExtractorExperiment:
                     type_stats["processing_times"].append(process_time)
 
                 except Exception as e:
-                    self.logger.error(f"Error processing file {file_path}: {e}")
+                    self.logger.exception(f"Error processing file {file_path}: {e}")
                     type_stats["errors"] += 1
 
                     # Stop monitoring with failure
@@ -503,7 +509,7 @@ class SemanticExtractorExperiment:
     def run_size_scaling_experiment(
         self,
         extractor_type: str,
-        file_sizes: list[int] = None,
+        file_sizes: list[int] | None = None,
         files_per_size: int = 5,
     ) -> dict[str, Any]:
         """
@@ -599,7 +605,7 @@ class SemanticExtractorExperiment:
                     size_stats["processing_times"].append(process_time)
 
                 except Exception as e:
-                    self.logger.error(f"Error processing file {file_path}: {e}")
+                    self.logger.exception(f"Error processing file {file_path}: {e}")
                     size_stats["errors"] += 1
 
                     # Stop monitoring with failure
@@ -650,7 +656,7 @@ class SemanticExtractorExperiment:
         self,
         days: int = 30,
         sample_interval: int = 1,
-        extractors: list[str] = None,
+        extractors: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         Run an experiment to project metadata coverage growth over time.
@@ -744,7 +750,7 @@ class SemanticExtractorExperiment:
             return coverage_results
 
         except Exception as e:
-            self.logger.error(f"Error in coverage experiment: {e}")
+            self.logger.exception(f"Error in coverage experiment: {e}")
             return {"experiment_type": "coverage", "error": str(e), "success": False}
 
     def run_all_experiments(self, sample_size: int = 100) -> dict[str, Any]:
@@ -967,9 +973,7 @@ class SemanticExtractorExperiment:
             </tr>
 """,
                 )
-                for exp in throughput_experiments:
-                    f.write(
-                        f"""
+                f.writelines(f"""
             <tr>
                 <td>{exp["extractor_type"].capitalize()}</td>
                 <td>{exp["files_per_second"]:.2f}</td>
@@ -977,8 +981,7 @@ class SemanticExtractorExperiment:
                 <td>{exp["processed_files"]}</td>
                 <td>{exp["processed_bytes"] / (1024*1024):.2f}</td>
                 <td>{exp["errors"]}</td>
-            </tr>""",
-                    )
+            </tr>""" for exp in throughput_experiments)
 
                 f.write(
                     """
@@ -992,11 +995,8 @@ class SemanticExtractorExperiment:
         <div class="image-container">
 """,
                 )
-                for exp in throughput_experiments:
-                    f.write(
-                        f"""
-            <img src="{exp["extractor_type"]}_throughput.png" alt="{exp["extractor_type"]} Throughput">""",
-                    )
+                f.writelines(f"""
+            <img src="{exp["extractor_type"]}_throughput.png" alt="{exp["extractor_type"]} Throughput">""" for exp in throughput_experiments)
 
                 f.write(
                     """
@@ -1210,8 +1210,8 @@ class SemanticExtractorExperiment:
 
     def analyze_performance_data_by_machine(
         self,
-        perf_file: str = None,
-        machine_id: str = None,
+        perf_file: str | None = None,
+        machine_id: str | None = None,
     ) -> dict[str, Any]:
         """
         Analyze performance data across multiple machines or for a specific machine.
@@ -1324,7 +1324,7 @@ class SemanticExtractorExperiment:
             df["mb_per_second"] = df["file_size"] / (1024 * 1024) / df["elapsed_time"].clip(lower=0.001)
 
             # Group by machine ID and extractor
-            by_machine_extractor = df.groupby(["machine_id", "extractor_name"]).agg(
+            df.groupby(["machine_id", "extractor_name"]).agg(
                 {
                     "elapsed_time": ["mean", "sum", "count"],
                     "file_size": ["sum"],
@@ -1400,7 +1400,7 @@ class SemanticExtractorExperiment:
             return overall_stats
 
         except Exception as e:
-            self.logger.error(f"Error analyzing performance data: {e}")
+            self.logger.exception(f"Error analyzing performance data: {e}")
             return {"error": f"Error analyzing performance data: {e}"}
 
     def _generate_machine_comparison_visualization(
@@ -1434,7 +1434,7 @@ class SemanticExtractorExperiment:
         plt.close()
 
 
-def main():
+def main() -> None:
     """Main entry point for the experiment driver."""
     parser = argparse.ArgumentParser(
         description="Semantic Extractor Performance Experiments",
@@ -1542,9 +1542,8 @@ def main():
         perf_file = args.perf_file
         machine_id = args.machine_id
 
-        print(f"Analyzing performance data from {perf_file or 'default location'}")
         if machine_id:
-            print(f"Filtering for machine ID: {machine_id}")
+            pass
 
         results = experiment.analyze_performance_data_by_machine(perf_file, machine_id)
 
@@ -1553,7 +1552,6 @@ def main():
         with open(analysis_file, "w") as f:
             json.dump(results, f, indent=2)
 
-        print(f"Analysis complete. Results saved to {analysis_file}")
         return
 
     # Determine which extractors to test
@@ -1602,7 +1600,6 @@ def main():
     # Generate summary
     experiment._generate_summary_report()
 
-    print(f"Experiments completed. Results saved to {output_dir}")
 
 
 if __name__ == "__main__":

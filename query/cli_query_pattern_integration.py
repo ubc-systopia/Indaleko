@@ -24,8 +24,10 @@ import logging
 import os
 import sys
 import traceback
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +46,7 @@ from utils.cli.base import IndalekoBaseCLI
 class CommandResult:
     """Result of a command execution."""
 
-    def __init__(self, success: bool, message: str = "", data: Any = None):
+    def __init__(self, success: bool, message: str = "", data: Any = None) -> None:
         """
         Initialize the command result.
 
@@ -73,7 +75,7 @@ class QueryPatternCLIIntegration:
         self,
         cli_instance: IndalekoBaseCLI,
         db_config: IndalekoDBConfig | None = None,
-    ):
+    ) -> None:
         """
         Initialize the CLI integration.
 
@@ -93,7 +95,7 @@ class QueryPatternCLIIntegration:
         # Register commands with the CLI
         self._register_commands()
 
-    def _register_commands(self):
+    def _register_commands(self) -> None:
         """Register commands with the CLI."""
         self.cli.register_command("/patterns", self.handle_patterns_command)
         self.cli.append_help_text(
@@ -111,10 +113,9 @@ class QueryPatternCLIIntegration:
                     if connected:
                         self.analyzer = QueryPatternAnalyzer(self.db_config)
                         return True
-                    else:
-                        return False
+                    return False
                 except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-                    self.logger.error(f"Failed to initialize database connection: {e}")
+                    self.logger.exception(f"Failed to initialize database connection: {e}")
                     return False
             else:
                 self.analyzer = QueryPatternAnalyzer(self.db_config)
@@ -151,23 +152,22 @@ class QueryPatternCLIIntegration:
 
         if subcommand == "analyze":
             return self._handle_analyze(args[1:])
-        elif subcommand == "metrics":
+        if subcommand == "metrics":
             return self._handle_metrics(args[1:])
-        elif subcommand == "chains":
+        if subcommand == "chains":
             return self._handle_chains(args[1:])
-        elif subcommand == "entities":
+        if subcommand == "entities":
             return self._handle_entities(args[1:])
-        elif subcommand == "suggestions":
+        if subcommand == "suggestions":
             return self._handle_suggestions(args[1:])
-        elif subcommand == "test":
+        if subcommand == "test":
             return self._handle_test(args[1:])
-        elif subcommand == "save":
+        if subcommand == "save":
             return self._handle_save(args[1:])
-        else:
-            return CommandResult(
-                success=False,
-                message=f"Unknown subcommand: {subcommand}. Use /patterns for help.",
-            )
+        return CommandResult(
+            success=False,
+            message=f"Unknown subcommand: {subcommand}. Use /patterns for help.",
+        )
 
     def _handle_analyze(self, args: list[str]) -> CommandResult:
         """Handle the analyze subcommand."""
@@ -187,7 +187,7 @@ class QueryPatternCLIIntegration:
             )
 
             try:
-                parsed_args = parser.parse_args(args)
+                parser.parse_args(args)
             except SystemExit:
                 # argparse calls sys.exit() when --help is used or parsing fails
                 # Capture that and return a CommandResult instead
@@ -247,8 +247,8 @@ class QueryPatternCLIIntegration:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in analyze command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in analyze command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error analyzing query patterns: {e!s}",
@@ -314,8 +314,8 @@ Timing:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in metrics command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in metrics command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error retrieving metrics: {e!s}",
@@ -389,8 +389,8 @@ Timing:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in chains command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in chains command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error retrieving query chains: {e!s}",
@@ -535,8 +535,8 @@ Timing:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in entities command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in entities command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error retrieving entity information: {e!s}",
@@ -607,8 +607,8 @@ Timing:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in suggestions command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in suggestions command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error generating suggestions: {e!s}",
@@ -655,8 +655,8 @@ Detected Patterns:
             return CommandResult(success=True, message=message)
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in test command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in test command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(success=False, message=f"Error running test: {e!s}")
 
     def _handle_save(self, args: list[str]) -> CommandResult:
@@ -723,8 +723,8 @@ Detected Patterns:
             )
 
         except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            self.logger.error(f"Error in save command: {e}")
-            self.logger.error(traceback.format_exc())
+            self.logger.exception(f"Error in save command: {e}")
+            self.logger.exception(traceback.format_exc())
             return CommandResult(
                 success=False,
                 message=f"Error saving results: {e!s}",
@@ -745,11 +745,10 @@ def register_query_pattern_commands(
     Returns:
         The created QueryPatternCLIIntegration instance
     """
-    integration = QueryPatternCLIIntegration(cli_instance, db_config)
-    return integration
+    return QueryPatternCLIIntegration(cli_instance, db_config)
 
 
-def main():
+def main() -> None:
     """Run a standalone CLI demo."""
     # Set up CLI
     from utils.cli.base import IndalekoBaseCLI
@@ -768,15 +767,11 @@ def main():
         connected = db_config.connect()
 
         if connected:
-            print("Connected to database.")
-            integration = register_query_pattern_commands(cli, db_config)
+            register_query_pattern_commands(cli, db_config)
         else:
-            print("Failed to connect to database. Running in mock mode.")
-            integration = register_query_pattern_commands(cli)
-    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-        print(f"Database connection error: {e}")
-        print("Running in mock mode.")
-        integration = register_query_pattern_commands(cli)
+            register_query_pattern_commands(cli)
+    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ):
+        register_query_pattern_commands(cli)
 
     # Run the CLI
     cli.run()

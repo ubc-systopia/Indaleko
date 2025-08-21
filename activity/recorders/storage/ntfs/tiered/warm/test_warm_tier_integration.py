@@ -6,14 +6,15 @@ Runs an end-to-end transition from a real hot-tier collection to a real warm-tie
 using a live ArangoDB instance configured via the project's test DB config.
 """
 import os
-import unittest
-import tempfile
 import shutil
+import tempfile
+import unittest
 import uuid
+
 from datetime import UTC, datetime, timedelta
 
-from db.db_config import IndalekoDBConfig
 from activity.recorders.storage.ntfs.tiered.warm.recorder import NtfsWarmTierRecorder
+from db.db_config import IndalekoDBConfig
 
 
 class TestWarmTierTransitionIntegration(unittest.TestCase):
@@ -28,13 +29,13 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
             raise unittest.SkipTest(f"DB config not found: {config_path}")
         # Connect to DB
         cls.db_config = IndalekoDBConfig(config_file=config_path)
-        if not getattr(cls.db_config, 'started', False):
+        if not getattr(cls.db_config, "started", False):
             raise unittest.SkipTest("Database not available for integration test")
         # Prepare unique hot and warm collections
         cls.hot_name = f"test_hot_{uuid.uuid4().hex[:8]}"
         cls.warm_name = f"test_warm_{uuid.uuid4().hex[:8]}"
         # Create collections in ArangoDB
-        db = cls.db_config._arangodb.db(cls.db_config.config['database']['database'])
+        db = cls.db_config._arangodb.db(cls.db_config.config["database"]["database"])
         db.create_collection(cls.hot_name)
         db.create_collection(cls.warm_name)
         cls.hot_coll = cls.db_config.get_collection(cls.hot_name)
@@ -43,13 +44,12 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
         now = datetime.now(UTC)
         docs = []
         for i in range(5):
-            docs.append({
-                '_key': f'doc{i}',
-                'Record': {'Data': {
-                    'timestamp': (now - timedelta(hours=13)).isoformat(),
-                    'transitioned': False
-                }}
-            })
+            docs.append(
+                {
+                    "_key": f"doc{i}",
+                    "Record": {"Data": {"timestamp": (now - timedelta(hours=13)).isoformat(), "transitioned": False}},
+                },
+            )
         for d in docs:
             cls.hot_coll.insert(d)
         # Set up temp dir for snapshots
@@ -71,7 +71,7 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # Drop test collections and remove snapshots
-        db = cls.db_config._arangodb.db(cls.db_config.config['database']['database'])
+        db = cls.db_config._arangodb.db(cls.db_config.config["database"]["database"])
         db.delete_collection(cls.hot_name)
         db.delete_collection(cls.warm_name)
         shutil.rmtree(cls.temp_dir)
@@ -84,16 +84,17 @@ class TestWarmTierTransitionIntegration(unittest.TestCase):
             data_root=self.temp_dir,
         )
         # Verify counts and DB writes
-        self.assertEqual(hot_count, 5)
-        self.assertEqual(warm_count, 5)
-        self.assertEqual(self.warm_coll.count(), 5)
+        assert hot_count == 5
+        assert warm_count == 5
+        assert self.warm_coll.count() == 5
         # Verify snapshots
-        snapshot_root = os.path.join(self.temp_dir, 'warm_snapshots')
+        snapshot_root = os.path.join(self.temp_dir, "warm_snapshots")
         subdirs = os.listdir(snapshot_root)
-        self.assertEqual(len(subdirs), 1)
+        assert len(subdirs) == 1
         sd = os.path.join(snapshot_root, subdirs[0])
-        self.assertTrue(os.path.isfile(os.path.join(sd, 'hot.jsonl')))
-        self.assertTrue(os.path.isfile(os.path.join(sd, 'warm.jsonl')))
+        assert os.path.isfile(os.path.join(sd, "hot.jsonl"))
+        assert os.path.isfile(os.path.join(sd, "warm.jsonl"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""
-DB-backed recorder for the incremental file system indexer.
-"""
+"""DB-backed recorder for the incremental file system indexer."""
 import logging
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,6 +13,7 @@ from activity.recorders.registration_service import (
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.record import IndalekoRecordDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -74,6 +74,6 @@ class FsIncrementalDbRecorder(StorageActivityRecorder):
                 self._collection.insert(doc, overwrite=True)
                 stored_ids.append(key)
             except Exception as e:
-                self._logger.error(f"Failed to upsert record for {path_str}: {e}")
+                self._logger.exception(f"Failed to upsert record for {path_str}: {e}")
                 self._logger.debug(doc)
         return stored_ids

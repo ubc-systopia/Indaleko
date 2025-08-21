@@ -80,31 +80,15 @@ class IndalekoCollections(IndalekoSingleton):
                     db=self.db_config,
                     reset=self.reset,
                 )
-            except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
+            except arango.exceptions.CollectionConfigureError:  # pylint: disable=no-member
                 logging.exception("Failed to configure collection %s", name)
-                print(f"Failed to configure collection {name}")
-                print(error)
                 if IndalekoDBCollections.Collections[name]["schema"] is not None:
-                    print("Schema:")
-                    print(
-                        json.dumps(
-                            IndalekoDBCollections.Collections[name]["schema"],
-                            indent=2,
-                        ),
-                    )
+                    pass
                 raise
-            except TypeError as error:
+            except TypeError:
                 logging.exception("Failed to configure collection %s", name)
-                print(f"Failed to configure collection {name}")
-                print(error)
                 if IndalekoDBCollections.Collections[name]["schema"] is not None:
-                    print("Schema:")
-                    print(
-                        json.dumps(
-                            IndalekoDBCollections.Collections[name]["schema"],
-                            indent=2,
-                        ),
-                    )
+                    pass
                 raise
 
         # Create or update views (unless skipped)

@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +42,7 @@ from data_models.db_config import (
 )
 from db import IndalekoDBConfig
 
+
 # from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 # from utils.data_validation import validate_ip_address, validate_hostname
 # from utils.misc.directory_management import indaleko_default_config_dir
@@ -48,9 +51,7 @@ from db import IndalekoDBConfig
 
 
 class IndalekoDBDocker:
-    """
-    Class used to manage docker installations of the database.
-    """
+    """Class used to manage docker installations of the database."""
 
     def __init__(
         self,
@@ -105,7 +106,7 @@ class IndalekoDBDocker:
         return IndalekoDBConfigDataModel(**new_config_data)
 
 
-def main():
+def main() -> None:
     """Construct a new docker configuration for the database."""
     ic("Not yet implemented")
 

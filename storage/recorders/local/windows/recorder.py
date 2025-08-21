@@ -23,9 +23,11 @@ import json
 import os
 import sys
 import uuid
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -48,6 +50,7 @@ from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
 from utils.misc.file_name_management import find_candidate_files
+
 
 # pylint: enable=wrong-import-position
 

@@ -3,10 +3,10 @@
 ![alt text](workflow_diagram.jpg)
 
 ## Set Up Instructions:
-To run the pipeline, ensure that you have access to an OpenAI API key. 
+To run the pipeline, ensure that you have access to an OpenAI API key.
 Store the secret key in the `Indaleko/config/openai-key.ini` file in the format:
 ```
-[openai] 
+[openai]
 api_key = your-secret-key
 ```
 
@@ -29,7 +29,7 @@ If not already installed, install:
 
 #### Step 1: Reset the Database
 
-```sh 
+```sh
 # Reset the database:
 python ./db/db_config.py reset
 # Add machine configuration file for appropriate OS:

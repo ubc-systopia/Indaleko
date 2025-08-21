@@ -25,9 +25,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,6 +50,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from activity.data_model.activity_classification import IndalekoActivityClassification
 from data_models.base import IndalekoBaseModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -149,7 +152,7 @@ class GDriveFileInfo(IndalekoBaseModel):
         if isinstance(v, str):
             try:
                 # Try to parse ISO format string
-                v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+                v = datetime.fromisoformat(v)
             except ValueError:
                 try:
                     # Try RFC 3339 format
@@ -251,7 +254,7 @@ class GDriveActivityData(IndalekoBaseModel):
         if isinstance(v, str):
             try:
                 # Try to parse ISO format string
-                v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+                v = datetime.fromisoformat(v)
             except ValueError:
                 try:
                     # Try RFC 3339 format

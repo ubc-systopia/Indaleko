@@ -12,9 +12,11 @@ where they're stored.
 """
 
 import argparse
+import contextlib
 import json
 import os
 import sys
+
 
 # Add Indaleko root to path if needed
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -35,9 +37,7 @@ try:
     )
     from utils.cli.base import IndalekoBaseCLI
     from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-except ImportError as e:
-    print(f"WARNING: Missing dependencies: {e}")
-    print("The test will create mock objects for missing dependencies.")
+except ImportError:
     _MISSING_IMPORTS = True
 
     # Create simplified mock classes
@@ -79,7 +79,7 @@ except ImportError as e:
             self.help_texts = []
 
         def output(self, message):
-            print(message)
+            pass
 
         def register_command(self, command, handler):
             self.custom_commands[command] = handler
@@ -89,8 +89,6 @@ except ImportError as e:
 
         def run(self):
             """Simplified run method for testing."""
-            print("\nTest Semantic Performance CLI")
-            print("Available commands: /perf, /experiments, /report")
 
             while True:
                 user_input = input(self.prompt).strip()
@@ -107,9 +105,9 @@ except ImportError as e:
                         handler = self.custom_commands[command]
                         handler(args.split())
                     else:
-                        print(f"No handler registered for command: {command}")
+                        pass
                 else:
-                    print(f"Unknown command: {user_input}")
+                    pass
 
         class default_handler_mixin:
             @staticmethod
@@ -123,7 +121,6 @@ except ImportError as e:
             self.cli = cli_instance
 
         def handle_perf_command(self, args):
-            print(f"[MOCK] Handling perf command: {args}")
             if not args:
                 self.cli.output("Performance Monitoring Commands:")
                 self.cli.output("  /perf status - Show monitoring status")
@@ -133,19 +130,16 @@ except ImportError as e:
                 self.cli.output("[MOCK] Performance monitoring is disabled")
 
         def handle_experiments_command(self, args):
-            print(f"[MOCK] Handling experiments command: {args}")
             self.cli.output("Experiments Commands:")
             self.cli.output("  /experiments list - List experiments")
 
         def handle_report_command(self, args):
-            print(f"[MOCK] Handling report command: {args}")
             self.cli.output("Report Commands:")
             self.cli.output("  /report generate - Generate report")
 
     # Mock registration function
     def register_semantic_performance_cli(cli_instance):
         """Register mock CLI integration."""
-        print("[MOCK] Registering performance CLI integration")
         return SemanticPerformanceCliIntegration(cli_instance)
 
 
@@ -159,18 +153,9 @@ class TestCLI(IndalekoBaseCLI):
 
     def output(self, message: str) -> None:
         """Override output method to print to console."""
-        print(message)
 
     def run(self) -> None:
         """Run the test CLI."""
-        print("\nSemantic Performance CLI Integration Test")
-        print("=======================================")
-        print("Type 'exit' or 'quit' to exit.")
-        print("Available commands:")
-        print("  /perf - Show performance monitoring commands")
-        print("  /experiments - List and run performance experiments")
-        print("  /report - Generate performance reports")
-        print()
 
         while True:
             user_input = input(self.prompt).strip()
@@ -191,8 +176,7 @@ class TestCLI(IndalekoBaseCLI):
                 elif command == "/report":
                     self.perf_integration.handle_report_command(args.split())
             else:
-                print(f"Unknown command: {user_input}")
-                print("Try /perf, /experiments, or /report")
+                pass
 
 
 def test_cli_integration(args: list[str] | None = None) -> None:
@@ -222,7 +206,6 @@ def test_cli_integration(args: list[str] | None = None) -> None:
     global _MISSING_IMPORTS
     if parsed_args.mock:
         _MISSING_IMPORTS = True
-        print("Running in mock mode due to --mock flag")
 
     try:
         # Create the test CLI
@@ -247,38 +230,29 @@ def test_cli_integration(args: list[str] | None = None) -> None:
             elif command == "/report":
                 cli.perf_integration.handle_report_command(cmd_args.split())
             else:
-                print(f"Unknown command: {command}")
+                pass
         else:
             # Run the interactive CLI
             cli.run()
 
-    except Exception as e:
-        print(f"Error: {e!s}")
+    except Exception:
         if parsed_args.debug:
             import traceback
 
             traceback.print_exc()
         else:
-            print("Use --debug for more detailed error information")
+            pass
 
 
 if __name__ == "__main__":
     try:
         test_cli_integration()
-    except Exception as e:
-        print(f"Error running test CLI integration: {e}")
-        print("Use --debug flag for more details")
+    except Exception:
 
-        try:
-            import docker
+        with contextlib.suppress(ImportError):
+            pass
 
-            print("docker module is available")
-        except ImportError:
-            print("docker module is MISSING")
 
-        try:
-            from icecream import ic
+        with contextlib.suppress(ImportError):
+            pass
 
-            print("icecream module is available")
-        except ImportError:
-            print("icecream module is MISSING")

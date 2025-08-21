@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import timedelta
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,67 +37,51 @@ from db import IndalekoDBConfig
 from query.memory.archivist_memory import ArchivistMemory
 from query.query_processing.query_history import QueryHistory
 
+
 # pylint: enable=wrong-import-position
 
 
 def main():
     """Run tests for the database optimizer."""
-    print("Indaleko Database Optimizer Test")
-    print("================================")
 
     # Connect to the database
-    print("\nConnecting to ArangoDB...")
     db_config = IndalekoDBConfig()
 
     # Initialize components
     archivist_memory = ArchivistMemory(db_config)
     query_history = QueryHistory()
 
-    print("Initializing database optimizer...")
     optimizer = DatabaseOptimizer(db_config._arangodb, archivist_memory, query_history)
 
     # Analyze query patterns
-    print("\nAnalyzing query patterns (last 30 days)...")
     analysis = optimizer.analyze_query_patterns(timedelta(days=30))
 
     # Print summary
-    print(f"\nAnalyzed {analysis.get('analyzed_queries', 0)} queries.")
-    print(f"Found {len(analysis.get('slow_queries', []))} slow queries.")
 
     # Print index recommendations
     index_recs = analysis.get("index_recommendations", [])
     if index_recs:
-        print(f"\nIndex Recommendations ({len(index_recs)}):")
-        for i, rec in enumerate(index_recs[:5], 1):
-            print(f"{i}. {rec.short_description()}")
-            print(f"   Impact: {rec.estimated_impact:.2f}")
-            print(f"   Explanation: {rec.explanation}")
+        for _i, _rec in enumerate(index_recs[:5], 1):
+            pass
     else:
-        print("\nNo index recommendations.")
+        pass
 
     # Print view recommendations
     view_recs = analysis.get("view_recommendations", [])
     if view_recs:
-        print(f"\nView Recommendations ({len(view_recs)}):")
-        for i, rec in enumerate(view_recs[:3], 1):
-            print(f"{i}. {rec.short_description()}")
-            print(f"   Impact: {rec.estimated_impact:.2f}")
-            print(f"   Explanation: {rec.explanation}")
+        for _i, _rec in enumerate(view_recs[:3], 1):
+            pass
     else:
-        print("\nNo view recommendations.")
+        pass
 
     # Print query optimizations
     query_opts = analysis.get("query_optimizations", [])
     if query_opts:
-        print(f"\nQuery Optimization Recommendations ({len(query_opts)}):")
-        for i, opt in enumerate(query_opts[:3], 1):
-            print(f"{i}. {opt.short_description()}")
-            print(f"   Speedup: {opt.estimated_speedup:.2f}x")
-            print(f"   Explanation: {opt.explanation}")
+        for _i, _opt in enumerate(query_opts[:3], 1):
+            pass
     else:
-        print("\nNo query optimization recommendations.")
+        pass
 
-    print("\nTest complete!")
 
 
 if __name__ == "__main__":

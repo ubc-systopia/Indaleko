@@ -1,5 +1,5 @@
 """
-Checksum recorder package for Indaleko
+Checksum recorder package for Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason

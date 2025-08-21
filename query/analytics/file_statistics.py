@@ -27,9 +27,11 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
 
 import matplotlib.pyplot as plt
+
 
 # Set up environment variables
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +44,7 @@ if root_dir not in sys.path:
 from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -53,7 +56,7 @@ logger = logging.getLogger(__name__)
 class FileStatistics:
     """Class for retrieving and analyzing file statistics from Indaleko."""
 
-    def __init__(self, db_config: IndalekoDBConfig | None = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """
         Initialize the FileStatistics class.
 
@@ -84,7 +87,7 @@ class FileStatistics:
 
             logger.info("Counting total objects in the system")
             cursor = self.db.aql.execute(query)
-            result = list(cursor)[0]
+            result = next(iter(cursor))
 
             # Ensure the result is an integer
             if result is None:
@@ -223,7 +226,7 @@ class FileStatistics:
             return distribution
 
         except Exception as e:
-            logger.error(f"Error getting file type distribution: {e}")
+            logger.exception(f"Error getting file type distribution: {e}")
             return {}
 
     def get_file_size_statistics(self) -> dict[str, Any]:
@@ -267,7 +270,7 @@ class FileStatistics:
 
             logger.info("Getting file size statistics")
             cursor = self.db.aql.execute(query)
-            result = list(cursor)[0]
+            result = next(iter(cursor))
 
             # Ensure all values are valid numbers
             default_stats = {
@@ -288,7 +291,7 @@ class FileStatistics:
             return result
 
         except Exception as e:
-            logger.error(f"Error getting file size statistics: {e}")
+            logger.exception(f"Error getting file size statistics: {e}")
             return {
                 "count": 0,
                 "total_size": 0,
@@ -368,7 +371,7 @@ class FileStatistics:
             return results
 
         except Exception as e:
-            logger.error(f"Error getting file age distribution: {e}")
+            logger.exception(f"Error getting file age distribution: {e}")
             return []
 
     def generate_report(
@@ -510,15 +513,14 @@ def format_size(size_bytes: int) -> str:
     """
     if size_bytes < 1024:
         return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
+    if size_bytes < 1024 * 1024:
         return f"{size_bytes / 1024:.2f} KB"
-    elif size_bytes < 1024 * 1024 * 1024:
+    if size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
-    else:
-        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 
-def display_report(report: dict[str, Any], display_buffer: list[str] = None) -> None:
+def display_report(report: dict[str, Any], display_buffer: list[str] | None = None) -> None:
     """
     Display the statistics report in a human-readable format.
 
@@ -529,11 +531,11 @@ def display_report(report: dict[str, Any], display_buffer: list[str] = None) -> 
     """
 
     # Helper function to handle output
-    def output(line: str):
+    def output(line: str) -> None:
         if display_buffer is not None:
             display_buffer.append(line)
         else:
-            print(line)
+            pass
 
     output("\n=== Indaleko File Statistics Report ===\n")
 
@@ -573,7 +575,7 @@ def display_report(report: dict[str, Any], display_buffer: list[str] = None) -> 
         )
 
 
-def main():
+def main() -> None:
     """Main entry point for the file statistics tool."""
     parser = argparse.ArgumentParser(description="Indaleko File Statistics Tool")
     parser.add_argument(
@@ -618,16 +620,10 @@ def main():
         display_report(report)
     else:
         # Display basic statistics
-        total_objects = stats.count_total_objects()
-        file_count = stats.count_files()
-        directory_count = stats.count_directories()
+        stats.count_total_objects()
+        stats.count_files()
+        stats.count_directories()
 
-        print("\n=== Indaleko File Statistics ===\n")
-        print(f"Total Objects: {total_objects:,}")
-        print(f"Files: {file_count:,} ({file_count/max(1, total_objects)*100:.1f}%)")
-        print(
-            f"Directories: {directory_count:,} ({directory_count/max(1, total_objects)*100:.1f}%)",
-        )
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ Prototype CLI: StorageIndexer
 Inherits from IndalekoBaseCLI and indexes local storage via LocalStorageCollector.
 """
 import json
+
 from pathlib import Path
 
 from activity.collectors.storage.local.collector import LocalStorageCollector
@@ -12,11 +13,11 @@ from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
 
 class StorageIndexerCLI(IndalekoBaseCLI):
-    def __init__(self):
+    def __init__(self) -> None:
         cli_data = IndalekoBaseCliDataModel()
         super().__init__(cli_data=cli_data)
 
-    def main(self):
+    def main(self) -> None:
         args = self.get_args()
         input_dir = Path(args.datadir).expanduser()
         collector = LocalStorageCollector(path=str(input_dir))
@@ -26,7 +27,6 @@ class StorageIndexerCLI(IndalekoBaseCLI):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(records, f, default=str, indent=2)
-        print(f"Written {len(records)} records to {output_path}")
 
 
 if __name__ == "__main__":

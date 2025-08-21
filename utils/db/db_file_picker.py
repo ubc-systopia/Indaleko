@@ -27,12 +27,14 @@ import sys
 import threading
 import time
 import uuid
+
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from queue import PriorityQueue
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +54,7 @@ from db.i_collections import IndalekoCollections
 from platforms.machine_config import get_machine_id
 from storage.i_object import IndalekoObject
 from storage.known_attributes import StorageSemanticAttributes
+
 
 # pylint: enable=wrong-import-position
 
@@ -76,7 +79,7 @@ class IndalekoFilePicker:
     - Low-priority background processing queue
     """
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()) -> None:
         self.db_config = db_config
         self.object_collection = IndalekoCollections.get_collection(
             IndalekoDBCollections.Indaleko_Object_Collection,
@@ -93,7 +96,7 @@ class IndalekoFilePicker:
         self._init_volume_guid_map()
 
     def _init_volume_guid_map(self) -> None:
-        """Initialize the volume GUID to path mapping for the local machine"""
+        """Initialize the volume GUID to path mapping for the local machine."""
         # This implementation will depend on the platform
         if sys.platform == "win32":
             import win32file
@@ -129,7 +132,7 @@ class IndalekoFilePicker:
         Determine if a file exists on the local machine by checking:
         1. If the file's machine ID matches the current machine
         2. If the file's volume GUID corresponds to a local volume
-        3. If the file actually exists at the expected local path
+        3. If the file actually exists at the expected local path.
 
         Args:
             file_obj: The IndalekoObject to check
@@ -210,7 +213,7 @@ class IndalekoFilePicker:
 
     def pick_random_files(
         self,
-        process_func: Callable[["IndalekoObject"], None] = None,
+        process_func: Callable[["IndalekoObject"], None] | None = None,
         count: int = 1,
         local_only: bool = False,
     ) -> list[IndalekoObject]:
@@ -247,11 +250,10 @@ class IndalekoFilePicker:
             all_files.append(file_obj)
 
             # If we're filtering for local files, check if this file is local
-            if local_only:
-                if self.is_file_local(file_obj):
-                    local_files.append(file_obj)
-                    if len(local_files) >= count:
-                        break
+            if local_only and self.is_file_local(file_obj):
+                local_files.append(file_obj)
+                if len(local_files) >= count:
+                    break
 
         # Determine which files to process
         result_files = local_files if local_only else all_files[:count]
@@ -266,7 +268,7 @@ class IndalekoFilePicker:
     def pick_files_for_semantic_processing(
         self,
         semantic_attribute_id: uuid.UUID | str,
-        process_func: Callable[["IndalekoObject", str], None] = None,
+        process_func: Callable[["IndalekoObject", str], None] | None = None,
         count: int = 10,
         max_age_days: int | None = None,
         min_last_processed_days: int | None = None,
@@ -274,7 +276,7 @@ class IndalekoFilePicker:
         """
         Pick files that need semantic attribute processing, prioritizing:
         1. Files that have never had this attribute processed
-        2. Files where this attribute was processed longest ago
+        2. Files where this attribute was processed longest ago.
 
         Args:
             semantic_attribute_id: UUID of the semantic attribute to check
@@ -367,7 +369,7 @@ class IndalekoFilePicker:
             return local_files
 
         except Exception as e:
-            logger.error(f"Error executing query for semantic processing: {e}")
+            logger.exception(f"Error executing query for semantic processing: {e}")
             return []
 
     def pick_all_files(
@@ -413,7 +415,7 @@ class IndalekoFilePicker:
             return processed_count
 
         except Exception as e:
-            logger.error(f"Error processing all files: {e}")
+            logger.exception(f"Error processing all files: {e}")
             return processed_count
         finally:
             if cursor:
@@ -484,7 +486,7 @@ class IndalekoFilePicker:
         return queued_count
 
     def _ensure_processor_thread(self) -> None:
-        """Ensure the background processor thread is running"""
+        """Ensure the background processor thread is running."""
         if self.processing_thread is None or not self.processing_thread.is_alive():
             self.should_stop.clear()
             self.processing_thread = threading.Thread(
@@ -495,7 +497,7 @@ class IndalekoFilePicker:
             self.processing_thread.start()
 
     def _background_processor(self) -> None:
-        """Background thread for processing queued files at low priority"""
+        """Background thread for processing queued files at low priority."""
         # Set process priority to below normal
         try:
             # Lower process priority
@@ -536,7 +538,7 @@ class IndalekoFilePicker:
                         self._update_semantic_attribute(file, item["semantic_attribute_id"], result)
 
                 except Exception as e:
-                    logger.error(f"Error processing file {local_path}: {e}")
+                    logger.exception(f"Error processing file {local_path}: {e}")
 
                 finally:
                     # Mark as no longer being processed
@@ -547,7 +549,7 @@ class IndalekoFilePicker:
                     self.processing_queue.task_done()
 
             except Exception as e:
-                logger.error(f"Error in background processor: {e}")
+                logger.exception(f"Error in background processor: {e}")
                 time.sleep(1)  # Avoid tight loop on error
 
     def _update_semantic_attribute(
@@ -609,7 +611,7 @@ class IndalekoFilePicker:
             return len(list(cursor)) > 0
 
         except Exception as e:
-            logger.error(f"Error updating semantic attribute: {e}")
+            logger.exception(f"Error updating semantic attribute: {e}")
             return False
 
     def stop_background_processing(self, wait: bool = True) -> None:
@@ -631,7 +633,7 @@ class IndalekoFilePicker:
 
 
 def check_mime_type(file: IndalekoObject) -> None:
-    """Check the mime type of the file"""
+    """Check the mime type of the file."""
     doc = file.serialize()
     semantic_attributes = doc.get("SemanticAttributes")
     ic(type(semantic_attributes))
@@ -675,8 +677,8 @@ def process_file_with_path(file: IndalekoObject, local_path: str) -> dict:
     }
 
 
-def main():
-    """Test the enhanced IndalekoFilePicker functionality"""
+def main() -> None:
+    """Test the enhanced IndalekoFilePicker functionality."""
     parser = argparse.ArgumentParser(description="Test IndalekoFilePicker functionality")
     parser.add_argument("--random", action="store_true", help="Pick random files")
     parser.add_argument("--local-only", action="store_true", help="Filter for local files only")

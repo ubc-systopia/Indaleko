@@ -21,6 +21,7 @@ import logging
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -32,6 +33,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db import IndalekoDBConfig, timed_aql_execute
 from db.db_collections import IndalekoDBCollections
 from utils.i_logging import get_logger
+
 
 # Configure logger
 logger = get_logger(__name__)

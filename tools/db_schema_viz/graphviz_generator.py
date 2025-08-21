@@ -24,18 +24,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
 import os
-from pathlib import Path
-import tempfile
-from typing import Dict, List, Any, Optional
+
+from typing import Any
 
 import graphviz
 
 
 def generate_dot(
-    collections: List[Dict[str, Any]],
-    relationships: List[Dict[str, Any]],
-    groups: Dict[str, List[str]],
-    show_indexes: bool = True
+    collections: list[dict[str, Any]],
+    relationships: list[dict[str, Any]],
+    groups: dict[str, list[str]],
+    show_indexes: bool = True,
 ) -> str:
     """
     Generate a GraphViz DOT representation of the database schema.
@@ -55,7 +54,7 @@ def generate_dot(
     dot = graphviz.Digraph(
         name="IndalekoDB",
         comment="Indaleko Database Schema",
-        format="pdf"
+        format="pdf",
     )
 
     # Set graph attributes
@@ -66,7 +65,7 @@ def generate_dot(
         compound="true",
         fontname="Arial",
         fontsize="14",
-        bgcolor="white"
+        bgcolor="white",
     )
 
     # Define node and edge attributes
@@ -77,14 +76,14 @@ def generate_dot(
         fontsize="12",
         margin="0.2,0.1",
         height="0.6",
-        width="2.5"
+        width="2.5",
     )
 
     dot.attr("edge",
         fontname="Arial",
         fontsize="10",
         fontcolor="#333333",
-        arrowsize="0.8"
+        arrowsize="0.8",
     )
 
     # Create subgraphs for groups
@@ -96,7 +95,7 @@ def generate_dot(
                 color="gray",
                 fontname="Arial",
                 fontsize="14",
-                labeljust="l"
+                labeljust="l",
             )
 
             # Add nodes for each collection in this group
@@ -123,7 +122,7 @@ def generate_dot(
                 label=relationship.get("type", ""),
                 style=edge_style,
                 color="#AA0000",
-                tooltip=relationship.get("description", "")
+                tooltip=relationship.get("description", ""),
             )
 
     # Add a legend
@@ -132,7 +131,7 @@ def generate_dot(
     return dot.source
 
 
-def _add_collection_node(graph, collection: Dict[str, Any]) -> None:
+def _add_collection_node(graph, collection: dict[str, Any]) -> None:
     """
     Add a node for a collection to the graph.
 
@@ -157,11 +156,11 @@ def _add_collection_node(graph, collection: Dict[str, Any]) -> None:
         fillcolor=fillcolor,
         color=color,
         style="filled,rounded",
-        tooltip=f"{collection['type'].capitalize()} collection with {collection['count']} documents"
+        tooltip=f"{collection['type'].capitalize()} collection with {collection['count']} documents",
     )
 
 
-def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
+def _add_index_nodes(graph, collection: dict[str, Any]) -> None:
     """
     Add nodes for collection indexes to the graph.
 
@@ -191,7 +190,7 @@ def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
             fontsize="10",
             width="1.5",
             height="0.4",
-            tooltip=f"{index_type.capitalize()} index on {fields_str}"
+            tooltip=f"{index_type.capitalize()} index on {fields_str}",
         )
 
         # Connect the index to its collection
@@ -200,7 +199,7 @@ def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
             collection["name"],
             style="dotted",
             arrowhead="none",
-            color="#006600"
+            color="#006600",
         )
 
 
@@ -218,7 +217,7 @@ def _add_legend(graph) -> None:
             color="black",
             fontname="Arial",
             fontsize="12",
-            bgcolor="#f5f5f5"
+            bgcolor="#f5f5f5",
         )
 
         # Add legend nodes
@@ -229,7 +228,7 @@ def _add_legend(graph) -> None:
             style="filled,rounded",
             fillcolor="#e6eeff",
             color="#003380",
-            fontsize="10"
+            fontsize="10",
         )
 
         legend.node(
@@ -239,7 +238,7 @@ def _add_legend(graph) -> None:
             style="filled,rounded",
             fillcolor="#ffe6e6",
             color="#800000",
-            fontsize="10"
+            fontsize="10",
         )
 
         legend.node(
@@ -249,7 +248,7 @@ def _add_legend(graph) -> None:
             style="filled,rounded",
             fillcolor="#e6ffe6",
             color="#006600",
-            fontsize="10"
+            fontsize="10",
         )
 
         # Add legend edges
@@ -259,7 +258,7 @@ def _add_legend(graph) -> None:
             label="contains",
             style="solid",
             color="#AA0000",
-            fontsize="10"
+            fontsize="10",
         )
 
         legend.edge(
@@ -268,7 +267,7 @@ def _add_legend(graph) -> None:
             label="references",
             style="dashed",
             color="#AA0000",
-            fontsize="10"
+            fontsize="10",
         )
 
         # Set legend layout
@@ -279,7 +278,7 @@ def generate_output(
     dot: str,
     output_path: str,
     format: str = "pdf",
-    orientation: str = "landscape"
+    orientation: str = "landscape",
 ) -> None:
     """
     Generate output in the specified format from a DOT representation.
@@ -303,7 +302,7 @@ def generate_output(
             os.makedirs(output_dir)
 
         # Write the DOT source to a file
-        with open(dot_output_path, 'w') as f:
+        with open(dot_output_path, "w") as f:
             f.write(dot)
 
         logging.info(f"DOT file written to {dot_output_path}")
@@ -320,4 +319,4 @@ def generate_output(
             logging.warning(f"Could not render with graphviz library: {render_e}")
 
     except Exception as e:
-        logging.error(f"Error generating output: {e}")
+        logging.exception(f"Error generating output: {e}")

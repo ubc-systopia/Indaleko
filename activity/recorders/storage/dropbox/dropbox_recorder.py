@@ -25,8 +25,10 @@ import os
 import socket
 import sys
 import uuid
+
 from datetime import timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +54,7 @@ from activity.collectors.storage.semantic_attributes import (
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -63,7 +66,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
     functionality for storing and querying Dropbox file system activities.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the Dropbox storage activity recorder.
 
@@ -113,7 +116,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         # Add Dropbox-specific metadata if available
         if hasattr(self._dropbox_collector, "_user_info") and self._dropbox_collector._user_info:
             email = getattr(self._dropbox_collector._user_info, "email", "unknown")
-            account_id = getattr(
+            getattr(
                 self._dropbox_collector._user_info,
                 "account_id",
                 "unknown",
@@ -192,7 +195,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_revision(
         self,
@@ -232,7 +235,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_activities_by_shared_folder(
         self,
@@ -272,7 +275,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_shared_activities(self, limit: int = 100, offset: int = 0) -> list[dict]:
         """
@@ -305,7 +308,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_dropbox_specific_statistics(self) -> dict[str, Any]:
         """
@@ -388,7 +391,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
                 stats["sharing_percentage"] = 0
 
         except Exception as e:
-            self._logger.error(f"Error generating Dropbox statistics: {e}")
+            self._logger.exception(f"Error generating Dropbox statistics: {e}")
 
         # Add information about monitoring state
         stats["monitoring_active"] = self._dropbox_collector._active
@@ -481,7 +484,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         document = self._build_dropbox_activity_document(activity_data)
 
         # Store in database
-        result = self._collection.add_document(document)
+        self._collection.add_document(document)
 
         return activity_data.activity_id
 
@@ -538,22 +541,19 @@ if __name__ == "__main__":
         # Wait for some activities to be collected
         import time
 
-        print("Monitoring Dropbox activities for 5 minutes...")
         time.sleep(300)  # 5 minutes
 
         # Store collected activities
         activity_ids = recorder.collect_and_store_activities()
-        print(f"Stored {len(activity_ids)} activities")
 
         # Get statistics
         stats = recorder.get_dropbox_specific_statistics()
-        print("Activity statistics:")
-        for key, value in stats.items():
+        for value in stats.values():
             # Skip complex values for cleaner output
             if isinstance(value, dict) and len(value) > 5:
-                print(f"  {key}: {len(value)} items")
+                pass
             else:
-                print(f"  {key}: {value}")
+                pass
 
     finally:
         # Stop monitoring

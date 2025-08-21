@@ -24,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from enum import Enum
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +43,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageProviderType,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # pylint: enable=wrong-import-position
 

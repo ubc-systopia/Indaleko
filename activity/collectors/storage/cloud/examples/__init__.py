@@ -1,3 +1,1 @@
-"""
-Examples for cloud storage collectors.
-"""
+"""Examples for cloud storage collectors."""

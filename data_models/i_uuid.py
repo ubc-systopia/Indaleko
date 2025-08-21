@@ -25,6 +25,7 @@ import uuid
 
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,13 +36,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoUUIDDataModel(IndalekoBaseModel):
-    """
-    This class defines the UUID data model for Indaleko.
-    """
+    """This class defines the UUID data model for Indaleko."""
 
     Identifier: uuid.UUID | str = Field(
         uuid.uuid4(),
@@ -66,8 +66,8 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoUUIDDataModel.test_model_main()
 
 

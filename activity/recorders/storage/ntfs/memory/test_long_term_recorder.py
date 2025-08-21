@@ -16,7 +16,9 @@ import argparse
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime, timedelta
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -31,10 +33,11 @@ from activity.recorders.storage.ntfs.memory.long_term.recorder import (
     NtfsLongTermMemoryRecorder,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
-def run_tests(verbose: bool = False, db_config_path: str = None) -> bool:
+def run_tests(verbose: bool = False, db_config_path: str | None = None) -> bool:
     """
     Run tests for the NtfsLongTermMemoryRecorder.
 
@@ -60,7 +63,7 @@ def run_tests(verbose: bool = False, db_config_path: str = None) -> bool:
         )
         logger.info("Successfully created Long-Term Memory Recorder")
     except Exception as e:
-        logger.error(f"Failed to create Long-Term Memory Recorder: {e}")
+        logger.exception(f"Failed to create Long-Term Memory Recorder: {e}")
         import traceback
 
         traceback.print_exc()

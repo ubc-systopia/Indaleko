@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
+
 from uuid import UUID, uuid4
 
 # third-party imports
 from pydantic import Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +38,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from semantic.data_models.base_data_model import BaseSemanticDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -145,8 +148,8 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
         }
 
 
-def main():
-    """Test code for the checksum data model"""
+def main() -> None:
+    """Test code for the checksum data model."""
     SemanticChecksumDataModel.test_model_main()
 
 

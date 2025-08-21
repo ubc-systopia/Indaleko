@@ -23,6 +23,7 @@ import sys
 
 from pydantic import Field, field_validator
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,6 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.data_models.ambient_data_model import (
     BaseAmbientConditionDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -102,13 +104,13 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
     @field_validator("playback_position_ms")
     @classmethod
     def validate_position(cls, value: int, values: dict) -> int:
-        """Validate playback position is within track duration"""
+        """Validate playback position is within track duration."""
         if "playback_position_ms" in values.data and value > values.data["track_duration_ms"]:
             raise ValueError("Playback position cannot exceed track duration")
         return value
 
     class Config:
-        """Configuration and example data for the ambient music data model"""
+        """Configuration and example data for the ambient music data model."""
 
         json_schema_extra = {
             "example": {
@@ -132,9 +134,8 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
         }
 
 
-def main():
-    """This allows testing the data models"""
-    print("Testing base Ambient Music Data Model:")
+def main() -> None:
+    """This allows testing the data models."""
     AmbientMusicData.test_model_main()
 
 

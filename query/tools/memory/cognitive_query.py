@@ -24,7 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import time
+
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,14 +44,15 @@ from query.tools.base import (
     ToolParameter,
 )
 
+
 # Try to import utilities
 try:
     from icecream import ic
 except ImportError:
     # Create a simple ic function for logging if icecream isn't available
-    def ic(*args):
-        for arg in args:
-            print(arg)
+    def ic(*args) -> None:
+        for _arg in args:
+            pass
 
 
 # Make sure utils.i_logging is available
@@ -74,7 +77,7 @@ class CognitiveMemoryQueryTool(BaseTool):
     - Archival Memory: Permanent knowledge store with rich semantic relationships
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the cognitive memory query tool."""
         super().__init__()
         self._db_config = None
@@ -742,10 +745,6 @@ class CognitiveMemoryQueryTool(BaseTool):
 
             if invalid_tiers:
                 # Log a warning but continue with valid tiers
-                print(
-                    f"Warning: Invalid memory tier names ignored: {', '.join(invalid_tiers)}. "
-                    f"Valid values are: sensory, short_term, long_term, archival",
-                )
                 ic(f"Invalid tier names ignored: {invalid_tiers}")
 
                 # Filter out invalid tiers
@@ -848,7 +847,7 @@ class CognitiveMemoryQueryTool(BaseTool):
 
             # Combine all results
             all_results = []
-            for tier, results in results_by_tier.items():
+            for results in results_by_tier.values():
                 all_results.extend(results)
 
             # Rank results with tier-specific weighting

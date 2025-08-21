@@ -23,12 +23,14 @@ import logging
 import os
 import sys
 import uuid
+
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -500,7 +502,7 @@ class QueryPatternAnalyzer:
     6. Integration with cross-source pattern detection
     """
 
-    def __init__(self, db_config=None, cross_source_detector=None):
+    def __init__(self, db_config=None, cross_source_detector=None) -> None:
         """
         Initialize the query pattern analyzer.
 
@@ -577,7 +579,7 @@ class QueryPatternAnalyzer:
                     loaded_count += 1
 
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.exception(
                         f"Error processing query {doc.get('_key', 'unknown')}: {e}",
                     )
 
@@ -587,7 +589,7 @@ class QueryPatternAnalyzer:
             self.logger.info(f"Loaded {loaded_count} queries from history")
 
         except Exception as e:
-            self.logger.error(f"Error loading query history: {e}")
+            self.logger.exception(f"Error loading query history: {e}")
 
         return loaded_count
 
@@ -636,11 +638,10 @@ class QueryPatternAnalyzer:
                 has_results = len(query_data["RawResults"]) > 0
 
             # Extract execution time
-            execution_time = None
             if "QueryHistory" in query_data and "ElapsedTime" in query_data["QueryHistory"]:
-                execution_time = query_data["QueryHistory"]["ElapsedTime"]
+                query_data["QueryHistory"]["ElapsedTime"]
             elif "ElapsedTime" in query_data:
-                execution_time = query_data["ElapsedTime"]
+                query_data["ElapsedTime"]
 
             # Extract intent
             intent = "search"  # Default intent
@@ -697,7 +698,7 @@ class QueryPatternAnalyzer:
                             entity_usage.co_occurring_entities[co_entity] = 1
 
         except Exception as e:
-            self.logger.error(f"Error processing entities for query {query_id}: {e}")
+            self.logger.exception(f"Error processing entities for query {query_id}: {e}")
 
     def analyze_query_chains(self) -> list[QueryChain]:
         """
@@ -882,7 +883,7 @@ class QueryPatternAnalyzer:
         """Check if a query has results."""
         if "QueryHistory" in query_data and "RawResults" in query_data["QueryHistory"]:
             return len(query_data["QueryHistory"]["RawResults"]) > 0
-        elif "RawResults" in query_data:
+        if "RawResults" in query_data:
             return len(query_data["RawResults"]) > 0
         return False
 
@@ -939,7 +940,7 @@ class QueryPatternAnalyzer:
         # Check for narrowing vs broadening
         if len(query2) > len(query1) and all(e in entities2 for e in entities1):
             return QueryRefinementType.NARROW
-        elif len(query2) < len(query1) and all(e in entities1 for e in entities2):
+        if len(query2) < len(query1) and all(e in entities1 for e in entities2):
             return QueryRefinementType.BROADEN
 
         # Default to adding a filter
@@ -1113,7 +1114,7 @@ class QueryPatternAnalyzer:
                     observation_count=entity_usage.mention_count,
                     entities_involved=[entity_name] + [e for e, _ in top_cooccur],
                     attributes={
-                        "co_occurrence_strengths": {e: p for e, p in strong_cooccurrence},
+                        "co_occurrence_strengths": dict(strong_cooccurrence),
                         "success_rate": entity_usage.success_rate,
                     },
                 )
@@ -1322,13 +1323,13 @@ class QueryPatternAnalyzer:
         """Extract execution time from query data."""
         if "QueryHistory" in query_data and "ElapsedTime" in query_data["QueryHistory"]:
             return query_data["QueryHistory"]["ElapsedTime"]
-        elif "ElapsedTime" in query_data:
+        if "ElapsedTime" in query_data:
             return query_data["ElapsedTime"]
         return None
 
     def generate_query_suggestions(
         self,
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate query suggestions based on detected patterns.
@@ -1449,7 +1450,7 @@ class QueryPatternAnalyzer:
 
                 suggestions.extend(query_suggestions)
             except Exception as e:
-                self.logger.error(f"Error getting cross-source suggestions: {e}")
+                self.logger.exception(f"Error getting cross-source suggestions: {e}")
 
         # Prioritize and limit suggestions
         suggestions.sort(key=lambda x: (x.priority.value, x.confidence), reverse=True)
@@ -1515,10 +1516,8 @@ class QueryPatternAnalyzer:
         return summary, suggestions
 
 
-def main():
-    """
-    Run a demonstration of the Query Pattern Analyzer.
-    """
+def main() -> None:
+    """Run a demonstration of the Query Pattern Analyzer."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Query Pattern Analysis demo")
@@ -1558,7 +1557,7 @@ def main():
 
     if args.mock:
         # Create some mock data
-        print("Running with mock data...")
+        pass
         # Mock implementation would go here
 
     else:
@@ -1570,7 +1569,6 @@ def main():
             connected = db_config.connect()
 
             if not connected:
-                print("Failed to connect to database")
                 return
 
             analyzer = QueryPatternAnalyzer(db_config)
@@ -1578,28 +1576,17 @@ def main():
             # Run analysis
             summary, suggestions = analyzer.analyze_and_generate()
 
-            print("\nQuery Pattern Analysis Summary:")
-            print(f"Processed {summary['query_count']} queries")
-            print(f"Detected {summary['chain_count']} query chains")
-            print(f"Identified {summary['pattern_count']} patterns")
 
             if summary["top_entities"]:
-                print(f"\nTop entities: {', '.join(summary['top_entities'])}")
+                pass
 
             if summary["top_intents"]:
-                print(f"Top intents: {', '.join(summary['top_intents'])}")
+                pass
 
-            print(f"\nSuccess rate: {summary['success_rate']:.1%}")
-            print(f"Refinement rate: {summary['refinement_rate']:.1%}")
 
             if suggestions:
-                print("\nGenerated Suggestions:")
-                for i, suggestion in enumerate(suggestions, 1):
-                    print(
-                        f"{i}. {suggestion.title} ({suggestion.suggestion_type.value}, confidence: {suggestion.confidence:.2f})",
-                    )
-                    print(f"   {suggestion.content}")
-                    print()
+                for _i, _suggestion in enumerate(suggestions, 1):
+                    pass
 
             # Save results if requested
             if args.save:
@@ -1618,10 +1605,8 @@ def main():
                 with open(args.output, "w") as f:
                     json.dump(results, f, indent=2, default=str)
 
-                print(f"Results saved to {args.output}")
 
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception:
             logging.exception("Exception in query pattern analysis")
 
 

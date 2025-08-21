@@ -21,10 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import sys
+
 from datetime import UTC, datetime
 
 import colorama
-from colorama import Fore, Style
+
 
 # Set up path for imports
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -68,13 +69,8 @@ def test_recommendation_integration(args):
     """Test the recommendation integration with Archivist."""
     colorama.init()
 
-    print(
-        f"{Fore.CYAN}Testing Recommendation Integration with Archivist{Style.RESET_ALL}",
-    )
-    print(f"{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
 
     # Initialize components
-    print(f"{Fore.GREEN}Initializing components...{Style.RESET_ALL}")
 
     # Create mock CLI
     cli = MockCLI(debug=args.debug)
@@ -142,23 +138,18 @@ def test_recommendation_integration(args):
     )
 
     # Register commands with CLI
-    print(f"{Fore.GREEN}Registering commands with CLI...{Style.RESET_ALL}")
     integration.register_commands()
 
     # List registered commands
-    print(f"{Fore.YELLOW}Registered commands:{Style.RESET_ALL}")
-    for command in integration.commands:
-        print(f"  {command}")
+    for _command in integration.commands:
+        pass
 
     # Test context preparation
-    print(f"\n{Fore.GREEN}Testing context preparation...{Style.RESET_ALL}")
     context = integration._prepare_context_data()
-    print(f"{Fore.YELLOW}Context keys:{Style.RESET_ALL}")
-    for key in context:
-        print(f"  {key}")
+    for _key in context:
+        pass
 
     # Update context with queries
-    print(f"\n{Fore.GREEN}Testing context updating with queries...{Style.RESET_ALL}")
     test_queries = [
         "documents from last week",
         "important work files",
@@ -167,71 +158,41 @@ def test_recommendation_integration(args):
     ]
 
     for query in test_queries:
-        print(f"{Fore.YELLOW}Adding query to context: {query}{Style.RESET_ALL}")
         integration.update_context_with_query(query)
 
     # Get recommendations
-    print(f"\n{Fore.GREEN}Testing recommendation generation...{Style.RESET_ALL}")
     recommendations = integration.get_recommendations_for_context()
 
     if recommendations:
-        print(
-            f"{Fore.YELLOW}Generated {len(recommendations)} recommendations:{Style.RESET_ALL}",
-        )
-        for i, rec in enumerate(recommendations, 1):
-            print(
-                f"  {i}. {rec.query} ({rec.source.value}, confidence: {rec.confidence:.2f})",
-            )
-            print(f"     {rec.description}")
+        for _i, _rec in enumerate(recommendations, 1):
+            pass
     else:
-        print(f"{Fore.RED}No recommendations generated{Style.RESET_ALL}")
+        pass
 
     # Test conversion to proactive suggestions
     if recommendations:
-        print(
-            f"\n{Fore.GREEN}Testing conversion to proactive suggestions...{Style.RESET_ALL}",
-        )
         integration._convert_to_proactive_suggestions(recommendations)
 
         proactive_suggestions = proactive.data.active_suggestions
         if proactive_suggestions:
-            print(
-                f"{Fore.YELLOW}Converted to {len(proactive_suggestions)} proactive suggestions:{Style.RESET_ALL}",
-            )
-            for i, suggestion in enumerate(proactive_suggestions, 1):
-                print(f"  {i}. {suggestion.title}")
-                print(f"     {suggestion.content}")
-                print(
-                    f"     Type: {suggestion.suggestion_type}, Priority: {suggestion.priority}",
-                )
-                print(f"     Confidence: {suggestion.confidence:.2f}")
-                print(f"     Expires: {suggestion.expires_at}")
+            for _i, _suggestion in enumerate(proactive_suggestions, 1):
+                pass
         else:
-            print(f"{Fore.RED}No proactive suggestions created{Style.RESET_ALL}")
+            pass
 
     # Test command handling
-    print(f"\n{Fore.GREEN}Testing command handling...{Style.RESET_ALL}")
 
     # Test config command
-    print(f"\n{Fore.YELLOW}Testing /rconfig show command:{Style.RESET_ALL}")
     integration.configure_recommendations("show")
 
     # Test recommendation stats
-    print(f"\n{Fore.YELLOW}Testing /rstats command:{Style.RESET_ALL}")
     integration.show_recommendation_stats("")
 
     # Test specific source recommendations
-    print(
-        f"\n{Fore.YELLOW}Testing recommendations from specific sources:{Style.RESET_ALL}",
-    )
 
     for source in RecommendationSource:
-        print(
-            f"\n{Fore.GREEN}Testing {source.value} recommendations...{Style.RESET_ALL}",
-        )
         integration.test_recommendations(source.value)
 
-    print(f"\n{Fore.CYAN}Test completed successfully{Style.RESET_ALL}")
 
 
 if __name__ == "__main__":

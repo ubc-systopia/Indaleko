@@ -13,6 +13,7 @@ from storage.incremental_update.models import ResolutionStatus
 from storage.incremental_update.queue_service import EntityResolutionQueue
 from utils.i_logging import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -34,7 +35,7 @@ class EntityResolutionService:
         batch_size: int = 10,
         max_retries: int = 3,
         sleep_interval: float = 5.0,
-    ):
+    ) -> None:
         """
         Initialize the entity resolution service.
 

@@ -27,7 +27,9 @@ import logging
 import os
 import sys
 import time
+
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,6 +46,7 @@ from semantic.recorders.mime.recorder import MimeTypeRecorder
 from storage.i_object import IndalekoObject
 from storage.known_attributes import StorageSemanticAttributes
 from utils.db.db_file_picker import IndalekoFilePicker
+
 
 # pylint: enable=wrong-import-position
 
@@ -90,7 +93,7 @@ def process_file_mime(
         return mime_info
 
     except Exception as e:
-        logger.error(f"Error processing MIME type for {local_path}: {e}")
+        logger.exception(f"Error processing MIME type for {local_path}: {e}")
         return None
 
 
@@ -138,7 +141,7 @@ def process_file_and_store(
         }
 
     except Exception as e:
-        logger.error(f"Error processing and storing MIME type for {local_path}: {e}")
+        logger.exception(f"Error processing and storing MIME type for {local_path}: {e}")
         return None
 
 
@@ -254,12 +257,12 @@ def schedule_mime_processing(
         return total_scheduled, total_processed
 
     except Exception as e:
-        logger.error(f"Error scheduling MIME processing: {e}")
+        logger.exception(f"Error scheduling MIME processing: {e}")
         return 0, 0
 
 
-def main():
-    """Main function for the MIME type background processor"""
+def main() -> None:
+    """Main function for the MIME type background processor."""
     parser = argparse.ArgumentParser(description="Background MIME type processor")
     parser.add_argument(
         "--count",

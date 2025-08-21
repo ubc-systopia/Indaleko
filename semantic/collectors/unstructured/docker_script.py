@@ -1,11 +1,13 @@
 import json
 import sys
 
+
 # to fix import issues
 sys.path.append("")
 
 from unstructured.partition.auto import partition  # type: ignore
 from unstructured.staging.base import elements_to_dicts  # type: ignore
+
 
 input_file_path = sys.argv[1]
 output_file_path = sys.argv[2]

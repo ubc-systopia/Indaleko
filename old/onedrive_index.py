@@ -15,7 +15,7 @@ class MicrosoftGraphCredentials:
         self,
         config: str = "config/msgraph-parameters.json",
         cache_file: str = "data/msgraph-cache.bin",
-    ):
+    ) -> None:
         self.__chosen_account__ = -1
         self.config = json.load(open(config))
         self.cache_file = cache_file
@@ -55,12 +55,9 @@ class MicrosoftGraphCredentials:
         if accounts:
             choice = -1
             while choice == -1:
-                print("Pick the account to use:")
                 index = 1
-                for a in accounts:
-                    print(f'{index} {a["username"]}')
+                for _a in accounts:
                     index = index + 1
-                print(f"{index} Use a different account (login)")
                 try:
                     choice = int(input())
                     if choice == index:  # Use a different account
@@ -115,13 +112,9 @@ class MicrosoftGraphCredentials:
                 raise ValueError(
                     f"Failed to create device flow. Err: {json.dumps(flow,indent=4)}",
                 )
-            print(flow["message"])
             sys.stdout.flush()
             result = self.app.acquire_token_by_device_flow(flow)
         if "access_token" not in result:
-            print(result.get("error"))
-            print(result.get("error_description"))
-            print(result.get("correlation_id"))
             self.token = None
         else:
             self.token = result["access_token"]
@@ -129,10 +122,9 @@ class MicrosoftGraphCredentials:
 
     def __save_cache__(self):
         if hasattr(self, "cache") and self.cache is not None:
-            print(type(self.cache))
             open(self.cache_file, "w").write(self.cache.serialize())
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "cache") and self.cache is not None and self.cache.has_state_changed:
             self.__save_cache__()
 
@@ -171,11 +163,9 @@ def get_onedrive_metadata_recursive(cred: MicrosoftGraphCredentials, folder_id=N
                         get_onedrive_metadata_recursive(cred, subfolder_id),
                     )
             endpoint = data.get("@odata.nextLink")
-        else:
-            print(f"Error: {response.status_code} - {response.text}")
-            if response.status_code == 401:  # seems to indicate a stale token
-                cred.clear_token()
-                headers = get_headers()
+        elif response.status_code == 401:  # seems to indicate a stale token
+            cred.clear_token()
+            headers = get_headers()
             # try again
     return metadata_list
 
@@ -202,11 +192,11 @@ def get_onedrive_metadata(cred: MicrosoftGraphCredentials):
 """
 
 
-def main():
+def main() -> None:
     # First, let's figure out the name we're using
     graphcreds = MicrosoftGraphCredentials()
     # Now parse the arguments
-    logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
+    logging_levels = sorted(set(logging.getLevelNamesMapping()))
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--loglevel",
@@ -255,16 +245,12 @@ def main():
         help="Clean database before running",
     )
     args = parser.parse_args()
-    print("args:", args)
-    start = datetime.datetime.now(datetime.UTC)
+    datetime.datetime.now(datetime.UTC)
     metadata = get_onedrive_metadata_recursive(graphcreds)
-    end = datetime.datetime.now(datetime.UTC)
+    datetime.datetime.now(datetime.UTC)
     if len(metadata) > 0:
         with open(args.output, "w") as output_file:
             json.dump(metadata, output_file, indent=4)
-        print(
-            f"Saved {len(metadata)} records to {args.output} in {end-start} seconds ({(end-start)/len(metadata)} seconds per record)",
-        )
 
 
 if __name__ == "__main__":

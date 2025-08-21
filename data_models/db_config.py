@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
 
 from icecream import ic
 from pydantic import AwareDatetime, BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,9 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class IndalekoDBConfigUserDataModel(BaseModel):
-    """
-    This class defines the data model used for user data information in the database.
-    """
+    """This class defines the data model used for user data information in the database."""
 
     Name: str = Field(..., title="Name", description="The name of the database user.")
 
@@ -48,9 +48,7 @@ class IndalekoDBConfigUserDataModel(BaseModel):
 
 
 class IndalekoDBConfigDockerConfigurationDataModel(BaseModel):
-    """
-    This class defines the data model for the Docker database Configuration.
-    """
+    """This class defines the data model for the Docker database Configuration."""
 
     ContainerName: str = Field(
         ...,
@@ -66,9 +64,7 @@ class IndalekoDBConfigDockerConfigurationDataModel(BaseModel):
 
 
 class IndalekoDBConfigDataModel(BaseModel):
-    """
-    This class defines the data model for the Indaleko Database Configuration.
-    """
+    """This class defines the data model for the Indaleko Database Configuration."""
 
     Type: str = Field(
         "arangodb",
@@ -149,16 +145,13 @@ class IndalekoDBConfigDataModel(BaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     ic("Testing the DBConfigDataModel")
     db_config_data = IndalekoDBConfigDataModel(
         **IndalekoDBConfigDataModel.Config.json_schema_extra["example"],
     )
     ic(db_config_data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True))
-    print(
-        db_config_data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True),
-    )
 
 
 if __name__ == "__main__":

@@ -52,7 +52,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     WindowsLocalDataFilePrefix = "windows-local-ingest"
     WindowsLocalIngestLogPrefix = "windows-local-ingest-log"
 
-    def __init__(self: "IndalekoWindowsLocalIngest", **kwargs):
+    def __init__(self: "IndalekoWindowsLocalIngest", **kwargs) -> None:
         self.timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S")
         default_args = {
             "Indexer": IndalekoWindowsLocalIngest.WindowsLocalIndexer_UUID,
@@ -75,21 +75,20 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     @staticmethod
     def find_data_files(data_dir: str) -> list:
         """This function finds the files to ingest:
-        data_dir: path to the data directory
+        data_dir: path to the data directory.
         """
         assert data_dir is not None, "data_dir must be a valid path"
         assert os.path.isdir(data_dir), "data_dir must be a valid directory"
-        df = [
+        return [
             x
             for x in os.listdir(data_dir)
             if x.startswith(IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix) and x.endswith(".json")
         ]
-        return df
 
     @staticmethod
     def find_config_files(config_dir: str) -> list:
         """This function finds the files to ingest:
-        config_dir: path to the config directory
+        config_dir: path to the config directory.
         """
         assert config_dir is not None, "config_dir must be a valid path"
         assert os.path.isdir(config_dir), "config_dir must be a valid directory"
@@ -141,17 +140,15 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         the caller.
         """
         if hasattr(self, "machine_config"):
-            print("returning cached value of machine_config")
             return self.machine_config
         self.machine_config = IndalekoWindowsMachineConfig()
-        print("returning newly loaded value of machine_config")
         return self.machine_config
 
     def get_machine_config(
         self: "IndalekoWindowsLocalIngest",
-        machine_id: str = None,
-        config_dir: str = None,
-        config_file: str = None,
+        machine_id: str | None = None,
+        config_dir: str | None = None,
+        config_file: str | None = None,
     ) -> IndalekoWindowsMachineConfig:
         """
         This method loads th current machine configuration.  If the machine_id
@@ -217,7 +214,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         # Note that the output of this process is just a set of files that still
         # need to be bulk uploaded to the database.  This _could_ be done via
         # the script interface.
-        machine_config = self.get_machine_config()
+        self.get_machine_config()
 
     def start(self: "IndalekoWindowsLocalIngest", args: argparse.Namespace) -> None:
         super().start(self.get_default_logfile_name(), args.loglevel)
@@ -227,7 +224,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         logging.info(f"Ingesting file {args.input}")
 
 
-def main():
+def main() -> None:
     ingest_args = {
         "Indexer": IndalekoWindowsLocalIngest.WindowsLocalIndexer_UUID,
         "MachineConfig": IndalekoWindowsLocalIngest.WindowsMachineConfig_UUID,

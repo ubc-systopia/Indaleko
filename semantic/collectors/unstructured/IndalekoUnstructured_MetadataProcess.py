@@ -2,10 +2,12 @@ import json
 import logging
 import os
 import sys
+
 from datetime import datetime
 
 from unstructured.partition.auto import partition  # type: ignore
 from unstructured.staging.base import elements_to_json  # type: ignore
+
 
 # Paths (ensure these match the paths in IndalekoUnstructured_Main.py)
 LOGS_PATH = "/app/logs"
@@ -13,7 +15,6 @@ TEST_PATH = "/app/test"
 
 # Get the output file name from command-line arguments
 if len(sys.argv) < 2:
-    print("Error: Output file name not provided.")
     sys.exit(1)
 # output_file_name = 'test_7'#input("Enter the desired output file name (without extension): ")
 output_file_name = sys.argv[1]
@@ -57,7 +58,7 @@ logger.addHandler(file_handler)
 
 
 # Function to process files
-def process_files(file_list, output_file_json):
+def process_files(file_list, output_file_json) -> None:
     all_elements = []
     for file_path in file_list:
         try:
@@ -66,7 +67,7 @@ def process_files(file_list, output_file_json):
             all_elements.extend(elements)
             logger.info(f"Processed file: {file_path}")
         except Exception as e:
-            logger.error(f"Failed to process {file_path}: {e}")
+            logger.exception(f"Failed to process {file_path}: {e}")
 
     # Save the extracted elements to JSON
     elements_to_json(all_elements, filename=os.path.join(TEST_PATH, output_file_json))
@@ -81,11 +82,10 @@ def process_files(file_list, output_file_json):
             open(jsonl_file_path, "w") as jsonl_file,
         ):
             data = json.load(json_file)
-            for entry in data:
-                jsonl_file.write(json.dumps(entry) + "\n")
+            jsonl_file.writelines(json.dumps(entry) + "\n" for entry in data)
         logger.info(f"Converted {output_file_json} to {output_file_jsonl}")
     except Exception as e:
-        logger.error(f"Failed to convert JSON to JSONL: {e}")
+        logger.exception(f"Failed to convert JSON to JSONL: {e}")
 
 
 # List all files

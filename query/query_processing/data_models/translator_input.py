@@ -24,6 +24,7 @@ import sys
 
 from pydantic import BaseModel
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -34,8 +35,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from query.utils.llm_connector.llm_base import IndalekoLLMBase
 from query.query_processing.data_models.query_input import StructuredQuery
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
+
 
 # pylint: enable=wrong-import-position
 

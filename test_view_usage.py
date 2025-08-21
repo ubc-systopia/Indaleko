@@ -8,6 +8,7 @@ for text search operations.
 import os
 import sys
 
+
 # Set up environment variables and path
 current_path = os.path.dirname(os.path.abspath(__file__))
 if current_path not in sys.path:
@@ -31,29 +32,23 @@ def main():
         from query.query_processing.query_translator.aql_translator import AQLTranslator
         from query.utils.llm_connector.openai_connector import OpenAIConnector
 
-        print("Imports succeeded")
 
         # Load API key
         api_key = load_api_key()
-        print("API key loaded successfully")
 
         # Initialize DB config
         db_config = IndalekoDBConfig(
             config_file=os.path.join(current_path, "config", "indaleko-db-config.ini"),
         )
-        print("DB config loaded successfully")
 
         # Initialize collections metadata
         collections_metadata = IndalekoDBCollectionsMetadata(db_config)
-        print("Collections metadata loaded successfully")
 
         # Initialize OpenAI connector
         llm_connector = OpenAIConnector(api_key=api_key, model="gpt-4o-mini")
-        print("LLM connector initialized")
 
         # Initialize AQL translator
         translator = AQLTranslator(collections_metadata)
-        print("AQL translator initialized")
 
         # Test queries
         test_queries = [
@@ -64,7 +59,6 @@ def main():
 
         # Process each query
         for query_text in test_queries:
-            print(f"\nProcessing query: {query_text}")
 
             # Create entities for the query
             if "test" in query_text.lower():
@@ -113,21 +107,14 @@ def main():
             )
 
             # Translate query
-            result = translator.translate(translator_input)
+            translator.translate(translator_input)
 
             # Print results
-            print(f"AQL Query: {result.aql_query}")
-            print(f"Bind Variables: {result.bind_vars}")
-            print(f"Confidence: {result.confidence}")
 
             # Check if the query is using a view
-            is_using_view = "ObjectsTextView" in result.aql_query and "SEARCH ANALYZER" in result.aql_query
 
-            view_status = "✅ Using view" if is_using_view else "❌ Not using view"
-            print(f"View Usage: {view_status}")
 
-    except Exception as e:
-        print(f"Error: {e!s}")
+    except Exception:
         import traceback
 
         traceback.print_exc()

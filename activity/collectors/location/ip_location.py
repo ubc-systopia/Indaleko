@@ -1,14 +1,17 @@
-"""This implements the IP Location Service"""
+"""This implements the IP Location Service."""
 
 import datetime
 import ipaddress
 import os
 import sys
 import uuid
+
 from typing import Any
 
 import requests
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -28,13 +31,14 @@ from activity.collectors.location.data_models.ip_location_data_model import (
     IPLocationDataModel,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class IPLocation(LocationCollector):
-    """This is the IP Location Service"""
+    """This is the IP Location Service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.timeout = 10
         self._name = "IP Location Service"
         self._location = ""
@@ -47,7 +51,7 @@ class IPLocation(LocationCollector):
 
     @staticmethod
     def capture_public_ip_address(timeout: int = 10) -> str:
-        """Capture the public IP address"""
+        """Capture the public IP address."""
         response = requests.get("https://api.ipify.org?format=json", timeout=timeout)
         data = response.json()
         return data.get("ip")
@@ -56,7 +60,7 @@ class IPLocation(LocationCollector):
         self,
         location_data: dict,
     ) -> IPLocationDataModel:
-        """Map the IP location data to the data model"""
+        """Map the IP location data to the data model."""
         # start with the required fields
         if "ip_address" in location_data:
             ip_address = location_data.get("ip_address")
@@ -104,7 +108,7 @@ class IPLocation(LocationCollector):
         return IPLocationDataModel(**example)
 
     def get_ip_location_data(self) -> dict:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         if self.ip_address is None:
             return None
         url = f"http://ip-api.com/json/{self.ip_address}"
@@ -112,11 +116,10 @@ class IPLocation(LocationCollector):
         data = response.json()
         if data.get("status") == "success":
             return data
-        else:
-            return None
+        return None
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the provider characteristics"""
+        """Get the provider characteristics."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
             ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
@@ -124,18 +127,18 @@ class IPLocation(LocationCollector):
         ]
 
     def get_collector_name(self) -> str:
-        """Get the provider name"""
+        """Get the provider name."""
         return self._name
 
     # alias for backwards compatibility
     get_collectorr_name = get_collector_name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the provider ID"""
+        """Get the provider ID."""
         return self._provider_id
 
     def retrieve_data(self, data_id: uuid.UUID) -> dict[str, Any]:
-        """Retrieve the data associated with the given data_id"""
+        """Retrieve the data associated with the given data_id."""
         # Return the latest stored data for this provider
         if data_id == self.get_provider_id() and hasattr(self, "data") and self.data:
             return self.data[-1]
@@ -148,7 +151,7 @@ class IPLocation(LocationCollector):
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
     ) -> list[dict[str, Any]]:
-        """Retrieve temporal data from the provider"""
+        """Retrieve temporal data from the provider."""
         # Determine time window
         start = reference_time - prior_time_window
         end = reference_time + subsequent_time_window
@@ -173,7 +176,7 @@ class IPLocation(LocationCollector):
     def cache_duration(self) -> datetime.timedelta:
         """
         Retrieve the maximum duration that data from this provider may be
-        cached
+        cached.
         """
         return datetime.timedelta(minutes=10)
 
@@ -189,11 +192,11 @@ class IPLocation(LocationCollector):
         """
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the provider"""
+        """Get the JSON schema for the provider."""
         return IPLocationDataModel.schema_json()
 
     def collect_data(self) -> None:
-        """Collect and store the latest IP location data"""
+        """Collect and store the latest IP location data."""
         # Fetch the public IP and corresponding geolocation
         self.ip_address = self.capture_public_ip_address(self.timeout)
         self.ip_location_data = self.get_ip_location_data()
@@ -206,7 +209,7 @@ class IPLocation(LocationCollector):
             self.store_data(processed)
 
     def process_data(self, data: Any) -> dict[str, Any]:
-        """Process collected data into a serializable dict"""
+        """Process collected data into a serializable dict."""
         if isinstance(data, IPLocationDataModel):
             return data.dict()
         if isinstance(data, dict):
@@ -215,20 +218,20 @@ class IPLocation(LocationCollector):
         raise TypeError(f"Unsupported data type: {type(data)}")
 
     def store_data(self, data: dict[str, Any]) -> None:
-        """Store processed data in memory"""
+        """Store processed data in memory."""
         if not hasattr(self, "data"):
             self.data = []
         self.data.append(data)
 
     def get_location_name(self) -> str:
-        """Get the location"""
+        """Get the location."""
         location = self._location
         if location is None:
             location = ""
         return location
 
     def get_coordinates(self) -> dict[str, float]:
-        """Get the coordinates for the location"""
+        """Get the coordinates for the location."""
         # Return the most recent stored coordinates
         if hasattr(self, "data") and self.data:
             loc = self.data[-1].get("Location", {}) or {}
@@ -243,7 +246,7 @@ class IPLocation(LocationCollector):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
-        """Get the location history for the location"""
+        """Get the location history for the location."""
         events: list[dict[str, Any]] = []
         for record in getattr(self, "data", []):
             # extract timestamp from nested Location
@@ -266,11 +269,11 @@ class IPLocation(LocationCollector):
         location1: dict[str, float],
         location2: dict[str, float],
     ) -> float:
-        """Get the distance between two locations"""
+        """Get the distance between two locations."""
         raise NotImplementedError("This method is not implemented yet.")
 
 
-def main():
+def main() -> None:
     """This is the interface for testing the foo.py module."""
     location = IPLocation()
     ic(location.get_collectorr_name())

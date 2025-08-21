@@ -1,4 +1,5 @@
 import unittest
+
 from io import StringIO
 from unittest.mock import patch
 
@@ -6,7 +7,7 @@ from operators import Canonize, FilterField, FilterFields, InputReader, ToList
 
 
 class TestInputReader(unittest.TestCase):
-    def test_successful_command(self):
+    def test_successful_command(self) -> None:
         # Mock subprocess.Popen to return a successful process
         with patch("subprocess.Popen") as mock_popen:
             mock_process = mock_popen.return_value
@@ -17,9 +18,9 @@ class TestInputReader(unittest.TestCase):
             reader = InputReader(["ls", "/bin"])
             output_lines = list(reader.run())
 
-        self.assertEqual(output_lines, [(0, "Line 1"), (0, "Line 2")])
+        assert output_lines == [(0, "Line 1"), (0, "Line 2")]
 
-    def test_failed_command(self):
+    def test_failed_command(self) -> None:
         # Mock subprocess.Popen to return a process with non-zero exit code
         with patch("subprocess.Popen") as mock_popen:
             mock_process = mock_popen.return_value
@@ -30,11 +31,9 @@ class TestInputReader(unittest.TestCase):
             reader = InputReader(["ls", "/nonexistent_directory"])
             output_lines = list(reader.run())
 
-        self.assertEqual(
-            output_lines, [(1, "Command exited with non-zero code: 1; stderr: ")],
-        )
+        assert output_lines == [(1, "Command exited with non-zero code: 1; stderr: ")]
 
-    def test_exception_handling(self):
+    def test_exception_handling(self) -> None:
         # Mock subprocess.Popen to raise an exception
         with patch("subprocess.Popen") as mock_popen:
             mock_process = mock_popen.return_value
@@ -44,51 +43,51 @@ class TestInputReader(unittest.TestCase):
             reader = InputReader(["ls", "/bin"])
             output_lines = list(reader.run())
 
-        self.assertEqual(output_lines, [(1, "Error: Something went wrong")])
+        assert output_lines == [(1, "Error: Something went wrong")]
 
 
 class TestToList(unittest.TestCase):
-    def test_valid_input_with_remove_true(self):
+    def test_valid_input_with_remove_true(self) -> None:
         valid_input = (0, "a b c d e")
         status, to_list_valid = ToList(sep=" ", remove_empty_fields=True).execute(
             valid_input,
         )
-        self.assertEqual(status, 0)
-        self.assertEqual(list(to_list_valid), ["a", "b", "c", "d", "e"])
+        assert status == 0
+        assert list(to_list_valid) == ["a", "b", "c", "d", "e"]
 
-    def test_valid_input_with_remove_false(self):
+    def test_valid_input_with_remove_false(self) -> None:
         valid_input = (0, "a b c d e")
         status, to_list_valid = ToList(sep=" ", remove_empty_fields=False).execute(
             valid_input,
         )
-        self.assertEqual(status, 0)
-        self.assertEqual(list(to_list_valid), ["a", "b", "c", "d", "e"])
+        assert status == 0
+        assert list(to_list_valid) == ["a", "b", "c", "d", "e"]
 
-    def test_empty_input_with_remove_true(self):
+    def test_empty_input_with_remove_true(self) -> None:
         empty_input = (0, "")
         status, to_list_empty = ToList(sep=" ", remove_empty_fields=True).execute(
             empty_input,
         )
-        self.assertEqual(status, 0)
-        self.assertEqual(list(to_list_empty), [])
+        assert status == 0
+        assert list(to_list_empty) == []
 
-    def test_empty_input_with_remove_false(self):
+    def test_empty_input_with_remove_false(self) -> None:
         empty_input = (0, "")
         status, to_list_empty = ToList(sep=" ", remove_empty_fields=False).execute(
             empty_input,
         )
-        self.assertEqual(status, 0)
-        self.assertEqual(list(to_list_empty), [""])
+        assert status == 0
+        assert list(to_list_empty) == [""]
 
-    def test_having_brackets(self):
+    def test_having_brackets(self) -> None:
         input_tuple = (0, "a b [ a d   d] a d")
         status, to_list = ToList(sep=" ", remove_empty_fields=True).execute(input_tuple)
-        self.assertEqual(status, 0)
-        self.assertEqual(list(to_list), ["a", "b", "[a d d]", "a", "d"])
+        assert status == 0
+        assert list(to_list) == ["a", "b", "[a d d]", "a", "d"]
 
 
 class TestFilterWithPos(unittest.TestCase):
-    def test_filter_notexist(self):
+    def test_filter_notexist(self) -> None:
         test_cases = {
             "field not exists(1)": (0, ["a=1", "b=1", ""]),
             "field not exists(2)": (0, ["a=1", "b=1", ""]),
@@ -98,17 +97,17 @@ class TestFilterWithPos(unittest.TestCase):
             "invalid input (2)": (1, []),
         }
 
-        for title, input in test_cases.items():
+        for input in test_cases.values():
             # print(f'... running test "{title}"')
 
             for pos in range(3):
                 # FilterField(input, (position, contains_value))
                 status, result = FilterField((pos, "c=")).execute(input)
 
-                self.assertEqual(status, 1)
-                self.assertEqual(len(result), len(input[-1]))
+                assert status == 1
+                assert len(result) == len(input[-1])
 
-    def test_filter_exists(self):
+    def test_filter_exists(self) -> None:
         test_cases = {
             "field exists (1)": {
                 "pos": 0,
@@ -122,17 +121,17 @@ class TestFilterWithPos(unittest.TestCase):
             },
         }
 
-        for title, test_case in test_cases.items():
+        for test_case in test_cases.values():
             # print(f'running "{title}"; test_args={test_case}')
             query, pos, input = test_case["query"], test_case["pos"], test_case["input"]
             status, result = FilterField((pos, query)).execute(input)
 
-            self.assertEqual(status, 0)
-            self.assertEqual(len(result), len(input[-1]))
+            assert status == 0
+            assert len(result) == len(input[-1])
 
 
 class TestFilterFieldsWithPos(unittest.TestCase):
-    def test_with_exact_match(self):
+    def test_with_exact_match(self) -> None:
         test_cases = {
             "only_one_res": {
                 "pos": 1,
@@ -160,22 +159,17 @@ class TestFilterFieldsWithPos(unittest.TestCase):
             },
         }
 
-        for title, tc in test_cases.items():
+        for tc in test_cases.values():
             # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries, exact_match=True).execute(
                     ia,
                 )
-                self.assertEqual(
-                    status,
-                    tc["expect"][i][0],
-                    f"input_arrs={
-                                 ia} queries={queries} expect={tc["expect"][i]}",
-                )
-                self.assertEqual(len(res_arr), tc["expect"][i][1])
+                assert status == tc["expect"][i][0], f"input_arrs={ia} queries={queries} expect={tc["expect"][i]}"
+                assert len(res_arr) == tc["expect"][i][1]
 
-    def test_all_exist(self):
+    def test_all_exist(self) -> None:
         test_cases = {
             "one_key": {
                 "pos": 1,
@@ -189,15 +183,15 @@ class TestFilterFieldsWithPos(unittest.TestCase):
             },
         }
 
-        for title, tc in test_cases.items():
+        for tc in test_cases.values():
             # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for ia in input_arrs:
                 status, res_arr = FilterFields(pos, queries).execute(ia)
-                self.assertEqual(status, 0)
-                self.assertEqual(len(res_arr), len(ia[1]))
+                assert status == 0
+                assert len(res_arr) == len(ia[1])
 
-    def test_some_exist(self):
+    def test_some_exist(self) -> None:
         test_cases = {
             "one_key": {
                 "pos": 1,
@@ -213,19 +207,15 @@ class TestFilterFieldsWithPos(unittest.TestCase):
             },
         }
 
-        for title, tc in test_cases.items():
+        for tc in test_cases.values():
             # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries).execute(ia)
-                self.assertEqual(
-                    status,
-                    tc["expect"][i][0],
-                    f"input_arrs={ia} queries={queries} expect={tc["expect"][i]}",
-                )
-                self.assertEqual(len(res_arr), tc["expect"][i][1])
+                assert status == tc["expect"][i][0], f"input_arrs={ia} queries={queries} expect={tc["expect"][i]}"
+                assert len(res_arr) == tc["expect"][i][1]
 
-    def test_nonexist(self):
+    def test_nonexist(self) -> None:
         test_cases = {
             "one_key": {
                 "pos": 5,
@@ -247,18 +237,13 @@ class TestFilterFieldsWithPos(unittest.TestCase):
             },
         }
 
-        for title, tc in test_cases.items():
+        for tc in test_cases.values():
             # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries).execute(ia)
-                self.assertEqual(
-                    status,
-                    tc["expect"][i][0],
-                    f"expect={
-                                 tc['expect'][i]} got=({status}, {res_arr})",
-                )
-                self.assertEqual(len(res_arr), tc["expect"][i][1])
+                assert status == tc["expect"][i][0], f"expect={tc['expect'][i]} got=({status}, {res_arr})"
+                assert len(res_arr) == tc["expect"][i][1]
 
 
 class TestCanonize(unittest.TestCase):
@@ -566,7 +551,7 @@ class TestCanonize(unittest.TestCase):
             if syscall_sample[1][1].strip() == syscall.strip()
         ]
 
-    def test_mmap(self):
+    def test_mmap(self) -> None:
         test_cases = {
             "expect": [
                 (0, ["19:52:18.420544", "mmap", "0", "<>", "ps", "464993"]),
@@ -579,10 +564,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input("mmap")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_rename(self):
+    def test_rename(self) -> None:
         test_cases = {
             "expect": [
                 (
@@ -624,10 +609,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input("rename")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_mkdir(self):
+    def test_mkdir(self) -> None:
         test_cases = {
             "expect": [
                 (
@@ -669,10 +654,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input("mkdir")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_write(self):
+    def test_write(self) -> None:
         test_cases = {
             "expect": [
                 (0, ["19:52:17.818965", "write", "17", "Code Helper", "21271"]),
@@ -683,10 +668,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input("write")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_read(self):
+    def test_read(self) -> None:
         test_cases = {
             "expect": [
                 (0, ["19:52:17.818972", "read", "16", "Code Helper", "21271"]),
@@ -699,10 +684,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input("read")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_open(self):
+    def test_open(self) -> None:
         test_cases = {
             "expect": [
                 (
@@ -756,10 +741,10 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input(syscall="open")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
-    def test_close(self):
+    def test_close(self) -> None:
         test_cases = {
             "expect": [
                 (0, ["19:53:19.842752", "close", "64", "Code Helper", "21316"]),
@@ -773,7 +758,7 @@ class TestCanonize(unittest.TestCase):
         for i, arr in enumerate(self.generate_mock_input(syscall="close")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
+            assert res == test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}"
             # fmt: on
 
 

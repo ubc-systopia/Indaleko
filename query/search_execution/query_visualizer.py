@@ -22,8 +22,10 @@ import os
 import re
 import sys
 import textwrap
+
 from enum import Enum
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -90,9 +92,7 @@ class PerformanceImpact(str, Enum):
 
 
 class ExecutionNode(IndalekoBaseModel):
-    """
-    Represents a node in the query execution plan.
-    """
+    """Represents a node in the query execution plan."""
 
     node_id: int = Field(..., description="The node ID")
     node_type: NodeType = Field(..., description="The type of the node")
@@ -142,7 +142,7 @@ class ExecutionNode(IndalekoBaseModel):
     )
 
     @validator("operation_type", pre=True, always=True)
-    def set_operation_type(cls, v, values):
+    def set_operation_type(self, v, values):
         """Set the operation type based on the node type."""
         if v != OperationType.UNKNOWN:
             return v
@@ -150,23 +150,23 @@ class ExecutionNode(IndalekoBaseModel):
         node_type = values.get("node_type")
         if node_type == NodeType.ENUMERATE_COLLECTION:
             return OperationType.SCAN
-        elif node_type == NodeType.INDEX:
+        if node_type == NodeType.INDEX:
             return OperationType.INDEX_SCAN
-        elif node_type == NodeType.FILTER:
+        if node_type == NodeType.FILTER:
             return OperationType.FILTER
-        elif node_type == NodeType.SORT:
+        if node_type == NodeType.SORT:
             return OperationType.SORT
-        elif node_type == NodeType.LIMIT:
+        if node_type == NodeType.LIMIT:
             return OperationType.LIMIT
-        elif node_type == NodeType.RETURN:
+        if node_type == NodeType.RETURN:
             return OperationType.RETURN
-        elif node_type == NodeType.CALCULATION:
+        if node_type == NodeType.CALCULATION:
             return OperationType.CALCULATION
-        elif node_type in [NodeType.JOIN, NodeType.SCATTER, NodeType.GATHER]:
+        if node_type in [NodeType.JOIN, NodeType.SCATTER, NodeType.GATHER]:
             return OperationType.JOIN
-        elif node_type == NodeType.TRAVERSAL:
+        if node_type == NodeType.TRAVERSAL:
             return OperationType.TRAVERSAL
-        elif node_type in [
+        if node_type in [
             NodeType.INSERT,
             NodeType.UPDATE,
             NodeType.REPLACE,
@@ -174,14 +174,11 @@ class ExecutionNode(IndalekoBaseModel):
             NodeType.UPSERT,
         ]:
             return OperationType.MODIFICATION
-        else:
-            return OperationType.UNKNOWN
+        return OperationType.UNKNOWN
 
 
 class ExecutionPlan(IndalekoBaseModel):
-    """
-    Represents a query execution plan.
-    """
+    """Represents a query execution plan."""
 
     nodes: list[ExecutionNode] = Field(
         default_factory=list,
@@ -220,11 +217,9 @@ class ExecutionPlan(IndalekoBaseModel):
 
 
 class PlanVisualizer:
-    """
-    Visualizes query execution plans.
-    """
+    """Visualizes query execution plans."""
 
-    def __init__(self, colorize: bool = True, max_depth: int = 10):
+    def __init__(self, colorize: bool = True, max_depth: int = 10) -> None:
         """
         Initialize the plan visualizer.
 
@@ -418,7 +413,7 @@ class PlanVisualizer:
         root_nodes = [node for node in nodes_by_id.values() if node.parent_id is None]
 
         # Use recursive depth-first traversal to set depths
-        def set_depth(node, depth):
+        def set_depth(node, depth) -> None:
             node.depth = depth
             for child_id in node.children_ids:
                 if child_id in nodes_by_id:
@@ -450,8 +445,7 @@ class PlanVisualizer:
         if node.node_type == NodeType.SORT:
             if node.estimated_cost > 1000:
                 return PerformanceImpact.HIGH
-            else:
-                return PerformanceImpact.MEDIUM
+            return PerformanceImpact.MEDIUM
 
         # Join operations can be high impact
         if node.node_type == NodeType.JOIN:
@@ -460,9 +454,9 @@ class PlanVisualizer:
         # Base impact on estimated cost for other operations
         if node.estimated_cost > 5000:
             return PerformanceImpact.HIGH
-        elif node.estimated_cost > 1000:
+        if node.estimated_cost > 1000:
             return PerformanceImpact.MEDIUM
-        elif node.estimated_cost > 0:
+        if node.estimated_cost > 0:
             return PerformanceImpact.LOW
 
         return PerformanceImpact.UNKNOWN
@@ -803,10 +797,9 @@ class PlanVisualizer:
         """
         if cost > 5000:
             return self._colorize(f"{cost:.2f}", "red")
-        elif cost > 1000:
+        if cost > 1000:
             return self._colorize(f"{cost:.2f}", "yellow")
-        else:
-            return self._colorize(f"{cost:.2f}", "green")
+        return self._colorize(f"{cost:.2f}", "green")
 
     def _colorize(self, text: str, color: str) -> str:
         """

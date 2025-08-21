@@ -24,11 +24,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,13 +49,14 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 
+
 # pylint: enable=wrong-import-position
 
 
 class BaseCloudStorageRecorder(BaseStorageRecorder):
     """This is the base class for all cloud storage recorder in Indaleko."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Build a new cloud storage recorder."""
         if "args" in kwargs:
             self.args = kwargs["args"]
@@ -101,7 +104,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
         @staticmethod
         def generate_log_file_name(keys: dict[str, str]) -> str:
-            """This method is used to generate a log file name"""
+            """This method is used to generate a log file name."""
             if "InputFileKeys" in keys:
                 if "plt" in keys["InputFileKeys"]:  # substitute the cloud platform name
                     keys["Platform"] = keys["InputFileKeys"]["plt"]
@@ -109,7 +112,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
         @staticmethod
         def generate_perf_file_name(keys: dict[str, str]) -> str:
-            """This method is used to generate a performance file name"""
+            """This method is used to generate a performance file name."""
             if "InputFileKeys" in keys:
                 if "plt" in keys["InputFileKeys"]:  # substitute the cloud platform name
                     keys["Platform"] = keys["InputFileKeys"]["plt"]
@@ -117,7 +120,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
     @staticmethod
     def local_run(keys: dict[str, str]) -> dict | None:
-        """Run the recorder"""
+        """Run the recorder."""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
         config_data = cli.get_config_data()
@@ -141,22 +144,21 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             if "userid" in config_data["InputFileKeys"] and config_data["InputFileKeys"]["userid"]:
                 kwargs["userid"] = config_data["InputFileKeys"]["userid"]
 
-        def record(recorder: BaseCloudStorageRecorder, **kwargs):
+        def record(recorder: BaseCloudStorageRecorder, **kwargs) -> None:
             recorder.record()
 
         def extract_counters(**kwargs):
             recorder = kwargs.get("recorder")
             if recorder:
                 return recorder.get_counts()
-            else:
-                return {}
+            return {}
 
         recorder = recorder_class(**kwargs)
 
         def capture_performance(
             task_func: Callable[..., Any],
-            output_file_name: Path | str = None,
-        ):
+            output_file_name: Path | str | None = None,
+        ) -> None:
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(

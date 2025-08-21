@@ -24,13 +24,16 @@ import os
 import re
 import sys
 import uuid
+
 from datetime import datetime
 from typing import Any
 
 # third-party imports
 import exifread
+
 from PIL import Image
 from PIL.ExifTags import TAGS
+
 
 # Set up path for Indaleko imports
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -42,6 +45,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Indaleko imports
 import semantic.recorders.exif.characteristics as ExifCharacteristics
+
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
@@ -67,8 +71,8 @@ class ExifCollector(SemanticCollector):
     - Image information (dimensions, software used, copyright)
     """
 
-    def __init__(self, **kwargs):
-        """Initialize the EXIF metadata collector"""
+    def __init__(self, **kwargs) -> None:
+        """Initialize the EXIF metadata collector."""
         self._name = "EXIF Metadata Collector"
         self._provider_id = uuid.UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6")
         self._exif_data = None
@@ -78,7 +82,7 @@ class ExifCollector(SemanticCollector):
             setattr(self, key, values)
 
     def get_collector_characteristics(self) -> list[SemanticDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             SemanticDataCharacteristics.SEMANTIC_DATA_CONTENTS,
             ExifCharacteristics.SEMANTIC_EXIF_DATA,
@@ -121,22 +125,22 @@ class ExifCollector(SemanticCollector):
         ]
 
     def get_collector_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_collector_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
-        """Retrieve the data for the collector"""
+        """Retrieve the data for the collector."""
         if not self._exif_data:
             logging.warning("No EXIF data has been collected yet")
             return {}
         return self._exif_data.model_dump()
 
     def get_collector_description(self) -> str:
-        """Get the description of the collector"""
+        """Get the description of the collector."""
         return """This collector extracts EXIF metadata from image files, providing information about:
         - Camera equipment (make, model, lens)
         - Capture settings (exposure, aperture, ISO)
@@ -144,7 +148,7 @@ class ExifCollector(SemanticCollector):
         - Image information (dimensions, software used, copyright)"""
 
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the collector"""
+        """Get the JSON schema for the collector."""
         return ExifDataModel.model_json_schema()
 
     def extract_exif_data(self, file_path: str) -> dict[str, Any]:
@@ -879,7 +883,7 @@ class ExifCollector(SemanticCollector):
                 )
 
         # Create the full ExifDataModel
-        exif_model = ExifDataModel(
+        return ExifDataModel(
             Record=record,
             Timestamp=datetime.now(),
             ObjectIdentifier=uuid.uuid4(),  # This would be replaced with actual object ID
@@ -895,7 +899,6 @@ class ExifCollector(SemanticCollector):
             image_info=image_info,
         )
 
-        return exif_model
 
     def extract_exif_from_file(
         self,
@@ -946,41 +949,38 @@ import unittest
 class TestExifCollector(unittest.TestCase):
     """Test the ExifCollector class."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up the test environment."""
         self.collector = ExifCollector()
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test initialization."""
-        self.assertEqual(self.collector.get_collector_name(), "EXIF Metadata Collector")
-        self.assertEqual(
-            self.collector.get_collector_id(),
-            uuid.UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
-        )
+        assert self.collector.get_collector_name() == "EXIF Metadata Collector"
+        assert self.collector.get_collector_id() == uuid.UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6")
 
-    def test_is_supported_image(self):
+    def test_is_supported_image(self) -> None:
         """Test supported image detection."""
-        self.assertTrue(self.collector.is_supported_image("test.jpg"))
-        self.assertTrue(self.collector.is_supported_image("test.jpeg"))
-        self.assertTrue(self.collector.is_supported_image("test.tif"))
-        self.assertTrue(self.collector.is_supported_image("test.png"))
-        self.assertFalse(self.collector.is_supported_image("test.txt"))
-        self.assertFalse(self.collector.is_supported_image("test.pdf"))
+        assert self.collector.is_supported_image("test.jpg")
+        assert self.collector.is_supported_image("test.jpeg")
+        assert self.collector.is_supported_image("test.tif")
+        assert self.collector.is_supported_image("test.png")
+        assert not self.collector.is_supported_image("test.txt")
+        assert not self.collector.is_supported_image("test.pdf")
 
-    def test_parse_datetime(self):
+    def test_parse_datetime(self) -> None:
         """Test EXIF datetime parsing."""
         dt = self.collector.parse_datetime("2023:07:15 14:22:36")
-        self.assertEqual(dt.year, 2023)
-        self.assertEqual(dt.month, 7)
-        self.assertEqual(dt.day, 15)
-        self.assertEqual(dt.hour, 14)
-        self.assertEqual(dt.minute, 22)
-        self.assertEqual(dt.second, 36)
+        assert dt.year == 2023
+        assert dt.month == 7
+        assert dt.day == 15
+        assert dt.hour == 14
+        assert dt.minute == 22
+        assert dt.second == 36
 
         # Test invalid datetime
-        self.assertIsNone(self.collector.parse_datetime("Invalid date"))
+        assert self.collector.parse_datetime("Invalid date") is None
 
-    def test_convert_to_decimal_degrees(self):
+    def test_convert_to_decimal_degrees(self) -> None:
         """Test conversion of DMS to decimal degrees."""
         # Test with North latitude
         lat = self.collector._convert_to_decimal_degrees([10, 20, 30], "N")

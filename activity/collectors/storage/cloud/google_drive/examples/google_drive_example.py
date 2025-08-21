@@ -23,12 +23,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
+import builtins
+import contextlib
 import json
 import logging
 import os
 import platform
 import sys
+
 from datetime import UTC, datetime, timedelta
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -54,22 +58,20 @@ try:
         GoogleDriveActivityRecorder,
     )
 except ImportError as e:
-    logger.error(f"Error importing Indaleko components: {e}")
-    logger.error(
+    logger.exception(f"Error importing Indaleko components: {e}")
+    logger.exception(
         "Make sure the virtual environment is activated and all dependencies are installed.",
     )
-    logger.error(f"Python path: {sys.path}")
+    logger.exception(f"Python path: {sys.path}")
     sys.exit(1)
 
 
-def detect_environment():
+def detect_environment() -> str:
     """Detect whether we're running in Windows, native Linux, or WSL."""
     # Check for WSL (Windows Subsystem for Linux)
-    is_wsl = False
     try:
         with open("/proc/version") as f:
             if "microsoft" in f.read().lower():
-                is_wsl = True
                 return "WSL"
     except:
         pass
@@ -77,130 +79,100 @@ def detect_environment():
     # Check platform
     if platform.system() == "Windows":
         return "Windows"
-    elif platform.system() == "Linux":
+    if platform.system() == "Linux":
         return "Linux"
-    elif platform.system() == "Darwin":
+    if platform.system() == "Darwin":
         return "macOS"
-    else:
-        return "Unknown"
+    return "Unknown"
 
 
-def display_file_details(file_info):
+def display_file_details(file_info) -> None:
     """Display detailed information about a file."""
-    print(f"\nFile: {file_info.name} ({file_info.file_id})")
-    print(f"Type: {file_info.file_type.name}")
-    print(f"MIME Type: {file_info.mime_type}")
-    print(f"Parent Folder: {file_info.parent_folder_name}")
-
     # Format timestamps
-    created = "Unknown"
-    modified = "Unknown"
 
     if file_info.created_time:
         try:
             created_dt = datetime.fromisoformat(
-                file_info.created_time.replace("Z", "+00:00"),
+                file_info.created_time,
             )
-            created = created_dt.strftime("%Y-%m-%d %H:%M:%S")
+            created_dt.strftime("%Y-%m-%d %H:%M:%S")
         except:
             pass
 
     if file_info.modified_time:
         try:
             modified_dt = datetime.fromisoformat(
-                file_info.modified_time.replace("Z", "+00:00"),
+                file_info.modified_time,
             )
-            modified = modified_dt.strftime("%Y-%m-%d %H:%M:%S")
+            modified_dt.strftime("%Y-%m-%d %H:%M:%S")
         except:
             pass
 
-    print(f"Created: {created}")
-    print(f"Modified: {modified}")
-    print(f"Shared: {'Yes' if file_info.shared else 'No'}")
 
     if file_info.web_view_link:
-        print(f"Web Link: {file_info.web_view_link}")
+        pass
 
     # Print file size in human-readable format if available
     if file_info.size:
         size_bytes = int(file_info.size)
-        size_str = ""
         if size_bytes < 1024:
-            size_str = f"{size_bytes} bytes"
+            pass
         elif size_bytes < 1024 * 1024:
-            size_str = f"{size_bytes / 1024:.1f} KB"
+            f"{size_bytes / 1024:.1f} KB"
         elif size_bytes < 1024 * 1024 * 1024:
-            size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+            f"{size_bytes / (1024 * 1024):.1f} MB"
         else:
-            size_str = f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-
-        print(f"Size: {size_str}")
+            f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 
-def display_activity(activity, detailed=False):
+
+def display_activity(activity, detailed=False) -> None:
     """Display activity details in a human-readable format."""
     # Format timestamp
     timestamp = activity.timestamp
     if isinstance(timestamp, str):
-        try:
-            timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        except:
-            pass
+        with contextlib.suppress(builtins.BaseException):
+            timestamp = datetime.fromisoformat(timestamp)
 
     if isinstance(timestamp, datetime):
-        time_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        timestamp.strftime("%Y-%m-%d %H:%M:%S")
     else:
-        time_str = str(timestamp)
+        str(timestamp)
 
     # Get user info
-    user_name = activity.user.display_name or activity.user.email or activity.user.user_id
 
     # Get file info
-    file_name = activity.file.name
 
     # Get activity type name
     activity_type = activity.activity_type.name
 
     # Print basic activity info
-    print(f"{time_str} | {activity_type} | {user_name} | {file_name}")
 
     # Print detailed info if requested
     if detailed:
-        print(f"  Activity ID: {activity.activity_id}")
-        print(f"  File ID: {activity.file.file_id}")
-        print(f"  File Type: {activity.file.file_type.name}")
-        print(f"  MIME Type: {activity.file.mime_type}")
 
         # Show additional info based on activity type
-        if activity_type == "RENAME":
-            print(f"  Previous Name: {activity.previous_file_name}")
-        elif activity_type == "MOVE":
-            print(f"  Destination Folder: {activity.destination_folder_name}")
-        elif activity_type == "COMMENT":
-            print(f"  Comment: {activity.comment_content}")
+        if activity_type in {"RENAME", "MOVE"} or activity_type == "COMMENT":
+            pass
         elif activity_type == "SHARE":
             if activity.shared_with:
-                shared_with = ", ".join(
+                ", ".join(
                     [f"{u.display_name or u.email or u.user_id}" for u in activity.shared_with],
                 )
-                print(f"  Shared With: {shared_with}")
 
             if activity.permission_changes:
-                print("  Permission Changes:")
-                for email, role in activity.permission_changes.items():
-                    print(f"    {email}: {role}")
+                for _email, _role in activity.permission_changes.items():
+                    pass
 
         # Print primary classification dimension
         if activity.activity_classification:
             class_dict = activity.activity_classification.model_dump()
             primary_dim = max(class_dict.items(), key=lambda x: x[1])[0]
-            primary_val = class_dict[primary_dim]
-            print(f"  Primary Classification: {primary_dim} ({primary_val:.2f})")
-
-        print()
+            class_dict[primary_dim]
 
 
-def main():
+
+def main() -> None:
     """Main entry point for the Google Drive Activity Collector example."""
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
@@ -257,8 +229,7 @@ def main():
         )
 
     # Detect environment
-    env = detect_environment()
-    print(f"Detected environment: {env}")
+    detect_environment()
 
     # Prepare kwargs for collector
     kwargs = {}
@@ -278,11 +249,9 @@ def main():
     # Set start time based on days argument
     start_time = datetime.now(UTC) - timedelta(days=args.days)
     start_time_str = start_time.isoformat()
-    print(f"Collecting activities since {start_time.strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
     # Test OAuth flow only if requested
     if args.test_oauth:
-        print("Testing OAuth authentication flow...")
         try:
             # Get default config directory and verify its existence
             default_config_dir = os.path.join(
@@ -291,7 +260,6 @@ def main():
             )
             if not os.path.exists(default_config_dir):
                 os.makedirs(default_config_dir, exist_ok=True)
-                print(f"Created config directory: {default_config_dir}")
 
             # Set paths for credentials and token files
             credentials_file = args.credentials or os.path.join(
@@ -306,32 +274,21 @@ def main():
             # Check for gdrive_config.json
             config_file = os.path.join(default_config_dir, "gdrive_config.json")
             if os.path.exists(config_file):
-                print(f"Found Google Drive config file: {config_file}")
-            else:
-                print(f"Google Drive config file not found at: {config_file}")
-                if not os.path.exists(credentials_file):
-                    print(f"Credentials file not found at: {credentials_file}")
-                    print("\nTo proceed, you need either:")
-                    print(f"1. A credentials file at {credentials_file}")
-                    print(f"2. A config file at {config_file}")
-                    return
+                pass
+            elif not os.path.exists(credentials_file):
+                return
 
             # Handle reauth if requested - add this early to make sure it's processed
             if args.reauth and os.path.exists(token_file):
-                print(
-                    f"Removing existing token file {token_file} to force re-authentication",
-                )
-                try:
+                with contextlib.suppress(Exception):
                     os.remove(token_file)
-                    print("Token file removed successfully.")
-                except Exception as e:
-                    print(f"Error removing token file: {e}")
 
             # Import our components - wrapped in try/except for clear dependency errors
             try:
                 # Also try importing other dependencies to check they're available
                 import google.auth
                 import requests
+
                 from google.oauth2.credentials import Credentials
                 from google_auth_oauthlib.flow import InstalledAppFlow
                 from googleapiclient.discovery import build
@@ -339,12 +296,7 @@ def main():
                 from activity.collectors.storage.cloud.oauth_utils import (
                     GoogleOAuthManager,
                 )
-            except ImportError as import_err:
-                print(f"\nImport error: {import_err}")
-                print("\nPlease install the required dependencies:")
-                print(
-                    "  pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib requests",
-                )
+            except ImportError:
                 return
 
             # Define the scopes needed
@@ -357,18 +309,15 @@ def main():
                 "https://www.googleapis.com/auth/userinfo.profile",
             ]
 
-            print("\nAttempting to authenticate with the following scopes:")
-            for scope in scopes:
-                print(f"  • {scope}")
+            for _scope in scopes:
+                pass
 
-            print(f"\nUsing token file: {token_file}")
 
             # If a token file exists, mention it
             if os.path.exists(token_file):
-                print("Existing token file found. Will attempt to refresh if needed.")
+                pass
 
             # Create OAuth manager with all scopes
-            print("\nInitializing OAuth manager...")
             oauth_manager = GoogleOAuthManager(
                 credentials_file=credentials_file,
                 token_file=token_file,
@@ -377,12 +326,9 @@ def main():
             )
 
             # Load credentials with additional error handling
-            print("Starting authentication process...")
             try:
                 credentials = oauth_manager.load_credentials()
-            except Exception as auth_error:
-                print(f"\nAuthentication error: {auth_error}")
-                print("\nTrying a direct manual approach as fallback...")
+            except Exception:
 
                 # Direct manual approach as a last resort
                 try:
@@ -390,6 +336,7 @@ def main():
                     if detect_environment() == "WSL":
                         # In WSL, use requests directly to get a token
                         import webbrowser
+
                         from wsgiref.simple_server import make_server
 
                         # 1. Load the flow
@@ -406,7 +353,6 @@ def main():
                                 scopes,
                             )
                         else:
-                            print("No OAuth configuration files found")
                             return
 
                         # 2. Set up WSGI callback server
@@ -436,17 +382,12 @@ def main():
                         flow.redirect_uri = redirect_uri
 
                         # 5. Get auth URL and start server
-                        auth_url = flow.authorization_url(
+                        flow.authorization_url(
                             access_type="offline",
                             include_granted_scopes="true",
                         )[0]
-                        print(
-                            "\nPlease copy this URL and open it in your browser to authorize the application:",
-                        )
-                        print("\n" + auth_url + "\n")
 
                         httpd = make_server("localhost", port, wsgi_app)
-                        print(f"Waiting for authentication on port {port}...")
 
                         # 6. Wait for auth code
                         while not auth_code:
@@ -488,9 +429,6 @@ def main():
                         with open(token_file, "w") as f:
                             f.write(credentials.to_json())
 
-                        print(
-                            "Successfully obtained and saved credentials with manual approach",
-                        )
                     else:
                         # On Windows/macOS/Linux, use a different direct approach
                         # by monkey patching the scope validation
@@ -509,7 +447,6 @@ def main():
                                 scopes,
                             )
                         else:
-                            print("No OAuth configuration files found")
                             return
 
                         # 2. Monkey patch fetch_token to bypass scope validation
@@ -524,8 +461,7 @@ def main():
 
                             try:
                                 # Call original fetch_token without validation
-                                result = original_fetch_token(self, **kwargs)
-                                return result
+                                return original_fetch_token(self, **kwargs)
                             finally:
                                 # Restore the original validation method
                                 self._oauth2session._validate_token_response = original_validate
@@ -540,11 +476,7 @@ def main():
                         with open(token_file, "w") as f:
                             f.write(credentials.to_json())
 
-                        print(
-                            "Successfully obtained and saved credentials with patched validation",
-                        )
-                except Exception as manual_error:
-                    print(f"Manual authentication also failed: {manual_error}")
+                except Exception:
                     if args.debug:
                         import traceback
 
@@ -553,72 +485,47 @@ def main():
 
             # Verify credentials were obtained
             if credentials:
-                print("\n✅ Authentication successful!")
 
                 # Get and display user info
-                print("Retrieving user information...")
                 try:
                     user_info = oauth_manager.get_user_info()
                     if user_info:
-                        print(
-                            f"Authenticated as: {user_info.get('name')} ({user_info.get('email')})",
-                        )
+                        pass
                     else:
-                        print(
-                            "Could not retrieve user information, but authentication succeeded.",
-                        )
-                except Exception as e:
-                    print(f"Error getting user info: {e}")
+                        pass
+                except Exception:
+                    pass
 
                 # Display scopes
                 if hasattr(credentials, "scopes"):
-                    print("\nGranted scopes:")
-                    for scope in credentials.scopes:
-                        print(f"  • {scope}")
+                    for _scope in credentials.scopes:
+                        pass
 
-                print(f"\nToken file stored at: {token_file}")
 
                 # Try to build a service to verify the token works
-                print("\nVerifying token by building Drive API service...")
                 try:
                     service = oauth_manager.build_service("drive", "v3")
                     if service:
-                        print(
-                            "✅ Successfully built Drive API service. Token is working correctly.",
-                        )
 
                         # Try a simple API call
-                        try:
-                            about = service.about().get(fields="user").execute()
-                            print(
-                                f"API call successful! Connected to Google Drive as: {about['user'].get('emailAddress')}",
-                            )
-                        except Exception as e:
-                            print(f"API call failed: {e}")
+                        with contextlib.suppress(Exception):
+                            service.about().get(fields="user").execute()
                     else:
-                        print(
-                            "⚠️ Could not build Drive API service. Token may have issues.",
-                        )
-                except Exception as e:
-                    print(f"Error building service: {e}")
+                        pass
+                except Exception:
+                    pass
             else:
-                print("\n❌ Authentication failed.")
+                pass
 
             # Exit early
             return
-        except ImportError as e:
-            print(f"Import error: {e}")
-            print("\nMake sure you have the required dependencies installed:")
-            print(
-                "  pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib requests",
-            )
+        except ImportError:
             if args.debug:
                 import traceback
 
                 traceback.print_exc()
             return
-        except Exception as e:
-            print(f"\n❌ OAuth test failed: {e}")
+        except Exception:
             if args.debug:
                 import traceback
 
@@ -637,29 +544,13 @@ def main():
             token_file = os.path.join(default_config_dir, "gdrive_token.json")
 
         if os.path.exists(token_file):
-            print(
-                f"Removing existing token file {token_file} to force re-authentication",
-            )
-            try:
+            with contextlib.suppress(Exception):
                 os.remove(token_file)
-                print("Token file removed successfully.")
-            except Exception as e:
-                print(f"Error removing token file: {e}")
 
     # Create collector
-    print("Initializing Google Drive Activity Collector...")
     try:
         collector = GoogleDriveActivityCollector(**kwargs)
-        print("Collector initialized successfully")
-    except Exception as e:
-        print(f"Error initializing collector: {e}")
-        print("\nTips to resolve this issue:")
-        print(
-            "1. Try running with the --test-oauth flag to debug authentication issues",
-        )
-        print("2. Use --reauth to force a fresh authentication")
-        print("3. Check that the credentials file or gdrive_config.json exists")
-        print("4. Make sure you have the necessary Python packages installed")
+    except Exception:
         if args.debug:
             import traceback
 
@@ -669,30 +560,23 @@ def main():
     # Create recorder if storing to database
     recorder = None
     if args.to_db:
-        print("Initializing Google Drive Activity Recorder...")
         try:
             recorder = GoogleDriveActivityRecorder(
                 collector=collector,
                 debug=args.debug,
                 auto_connect=False,  # Don't automatically connect to DB
             )
-            print("Recorder initialized successfully without database connection")
-        except Exception as e:
-            print(f"Warning: Could not initialize recorder with database: {e}")
-            print("Continuing without database support...")
+        except Exception:
             args.to_db = False
 
     # Collect activities
-    print("Collecting Google Drive activities...")
     try:
         # First get the activities
         activities, next_page_token = collector._get_activities(start_time_str)
 
         if not activities:
-            print("No activities found for the specified time period.")
             return
 
-        print(f"Collected {len(activities)} raw activities from Google Drive API")
 
         # Process the activities
         processed_activities = []
@@ -702,16 +586,10 @@ def main():
                 processed_activities.append(activity_data)
 
         if not processed_activities:
-            print("No activities could be processed.")
             return
 
-        print(f"Successfully processed {len(processed_activities)} activities")
 
         # Display activities
-        print("\nActivity Timeline:")
-        print("=" * 80)
-        print("Timestamp | Activity Type | User | File")
-        print("-" * 80)
 
         # Sort by timestamp (newest first)
         sorted_activities = sorted(
@@ -719,7 +597,7 @@ def main():
             key=lambda a: (
                 a.timestamp
                 if isinstance(a.timestamp, datetime)
-                else datetime.fromisoformat(a.timestamp.replace("Z", "+00:00"))
+                else datetime.fromisoformat(a.timestamp)
             ),
             reverse=True,
         )
@@ -730,27 +608,21 @@ def main():
 
         # Store activities if requested
         if args.to_db and recorder:
-            print("\nConnecting to database...")
             try:
                 # Connect using the recorder's method for database connection
                 recorder._connect_to_db()
-                print("Database connection successful")
 
-                print(f"Storing {len(processed_activities)} activities in database...")
                 storage_activities = [activity.to_storage_activity() for activity in processed_activities]
-                activity_ids = recorder.store_activities(storage_activities)
+                recorder.store_activities(storage_activities)
 
-                print(f"Successfully stored {len(activity_ids)} activities in database")
 
                 # Get statistics
-                print("\nActivity Statistics:")
                 stats = recorder.get_activity_statistics()
-                for key, value in stats.items():
+                for value in stats.values():
                     if not isinstance(value, dict) and not isinstance(value, list):
-                        print(f"  {key}: {value}")
+                        pass
 
-            except Exception as e:
-                print(f"Error storing activities in database: {e}")
+            except Exception:
                 if args.debug:
                     import traceback
 
@@ -758,7 +630,6 @@ def main():
 
         # Save to file if output path specified
         if args.output:
-            print(f"\nSaving activities to {args.output}...")
             try:
                 # Create directory if it doesn't exist
                 os.makedirs(
@@ -770,20 +641,14 @@ def main():
                     for activity in processed_activities:
                         f.write(activity.model_dump_json() + "\n")
 
-                print(
-                    f"Successfully saved {len(processed_activities)} activities to {args.output}",
-                )
-            except Exception as e:
-                print(f"Error saving activities to file: {e}")
+            except Exception:
                 if args.debug:
                     import traceback
 
                     traceback.print_exc()
 
-        print("\nExample completed successfully!")
 
-    except Exception as e:
-        print(f"Error collecting activities: {e}")
+    except Exception:
         if args.debug:
             import traceback
 

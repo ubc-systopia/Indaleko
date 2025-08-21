@@ -1,5 +1,5 @@
 class DBConfig:
-    def __init__(self, db_config):
+    def __init__(self, db_config) -> None:
         # Make sure we have all the correct args
         self.__user_name = "user_name"
         self.__user_password = "user_password"
@@ -33,5 +33,5 @@ class DBConfig:
     def get_db(self):
         return self.db_config[self.__db]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ", ".join(f"{key}={value}" for key, value in self.__dict__.items() if not key.startswith("_"))

@@ -27,8 +27,10 @@ import sys
 import tempfile
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -93,9 +95,9 @@ class TestUnstructuredCollector(unittest.TestCase):
         characteristics = self.collector.get_collector_characteristics()
 
         # Verify the result
-        self.assertEqual(characteristics.get_name(), self.collector.COLLECTOR_NAME)
-        self.assertEqual(characteristics.get_provider_id(), self.collector.PROVIDER_ID)
-        self.assertTrue(len(characteristics.get_supported_file_types()) > 0)
+        assert characteristics.get_name() == self.collector.COLLECTOR_NAME
+        assert characteristics.get_provider_id() == self.collector.PROVIDER_ID
+        assert len(characteristics.get_supported_file_types()) > 0
 
     @patch("semantic.collectors.unstructured.unstructured_collector.subprocess.run")
     def test_filter_files(self, mock_run):
@@ -154,9 +156,9 @@ class TestUnstructuredCollector(unittest.TestCase):
             filtered_files = self.collector._filter_files(input_models)
 
             # Verify the result
-            self.assertEqual(len(filtered_files), 2)  # Only valid files should remain
-            self.assertEqual(filtered_files[0].LocalPath, self.text_file)
-            self.assertEqual(filtered_files[1].LocalPath, self.pdf_file)
+            assert len(filtered_files) == 2  # Only valid files should remain
+            assert filtered_files[0].LocalPath == self.text_file
+            assert filtered_files[1].LocalPath == self.pdf_file
 
 
 class TestUnstructuredRecorder(unittest.TestCase):
@@ -176,8 +178,8 @@ class TestUnstructuredRecorder(unittest.TestCase):
         characteristics = self.recorder.get_recorder_characteristics()
 
         # Verify the result
-        self.assertEqual(characteristics.get_name(), self.recorder.RECORDER_NAME)
-        self.assertEqual(characteristics.get_provider_id(), self.recorder.RECORDER_ID)
+        assert characteristics.get_name() == self.recorder.RECORDER_NAME
+        assert characteristics.get_provider_id() == self.recorder.RECORDER_ID
 
     def test_get_collector_class_model(self):
         """Test get_collector_class_model method."""
@@ -185,7 +187,7 @@ class TestUnstructuredRecorder(unittest.TestCase):
         collector_class = self.recorder.get_collector_class_model()
 
         # Verify the result
-        self.assertEqual(collector_class, UnstructuredCollector)
+        assert collector_class == UnstructuredCollector
 
     def test_create_attribute(self):
         """Test _create_attribute method."""
@@ -195,27 +197,15 @@ class TestUnstructuredRecorder(unittest.TestCase):
         unknown_attr = self.recorder._create_attribute("unknown", "test value")
 
         # Verify the results
-        self.assertEqual(
-            title_attr.Identifier.Identifier,
-            self.recorder.attribute_map["Title"],
-        )
-        self.assertEqual(title_attr.Value, "Test Title")
+        assert title_attr.Identifier.Identifier == self.recorder.attribute_map["Title"]
+        assert title_attr.Value == "Test Title"
 
-        self.assertEqual(
-            filename_attr.Identifier.Identifier,
-            self.recorder.attribute_map["filename"],
-        )
-        self.assertEqual(filename_attr.Value, "test.pdf")
+        assert filename_attr.Identifier.Identifier == self.recorder.attribute_map["filename"]
+        assert filename_attr.Value == "test.pdf"
 
         # Unknown attribute should use the SEM_UNUSED UUID
-        self.assertEqual(
-            unknown_attr.Identifier.Identifier,
-            self.recorder.attribute_map.get(
-                "unknown",
-                "5cc55605-64f2-4491-9ff1-ddfe23e964b8",
-            ),
-        )
-        self.assertEqual(unknown_attr.Value, "test value")
+        assert unknown_attr.Identifier.Identifier == self.recorder.attribute_map.get("unknown", "5cc55605-64f2-4491-9ff1-ddfe23e964b8")
+        assert unknown_attr.Value == "test value"
 
 
 class TestUnstructuredProcessor(unittest.TestCase):
@@ -320,15 +310,15 @@ class TestUnstructuredProcessor(unittest.TestCase):
             result = self.processor.process_pdf(self.pdf_file)
 
             # Verify the result
-            self.assertEqual(result["status"], "success")
-            self.assertEqual(result["file"], self.pdf_file)
+            assert result["status"] == "success"
+            assert result["file"] == self.pdf_file
 
             # Check content extraction
             content = result.get("content", {})
-            self.assertEqual(content.get("title"), "Test Title")
-            self.assertEqual(len(content.get("text", [])), 2)
-            self.assertEqual(content.get("text")[0], "Test Title")
-            self.assertEqual(content.get("text")[1], "This is the content of the PDF.")
+            assert content.get("title") == "Test Title"
+            assert len(content.get("text", [])) == 2
+            assert content.get("text")[0] == "Test Title"
+            assert content.get("text")[1] == "This is the content of the PDF."
 
             # Verify mocks were called correctly
             mock_mime.assert_called_once_with(self.pdf_file)
@@ -369,9 +359,9 @@ class TestUnstructuredProcessor(unittest.TestCase):
             result = self.processor.process_directory(self.temp_dir)
 
             # Verify the result
-            self.assertEqual(result["status"], "success")
-            self.assertEqual(result["files_found"], 2)
-            self.assertEqual(result["files_processed"], 1)
+            assert result["status"] == "success"
+            assert result["files_found"] == 2
+            assert result["files_processed"] == 1
 
             # Verify mocks were called correctly
             mock_find_files.assert_called_once_with(self.temp_dir, True, None, None)
@@ -389,15 +379,15 @@ class TestUnstructuredProcessor(unittest.TestCase):
             files = self.processor._find_files(self.temp_dir, True, [".pdf"], None)
 
             # Verify the result
-            self.assertEqual(len(files), 1)
-            self.assertEqual(files[0], self.pdf_file)
+            assert len(files) == 1
+            assert files[0] == self.pdf_file
 
             # Call the method with recursive=False
             files = self.processor._find_files(self.temp_dir, False, [".pdf"], None)
 
             # Verify the result (should not include files in subdirectories)
-            self.assertEqual(len(files), 1)
-            self.assertEqual(files[0], self.pdf_file)
+            assert len(files) == 1
+            assert files[0] == self.pdf_file
 
 
 if __name__ == "__main__":

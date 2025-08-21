@@ -1,8 +1,9 @@
-"""initializtion logic for the Indaleko query library"""
+"""initializtion logic for the Indaleko query library."""
 
 import importlib
 import os
 import sys
+
 
 # from icecream import ic
 
@@ -28,6 +29,7 @@ from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from query.utils.logging_service import LoggingService
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -35,13 +37,13 @@ __version__ = "0.1.0"
 
 __all__ = [
     "CLI",
-    "NLParser",
-    "AQLTranslator",
-    "QueryHistory",
     "AQLExecutor",
-    "MetadataAnalyzer",
+    "AQLTranslator",
     "FacetGenerator",
-    "ResultRanker",
-    "OpenAIConnector",
     "LoggingService",
+    "MetadataAnalyzer",
+    "NLParser",
+    "OpenAIConnector",
+    "QueryHistory",
+    "ResultRanker",
 ]

@@ -35,8 +35,10 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -60,7 +62,7 @@ class TierTransitionManager:
     to the warm tier based on age, importance, and other factors.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the tier transition manager.
 
@@ -101,7 +103,7 @@ class TierTransitionManager:
             try:
                 self._hot_tier = NtfsHotTierRecorder(debug=self._debug)
             except Exception as e:
-                self._logger.error(f"Error creating hot tier recorder: {e}")
+                self._logger.exception(f"Error creating hot tier recorder: {e}")
                 self._hot_tier = None
 
         if self._warm_tier is None:
@@ -112,7 +114,7 @@ class TierTransitionManager:
                     transition_enabled=True,
                 )
             except Exception as e:
-                self._logger.error(f"Error creating warm tier recorder: {e}")
+                self._logger.exception(f"Error creating warm tier recorder: {e}")
                 self._warm_tier = None
 
     def check_readiness(self) -> bool:
@@ -250,7 +252,7 @@ class TierTransitionManager:
             return stats
 
         except Exception as e:
-            self._logger.error(f"Error getting transition stats: {e}")
+            self._logger.exception(f"Error getting transition stats: {e}")
             stats["status"] = "error"
             stats["error"] = str(e)
             return stats
@@ -307,7 +309,7 @@ class TierTransitionManager:
             return (len(hot_activities), transitioned)
 
         except Exception as e:
-            self._logger.error(f"Error in transition batch: {e}")
+            self._logger.exception(f"Error in transition batch: {e}")
             return (0, 0)
 
     def run_transition(
@@ -345,7 +347,7 @@ class TierTransitionManager:
                 self._logger.info(f"Processing batch {batch+1}/{max_batches}")
 
                 # Get transition stats before batch
-                before_stats = self.get_transition_stats()
+                self.get_transition_stats()
 
                 # Transition batch
                 start_time = time.time()
@@ -353,7 +355,7 @@ class TierTransitionManager:
                 end_time = time.time()
 
                 # Get transition stats after batch
-                after_stats = self.get_transition_stats()
+                self.get_transition_stats()
 
                 # Add batch results
                 batch_result = {
@@ -397,7 +399,7 @@ class TierTransitionManager:
             return results
 
         except Exception as e:
-            self._logger.error(f"Error in run_transition: {e}")
+            self._logger.exception(f"Error in run_transition: {e}")
             results["status"] = "error"
             results["error"] = str(e)
             results["end_time"] = datetime.now(UTC).isoformat()
@@ -430,7 +432,7 @@ def create_recorders(args):
             no_db=args.no_db,
         )
     except Exception as e:
-        logger.error(f"Error creating hot tier recorder: {e}")
+        logger.exception(f"Error creating hot tier recorder: {e}")
         hot_tier = None
 
     # Create warm tier recorder
@@ -442,13 +444,13 @@ def create_recorders(args):
             transition_enabled=True,
         )
     except Exception as e:
-        logger.error(f"Error creating warm tier recorder: {e}")
+        logger.exception(f"Error creating warm tier recorder: {e}")
         warm_tier = None
 
     return (hot_tier, warm_tier)
 
 
-def main():
+def main() -> int | None:
     """Main function for command line operation."""
     parser = argparse.ArgumentParser(
         description="NTFS Tier Transition Manager",
@@ -521,7 +523,6 @@ def main():
     logger = logging.getLogger("tier_transition")
 
     # Show header
-    print("=== NTFS Tier Transition Manager ===")
 
     try:
         # Create recorders
@@ -538,89 +539,49 @@ def main():
 
         # Check if manager is ready
         if not manager.check_readiness():
-            print("Transition manager is not ready for operation")
-            print("Please check database connection and recorder initialization")
             return None
 
         # Show stats if requested
         if args.stats:
-            print("\nTransition Statistics:")
             stats = manager.get_transition_stats()
 
             # Print status
-            print(f"Status: {stats.get('status', 'unknown')}")
 
             # Print hot tier stats
             if "hot_tier" in stats:
-                hot = stats["hot_tier"]
-                print("\nHot Tier:")
-                print(f"  Total activities: {hot.get('total_activities', 0):,}")
-                print(f"  Ready for transition: {hot.get('transition_ready', 0):,}")
-                print(f"  Already transitioned: {hot.get('already_transitioned', 0):,}")
-                print(f"  Remaining hot: {hot.get('remaining_hot', 0):,}")
+                stats["hot_tier"]
 
             # Print warm tier stats
             if "warm_tier" in stats:
-                warm = stats["warm_tier"]
-                print("\nWarm Tier:")
-                print(f"  Total activities: {warm.get('total_activities', 0):,}")
-                print(
-                    f"  Aggregated activities: {warm.get('aggregated_activities', 0):,}",
-                )
-                print(
-                    f"  Individual activities: {warm.get('individual_activities', 0):,}",
-                )
+                stats["warm_tier"]
 
             # Print configuration
             if args.verbose and "configuration" in stats:
                 config = stats["configuration"]
-                print("\nConfiguration:")
-                for key, value in config.items():
-                    print(f"  {key}: {value}")
+                for _key, _value in config.items():
+                    pass
 
         # Run transition if requested
         if args.run:
-            print("\nRunning tier transition...")
-            start_time = time.time()
+            time.time()
 
             results = manager.run_transition(max_batches=args.max_batches)
 
-            end_time = time.time()
+            time.time()
 
             # Print results
-            print(f"\nTransition completed in {end_time - start_time:.2f} seconds")
-            print(f"Status: {results.get('status', 'unknown')}")
 
             if results.get("status") == "error":
-                print(f"Error: {results.get('error', 'unknown error')}")
-            else:
-                print(
-                    f"Total activities found: {results.get('total_activities_found', 0):,}",
-                )
-                print(
-                    f"Total activities transitioned: {results.get('total_activities_transitioned', 0):,}",
-                )
+                pass
 
-                # Print batch results
-                if args.verbose and "batches" in results:
-                    print("\nBatch results:")
-                    for i, batch in enumerate(results["batches"]):
-                        print(f"  Batch {i+1}:")
-                        print(
-                            f"    Activities found: {batch.get('activities_found', 0):,}",
-                        )
-                        print(
-                            f"    Activities transitioned: {batch.get('activities_transitioned', 0):,}",
-                        )
-                        print(
-                            f"    Duration: {batch.get('duration_seconds', 0):.2f} seconds",
-                        )
+            # Print batch results
+            elif args.verbose and "batches" in results:
+                for _i, _batch in enumerate(results["batches"]):
+                    pass
 
-        print("\nDone.")
 
     except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
-        print(f"Unhandled error: {e}")
+        logger.exception(f"Unhandled exception: {e}")
         if args.debug:
             import traceback
 

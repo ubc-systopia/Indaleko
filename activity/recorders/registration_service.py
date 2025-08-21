@@ -20,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from pathlib import Path
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -38,6 +40,7 @@ from data_models.activity_data_registration import (
 )
 from db import IndalekoCollection, IndalekoDBCollections, IndalekoServiceManager
 from utils.registration_service import IndalekoRegistrationService
+
 
 # pylint: enable=wrong-import-position
 

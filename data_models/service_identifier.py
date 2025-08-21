@@ -24,6 +24,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,11 +36,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from constants import IndalekoConstants
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
-    """This is the data model for the Indaleko service identifier"""
+    """This is the data model for the Indaleko service identifier."""
 
     # Name : str = Field(..., title='Name', description='This is the service name.')
 
@@ -61,8 +63,8 @@ class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the service data model"""
+def main() -> None:
+    """This allows testing the service data model."""
     ic("Testing Service Data Model")
     ic(IndalekoServiceIdentifierDataModel.Config.json_schema_extra["example"])
 

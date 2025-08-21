@@ -13,7 +13,7 @@ from data_models.named_entity import NamedEntityCollection
 from query.utils.llm_connector.llm_base import LLMBase
 
 
-# ruff: noqa: S101,S311,FBT001,FBT002
+# ruff: noqa: S101
 
 
 class QueryExtractor:
@@ -23,10 +23,10 @@ class QueryExtractor:
         """Initializes the Query Extractor."""
 
     def extract(
-            self,
-            query: str,
-            named_entities: NamedEntityCollection,
-            llm_connector: LLMBase,
+        self,
+        query: str,
+        named_entities: NamedEntityCollection,
+        llm_connector: LLMBase,
     ) -> str:
         """
         Translates a parsed query into a dictionary for creating the metadata dataset.
@@ -46,11 +46,10 @@ class QueryExtractor:
         return json.loads(json_string)
 
     def generate_query_str(
-            self,
-            prompt: str,
-            llm_connector:
-            LLMBase,
-            temperature: int = 0,
+        self,
+        prompt: str,
+        llm_connector: LLMBase,
+        temperature: int = 0,
     ) -> str:
         """
         Generate a query string from the LLM.
@@ -63,7 +62,7 @@ class QueryExtractor:
             str: The generated query string
         """
         completion = llm_connector.client.beta.chat.completions.parse(
-            model = llm_connector.model,
+            model=llm_connector.model,
             messages=[
                 {
                     "role": "system",
@@ -182,14 +181,15 @@ class QueryExtractor:
                 }
             }
         }
-        """)
+        """,
+        )
         return dictionary.replace("{TEXT_TAGS}", str(SemanticMetadata.AVAIL_TEXT_TAGS))
 
     def _create_extraction_prompt(
-            self,
-            query: str,
-            selected_md_schema: str,
-            named_entities: NamedEntityCollection,
+        self,
+        query: str,
+        selected_md_schema: str,
+        named_entities: NamedEntityCollection,
     ) -> dict:
         """
         Create a prompt for the LLM to generate an  query.
@@ -293,16 +293,21 @@ class QueryExtractor:
         error message as a string "error:..." specifying the specific error.
         """
 
-
         # adding the current date since LLM has difficulties getting today's date
-        system_prompt = system_prompt.replace(
-            "{curr_date}", str(datetime.now(UTC))).replace(
-                "{selected_md_schema}", selected_md_schema).replace(
-                    "{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS),
-                ).replace(
-                    "{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS)).replace(
-                        "{AVAIL_TEXT_TAGS}", str(SemanticMetadata.AVAIL_TEXT_TAGS),
-                        ).replace("{named_entities}", str(named_entities))
+        system_prompt = (
+            system_prompt.replace("{curr_date}", str(datetime.now(UTC)))
+            .replace("{selected_md_schema}", selected_md_schema)
+            .replace(
+                "{BUTTON_TAGS}",
+                str(SemanticMetadata.BUTTON_TAGS),
+            )
+            .replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS))
+            .replace(
+                "{AVAIL_TEXT_TAGS}",
+                str(SemanticMetadata.AVAIL_TEXT_TAGS),
+            )
+            .replace("{named_entities}", str(named_entities))
+        )
 
         user_prompt = query
         return {"system": system_prompt, "user": user_prompt}

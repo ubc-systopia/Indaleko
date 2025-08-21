@@ -1,5 +1,5 @@
 """
-Indaleko Streamlit GUI Package
+Indaleko Streamlit GUI Package.
 
 This package provides a graphical user interface for Indaleko using Streamlit.
 

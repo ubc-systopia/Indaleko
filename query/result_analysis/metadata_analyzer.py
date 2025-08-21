@@ -2,9 +2,7 @@ from typing import Any
 
 
 class MetadataAnalyzer:
-    """
-    Analyzes metadata of search results to extract useful information.
-    """
+    """Analyzes metadata of search results to extract useful information."""
 
     def analyze(self, raw_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """

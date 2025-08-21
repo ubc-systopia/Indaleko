@@ -5,24 +5,21 @@ import os
 import platform
 
 import local_index
+
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
 
 class IndalekoWindowsLocalIndexer:
-    """
-    Definitions & methods used by the Windows local indexer.
-    """
+    """Definitions & methods used by the Windows local indexer."""
 
     WindowsLocalIndexFilePrefix = "windows-local-fs-data"
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
 
 def windows_to_posix(filename):
-    """
-    Convert a Win32 filename to a POSIX-compliant one.
-    """
+    """Convert a Win32 filename to a POSIX-compliant one."""
     # Define a mapping of Win32 reserved characters to POSIX-friendly characters
     win32_to_posix = {
         "<": "_lt_",
@@ -43,9 +40,7 @@ def windows_to_posix(filename):
 
 
 def posix_to_windows(filename):
-    """
-    Convert a POSIX-compliant filename to a Win32 one.
-    """
+    """Convert a POSIX-compliant filename to a Win32 one."""
     # Define a mapping of POSIX-friendly characters back to Win32 reserved characters
     posix_to_win32 = {
         "_lt_": "<",
@@ -76,8 +71,7 @@ def construct_windows_output_file_name(path: str, configdir="./config"):
             assert "Volume" in drive_guid, f"{drive_guid} is not a volume GUID"
             drive_guid = drive_guid[-38:-2]
             break
-        else:
-            drive_guid = drive  # ugly, but what else can I do at this point?
+        drive_guid = drive  # ugly, but what else can I do at this point?
     timestamp = timestamp = datetime.datetime.now(datetime.UTC).isoformat()
     return posix_to_windows(
         f"{IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix}-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json",
@@ -147,7 +141,7 @@ def walk_files_and_directories(path: str, config: IndalekoWindowsMachineConfig) 
     return data
 
 
-def main():
+def main() -> None:
     # Now parse the arguments
     li = local_index.LocalIndex()
     li.add_arguments(

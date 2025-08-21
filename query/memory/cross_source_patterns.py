@@ -22,11 +22,13 @@ import logging
 import os
 import sys
 import uuid
+
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,12 +38,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from query.memory.pattern_types import (
     DataSourceType,
     ProactiveSuggestion,
     SuggestionPriority,
     SuggestionType,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -292,7 +297,7 @@ class CrossSourcePatternDetector:
     holistic understanding of user behavior.
     """
 
-    def __init__(self, db_config=None):
+    def __init__(self, db_config=None) -> None:
         """
         Initialize the cross-source pattern detector.
 
@@ -433,14 +438,14 @@ class CrossSourcePatternDetector:
                         stats["last_event"] = timestamp
 
                 except Exception as e:
-                    self.logger.error(f"Error processing NTFS event: {e}")
+                    self.logger.exception(f"Error processing NTFS event: {e}")
 
             # Update last update timestamp
             if events:
                 self.data.last_update[DataSourceType.NTFS] = max(event.timestamp for event in events)
 
         except Exception as e:
-            self.logger.error(f"Error collecting NTFS events: {e}")
+            self.logger.exception(f"Error collecting NTFS events: {e}")
 
         return events
 
@@ -532,14 +537,14 @@ class CrossSourcePatternDetector:
                             stats["last_event"] = timestamp
 
                     except Exception as e:
-                        self.logger.error(f"Error processing collaboration event: {e}")
+                        self.logger.exception(f"Error processing collaboration event: {e}")
 
             # Update last update timestamp
             if events:
                 self.data.last_update[DataSourceType.COLLABORATION] = max(event.timestamp for event in events)
 
         except Exception as e:
-            self.logger.error(f"Error collecting collaboration events: {e}")
+            self.logger.exception(f"Error collecting collaboration events: {e}")
 
         return events
 
@@ -629,14 +634,14 @@ class CrossSourcePatternDetector:
                         self._update_location_context(event)
 
                     except Exception as e:
-                        self.logger.error(f"Error processing location event: {e}")
+                        self.logger.exception(f"Error processing location event: {e}")
 
             # Update last update timestamp
             if events:
                 self.data.last_update[DataSourceType.LOCATION] = max(event.timestamp for event in events)
 
         except Exception as e:
-            self.logger.error(f"Error collecting location events: {e}")
+            self.logger.exception(f"Error collecting location events: {e}")
 
         return events
 
@@ -727,14 +732,14 @@ class CrossSourcePatternDetector:
                             stats["last_event"] = timestamp
 
                     except Exception as e:
-                        self.logger.error(f"Error processing ambient event: {e}")
+                        self.logger.exception(f"Error processing ambient event: {e}")
 
             # Update last update timestamp
             if events:
                 self.data.last_update[DataSourceType.AMBIENT] = max(event.timestamp for event in events)
 
         except Exception as e:
-            self.logger.error(f"Error collecting ambient events: {e}")
+            self.logger.exception(f"Error collecting ambient events: {e}")
 
         return events
 
@@ -824,14 +829,14 @@ class CrossSourcePatternDetector:
                         stats["last_event"] = timestamp
 
                 except Exception as e:
-                    self.logger.error(f"Error processing query event: {e}")
+                    self.logger.exception(f"Error processing query event: {e}")
 
             # Update last update timestamp
             if events:
                 self.data.last_update[DataSourceType.QUERY] = max(event.timestamp for event in events)
 
         except Exception as e:
-            self.logger.error(f"Error collecting query events: {e}")
+            self.logger.exception(f"Error collecting query events: {e}")
 
         return events
 
@@ -1052,10 +1057,8 @@ class CrossSourcePatternDetector:
                     for event_sig in event_types:
                         if ":" in event_sig:
                             source_type = event_sig.split(":")[0]
-                            try:
+                            with contextlib.suppress(ValueError):
                                 source_types.add(DataSourceType(source_type))
-                            except ValueError:
-                                pass
 
                     # Only consider patterns with multiple source types
                     if len(source_types) > 1:
@@ -1222,10 +1225,7 @@ class CrossSourcePatternDetector:
             std_diff = variance**0.5
 
         # Calculate coefficient of variation (lower means more clustered)
-        if mean_diff > 0:
-            cv = std_diff / mean_diff
-        else:
-            cv = 0
+        cv = std_diff / mean_diff if mean_diff > 0 else 0
 
         # Calculate clustering score:
         # - Events that happen close together in time (small mean_diff) -> higher score
@@ -1367,7 +1367,7 @@ class CrossSourcePatternDetector:
         day_source_counts = defaultdict(lambda: defaultdict(int))
 
         # Analyze events
-        for event_id, event in self.data.events.items():
+        for event in self.data.events.values():
             # Hour analysis
             hour = event.timestamp.hour
             hour_source_counts[hour][event.source_type] += 1
@@ -2076,11 +2076,10 @@ class CrossSourcePatternDetector:
         return event_count, patterns, correlations, suggestions
 
 
-def main():
+def main() -> None:
     """Test the cross-source pattern detector."""
     from db import IndalekoDBConfig
 
-    print("Testing Cross-Source Pattern Detector")
 
     # Initialize detector
     db_config = IndalekoDBConfig()
@@ -2090,36 +2089,21 @@ def main():
     event_count, patterns, correlations, suggestions = detector.analyze_and_generate()
 
     # Print results
-    print(f"\nCollected {event_count} events")
-    print(f"Detected {len(patterns)} new patterns")
-    print(f"Detected {len(correlations)} new correlations")
-    print(f"Generated {len(suggestions)} suggestions")
 
     # Show patterns
     if patterns:
-        print("\nPatterns:")
-        for pattern in patterns:
-            print(
-                f"- {pattern.pattern_name}: {pattern.description} (confidence: {pattern.confidence:.2f})",
-            )
+        for _pattern in patterns:
+            pass
 
     # Show correlations
     if correlations:
-        print("\nCorrelations:")
-        for correlation in correlations:
-            print(
-                f"- {correlation.description} (confidence: {correlation.confidence:.2f})",
-            )
+        for _correlation in correlations:
+            pass
 
     # Show suggestions
     if suggestions:
-        print("\nSuggestions:")
-        for suggestion in suggestions:
-            print(f"- [{suggestion.priority}] {suggestion.title}")
-            print(f"  {suggestion.content}")
-            print(
-                f"  Confidence: {suggestion.confidence:.2f}, Expires: {suggestion.expires_at}",
-            )
+        for _suggestion in suggestions:
+            pass
 
 
 if __name__ == "__main__":

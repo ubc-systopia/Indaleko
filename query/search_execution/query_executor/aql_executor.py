@@ -19,15 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import time
 
 from pathlib import Path
 from typing import Any
 
-from arango.exceptions import AQLQueryExecuteError
 from arango.cursor import Cursor
+from arango.exceptions import AQLQueryExecuteError
 from arango.result import Result
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -48,7 +48,7 @@ from query.utils.llm_connector.llm_base import LLMBase
 
 # pylint: enable=wrong-import-position
 
-# ruff: noqa: S101,S311,FBT001,FBT002,G004
+# ruff: noqa: S101, FBT001, FBT002
 # pylint: disable=W1203
 
 class AQLExecutor(ExecutorBase):
@@ -248,13 +248,13 @@ class AQLExecutor(ExecutorBase):
             # Add some sample values for common parameters if they're missing
             for param in params_in_query:
                 if param not in bind_vars:
-                    if param.lower() in ['size', 'filesize', 'minsize']:
+                    if param.lower() in ["size", "filesize", "minsize"]:
                         bind_vars[param] = 1000000
-                    elif param.lower() in ['timestamp', 'date', 'time']:
+                    elif param.lower() in ["timestamp", "date", "time"]:
                         bind_vars[param] = "2024-01-01"
-                    elif param.lower() in ['path', 'file', 'filename']:
+                    elif param.lower() in ["path", "file", "filename"]:
                         bind_vars[param] = "test.pdf"
-                    elif param.lower() in ['limit', 'max', 'count']:
+                    elif param.lower() in ["limit", "max", "count"]:
                         bind_vars[param] = 10
                     else:
                         # Default to a string for unknown parameters
@@ -291,13 +291,13 @@ class AQLExecutor(ExecutorBase):
                 f"An error occurred while explaining the AQL query:\n\tquery: {query}\n\tException: {e}",
             )
             return {
-                'error': str(e),
-                'query': query,
-                'bind_vars': bind_vars,
-                'analysis': {
-                    'warnings': [str(e)],
-                    'recommendations': ["Check query syntax and ensure bind variables are provided for all parameters"]
-                }
+                "error": str(e),
+                "query": query,
+                "bind_vars": bind_vars,
+                "analysis": {
+                    "warnings": [str(e)],
+                    "recommendations": ["Check query syntax and ensure bind variables are provided for all parameters"],
+                },
             }
 
     @staticmethod
@@ -337,7 +337,7 @@ class AQLExecutor(ExecutorBase):
                 "estimated_cost": plan.get("estimatedCost", 0),
                 "collections_used": len(plan.get("collections", [])),
                 "operations": len(plan.get("nodes", [])),
-                "cacheable": explain_result.get("cacheable", False)
+                "cacheable": explain_result.get("cacheable", False),
             })
 
             # Extract plan details
@@ -441,10 +441,7 @@ class AQLExecutor(ExecutorBase):
                     return False
 
         # Check if all parentheses were closed
-        if parens_stack:
-            return False
-
-        return True
+        return not parens_stack
 
     @staticmethod
     def format_results(

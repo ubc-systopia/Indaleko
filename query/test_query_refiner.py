@@ -22,6 +22,7 @@ import os
 import sys
 import time
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -121,7 +122,7 @@ def create_sample_facets():
     )
 
     # Create a dynamic facets object
-    facets = DynamicFacets(
+    return DynamicFacets(
         facets=[file_type_facet, date_facet, author_facet, location_facet],
         suggestions=[
             "Filter by PDF files",
@@ -140,20 +141,16 @@ def create_sample_facets():
         ],
     )
 
-    return facets
 
 
 def main():
     """Test the query refinement functionality."""
-    print("Testing Indaleko Query Refinement")
-    print("===============================\n")
 
     # Create the query refiner
     refiner = QueryRefiner()
 
     # Initialize with a basic query
     original_query = "find documents about machine learning"
-    print(f"Original query: {original_query}")
     refiner.initialize_state(original_query)
 
     # Get sample facets
@@ -188,8 +185,7 @@ def main():
         {"name": "Clear all refinements"},
     ]
 
-    for i, test_case in enumerate(test_cases, 1):
-        print(f"\n\n===== Test {i}: {test_case['name']} =====")
+    for _i, test_case in enumerate(test_cases, 1):
 
         if "facet" in test_case and "value" in test_case:
             # Apply a refinement
@@ -197,42 +193,28 @@ def main():
                 test_case["facet"],
                 test_case["value"],
             )
-            print(f"Refined query: {refined_query}")
-            print("Active refinements:")
-            for j, refinement in enumerate(state.active_refinements, 1):
-                print(
-                    f"  {j}. {refinement.facet_name}: {refinement.value} → {refinement.query_fragment}",
-                )
+            for _j, _refinement in enumerate(state.active_refinements, 1):
+                pass
 
         elif "remove" in test_case:
             # Remove a refinement
             facet_name, value = test_case["remove"]
             refined_query, state = refiner.remove_refinement(facet_name, value)
-            print(f"After removing {facet_name}: {value}")
-            print(f"Refined query: {refined_query}")
-            print("Active refinements:")
-            for j, refinement in enumerate(state.active_refinements, 1):
-                print(
-                    f"  {j}. {refinement.facet_name}: {refinement.value} → {refinement.query_fragment}",
-                )
+            for _j, _refinement in enumerate(state.active_refinements, 1):
+                pass
 
         elif "name" in test_case and test_case["name"] == "Clear all refinements":
             # Clear all refinements
             original, state = refiner.clear_refinements()
-            print(f"Cleared all refinements. Back to: {original}")
-            print(f"Active refinements: {len(state.active_refinements)}")
 
         # Small delay between tests for readability
         time.sleep(0.5)
 
     # Test facet options generation
-    print("\n\n===== Test: Generate Facet Options =====")
     options = refiner.get_facet_options(facets)
-    print(f"Generated {len(options)} facet selection options:")
-    for key, option in options.items():
-        print(f"  [{key}] {option['display']}")
+    for _key, _option in options.items():
+        pass
 
-    print("\nTest completed successfully!")
 
 
 if __name__ == "__main__":

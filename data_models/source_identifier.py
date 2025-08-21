@@ -24,6 +24,7 @@ import uuid
 
 from pydantic import Field
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,13 +37,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
-    """
-    This class defines the UUID data model for Indaleko.
-    """
+    """This class defines the UUID data model for Indaleko."""
 
     Identifier: uuid.UUID = Field(
         ...,
@@ -77,8 +77,8 @@ class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoSourceIdentifierDataModel.test_model_main()
 
 

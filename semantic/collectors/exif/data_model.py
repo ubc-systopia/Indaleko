@@ -21,12 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 # third-party imports
 from pydantic import Field, field_validator
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -230,8 +232,8 @@ class ExifDataModel(BaseSemanticDataModel):
         }
 
 
-def main():
-    """Test code for the EXIF data model"""
+def main() -> None:
+    """Test code for the EXIF data model."""
     ExifDataModel.test_model_main()
 
 

@@ -25,6 +25,7 @@ import logging
 import os
 import socket
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -34,6 +35,7 @@ from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
 
+
 # Set up logging
 logger = logging.getLogger("semantic.database")
 
@@ -41,7 +43,7 @@ logger = logging.getLogger("semantic.database")
 class SemanticDatabaseHelper:
     """Helper class for semantic processing database operations."""
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         """Initialize the database helper with configuration."""
         self.config = config
         self.db = None
@@ -69,7 +71,7 @@ class SemanticDatabaseHelper:
             logger.info("Connected to database")
             return True
         except Exception as e:
-            logger.error(f"Database connection error: {e}")
+            logger.exception(f"Database connection error: {e}")
             self.connected = False
             return False
 
@@ -102,7 +104,7 @@ class SemanticDatabaseHelper:
             return []
 
         # Get the last processed file ID from state
-        last_file_id = state["extractors"].get(extractor_type, {}).get("last_file_id")
+        state["extractors"].get(extractor_type, {}).get("last_file_id")
 
         try:
             # Get the appropriate semantic collection based on extractor type
@@ -110,12 +112,12 @@ class SemanticDatabaseHelper:
 
             if extractor_type == "mime":
                 semantic_collection_name = IndalekoDBCollections.Indaleko_Semantic_MIME
-                semantic_attribute_id = uuid.UUID(
+                uuid.UUID(
                     "8a7b9678-f2c5-4e3a-9a8b-cc8c2e626374",
                 )  # Mime type attribute
             elif extractor_type == "checksum":
                 semantic_collection_name = IndalekoDBCollections.Indaleko_Semantic_Checksum
-                semantic_attribute_id = uuid.UUID(
+                uuid.UUID(
                     "c4e2d558-6a13-4734-9e19-5fe3c8a2c355",
                 )  # Checksum attribute (MD5)
             else:
@@ -190,7 +192,7 @@ class SemanticDatabaseHelper:
             }
 
             cursor = self.db.aql.execute(aql_query, bind_vars=bind_vars)
-            results = [doc for doc in cursor]
+            results = list(cursor)
 
             # Filter results to only include files that exist on disk
             filtered_results = []
@@ -207,7 +209,7 @@ class SemanticDatabaseHelper:
             return filtered_results
 
         except Exception as e:
-            logger.error(f"Error retrieving files for {extractor_type} processing: {e}")
+            logger.exception(f"Error retrieving files for {extractor_type} processing: {e}")
             return []
 
     def store_mime_type_data(self, object_id: str, mime_data: dict[str, Any]) -> bool:
@@ -248,7 +250,7 @@ class SemanticDatabaseHelper:
             return True
 
         except Exception as e:
-            logger.error(f"Error storing MIME data for object {object_id}: {e}")
+            logger.exception(f"Error storing MIME data for object {object_id}: {e}")
             return False
 
     def store_checksum_data(
@@ -293,5 +295,5 @@ class SemanticDatabaseHelper:
             return True
 
         except Exception as e:
-            logger.error(f"Error storing checksum data for object {object_id}: {e}")
+            logger.exception(f"Error storing checksum data for object {object_id}: {e}")
             return False

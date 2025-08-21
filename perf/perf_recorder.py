@@ -24,7 +24,9 @@ import sys
 import uuid
 
 import jsonlines
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +46,7 @@ from utils.misc.file_name_management import (
     indaleko_file_name_prefix,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -54,7 +57,7 @@ class IndalekoPerformanceDataRecorder:
     further analysis.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the object."""
         self.perf_data_collection = IndalekoCollections().get_collection(
             IndalekoDBCollections.Indaleko_Performance_Data_Collection,
@@ -125,7 +128,7 @@ class IndalekoPerformanceDataRecorder:
         """
 
 
-def main():
+def main() -> None:
     """Test code for the IndalekoPerformanceData class."""
     ic("IndalekoPerformanceDataRecorder test code")
     test_perf_data = IndalekoPerformanceDataCollector(

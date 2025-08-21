@@ -1,8 +1,10 @@
 import ctypes
 import platform
 import struct
+
 from ctypes import wintypes
 from datetime import datetime
+
 
 # Windows API constants
 FSCTL_QUERY_USN_JOURNAL = 0x900F4
@@ -180,7 +182,6 @@ def read_usn_journal(handle, journal_id, start_usn):
     )
     if not success:
         error = ctypes.get_last_error()
-        print(f"DeviceIoControl failed with Win32 error code: {error}")
         raise ctypes.WinError(error)
 
     return buffer, bytes_returned.value
@@ -226,7 +227,7 @@ def parse_usn_record(buffer, offset, bytes_returned):
     }
 
 
-def main():
+def main() -> None:
     # Add argument parsing for better integration
     import argparse
 
@@ -252,14 +253,10 @@ def main():
     args = parser.parse_args()
 
     if not is_admin():
-        print("This script must be run with administrative privileges.")
         return
 
     # Check Windows version
-    win_version = platform.win32_ver()[0]
-    print(
-        f"Running on Windows {win_version}. Note: USN journal behavior may vary across versions.",
-    )
+    platform.win32_ver()[0]
 
     # Format volume path properly
     volume = args.volume
@@ -268,7 +265,7 @@ def main():
     volume_path = f"\\\\.\\{volume}"
 
     if args.verbose:
-        print(f"Using volume path: {volume_path}")
+        pass
 
     try:
         # Open volume handle
@@ -277,15 +274,12 @@ def main():
         try:
             # Query USN journal
             journal_data = query_usn_journal(handle)
-            print(f"Journal ID: {journal_data.UsnJournalID}")
-            print(f"First USN: {journal_data.FirstUsn}")
-            print(f"Next USN: {journal_data.NextUsn}")
 
             # Use provided start_usn or default to FirstUsn
             start_usn = args.start_usn if args.start_usn is not None else journal_data.FirstUsn
 
             if args.verbose:
-                print(f"Starting from USN: {start_usn}")
+                pass
 
             # Read USN journal
             buffer, bytes_returned = read_usn_journal(
@@ -295,7 +289,7 @@ def main():
             )
 
             if args.verbose:
-                print(f"Read {bytes_returned} bytes from USN journal")
+                pass
 
             # Parse records
             offset = 8  # Skip first 8 bytes (NextUsn)
@@ -306,24 +300,17 @@ def main():
                     break
 
                 records_found += 1
-                print(f"\nUSN: {record['USN']}")
-                print(f"File: {record['FileName']}")
-                print(f"Timestamp: {record['Timestamp']}")
-                print(f"Reasons: {', '.join(record['Reasons'])}")
-                print(f"Attributes: {', '.join(record['Attributes'])}")
-                print(f"FileRef: {record['FileReferenceNumber']}")
-                print(f"ParentFileRef: {record['ParentFileReferenceNumber']}")
 
                 offset += struct.unpack_from("<I", buffer, offset)[0]
 
             if args.verbose:
-                print(f"Found {records_found} records")
+                pass
 
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)
 
-    except OSError as e:
-        print(f"Error: {e}")
+    except OSError:
+        pass
 
 
 if __name__ == "__main__":

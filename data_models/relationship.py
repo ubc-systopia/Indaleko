@@ -24,6 +24,7 @@ import sys
 from icecream import ic
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +63,7 @@ class IndalekoRelationshipDataModel(IndalekoBaseModel):
     )
 
     class Config:
-        """Sample configuration data for the relationship model"""
+        """Sample configuration data for the relationship model."""
 
         json_schema_extra = {
             "example": {
@@ -78,7 +80,7 @@ class IndalekoRelationshipDataModel(IndalekoBaseModel):
         }
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     ic("Testing IndalekoRelationshipDataModel")
     IndalekoRelationshipDataModel().test_model_main()

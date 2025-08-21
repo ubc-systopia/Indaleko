@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Indaleko Project - Unstructured Semantic Collector
+Indaleko Project - Unstructured Semantic Collector.
 
 This module implements a semantic metadata collector using the unstructured.io library.
 It extracts semantic content from various document types (PDF, DOCX, etc.) following
@@ -37,9 +37,10 @@ import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+from datetime import UTC, datetime
+from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +49,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+import contextlib
+
 from Indaleko import Indaleko
 from semantic.characteristics import SemanticDataCharacteristics
 from semantic.collectors.semantic_collector import SemanticCollectorBase
@@ -62,7 +64,6 @@ from semantic.performance_monitor import (
     SemanticExtractorPerformance,
     monitor_semantic_extraction,
 )
-from utils.misc.string_similarity import fuzzy_string_match
 
 
 class UnstructuredCollector(SemanticCollectorBase):
@@ -105,7 +106,7 @@ class UnstructuredCollector(SemanticCollectorBase):
     # File size limits
     MAX_FILE_SIZE_MB = 50  # Skip files larger than this
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the UnstructuredCollector.
 
@@ -141,7 +142,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         self._logger.setLevel(logging.INFO)
         if not self._logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             handler.setFormatter(formatter)
             self._logger.addHandler(handler)
 
@@ -170,14 +171,14 @@ class UnstructuredCollector(SemanticCollectorBase):
         if not self._skip_docker_pull:
             self._check_docker_available()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Clean up temporary resources when the collector is destroyed."""
         try:
-            if hasattr(self, '_temp_dir') and os.path.exists(self._temp_dir):
+            if hasattr(self, "_temp_dir") and os.path.exists(self._temp_dir):
                 shutil.rmtree(self._temp_dir)
         except Exception as e:
-            if hasattr(self, '_logger'):
-                self._logger.error(f"Error cleaning up temporary directory: {e}")
+            if hasattr(self, "_logger"):
+                self._logger.exception(f"Error cleaning up temporary directory: {e}")
 
     def get_collector_characteristics(self) -> SemanticDataCharacteristics:
         """
@@ -219,7 +220,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         """
         return self._description
 
-    def get_data(self) -> List[Dict[str, Any]]:
+    def get_data(self) -> list[dict[str, Any]]:
         """
         Get the collected data.
 
@@ -229,7 +230,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         return self._data
 
     @monitor_semantic_extraction(extractor_name="UnstructuredCollector.collect_data")
-    def collect_data(self, input_files: List[UnstructuredInputDataModel]) -> List[Dict[str, Any]]:
+    def collect_data(self, input_files: list[UnstructuredInputDataModel]) -> list[dict[str, Any]]:
         """
         Collect semantic data from the specified files.
 
@@ -259,7 +260,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         return self._data
 
     @monitor_semantic_extraction(extractor_name="UnstructuredCollector.retrieve_data")
-    def retrieve_data(self, data_id: str) -> Optional[Dict[str, Any]]:
+    def retrieve_data(self, data_id: str) -> dict[str, Any] | None:
         """
         Retrieve specific data by ID.
 
@@ -292,7 +293,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         """
         return 3600  # 1 hour
 
-    def get_json_schema(self) -> Dict[str, Any]:
+    def get_json_schema(self) -> dict[str, Any]:
         """
         Get the JSON schema for the collected data.
 
@@ -301,7 +302,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         """
         return UnstructuredEmbeddedDataModel.model_json_schema()
 
-    def process_data(self, raw_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def process_data(self, raw_data: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Process raw collected data.
 
@@ -313,7 +314,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         """
         return raw_data
 
-    def store_data(self, data: List[Dict[str, Any]]) -> bool:
+    def store_data(self, data: list[dict[str, Any]]) -> bool:
         """
         Store processed data.
 
@@ -327,7 +328,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         return True
 
     @monitor_semantic_extraction(extractor_name="UnstructuredCollector._filter_files")
-    def _filter_files(self, input_files: List[UnstructuredInputDataModel]) -> List[UnstructuredInputDataModel]:
+    def _filter_files(self, input_files: list[UnstructuredInputDataModel]) -> list[UnstructuredInputDataModel]:
         """
         Filter files based on type, size, and previous processing.
 
@@ -384,7 +385,7 @@ class UnstructuredCollector(SemanticCollectorBase):
         return mime_type or "application/octet-stream"
 
     @monitor_semantic_extraction(extractor_name="UnstructuredCollector._process_batch")
-    def _process_batch(self, batch: List[UnstructuredInputDataModel]) -> List[Dict[str, Any]]:
+    def _process_batch(self, batch: list[UnstructuredInputDataModel]) -> list[dict[str, Any]]:
         """
         Process a batch of files using unstructured.io via Docker.
 
@@ -441,10 +442,10 @@ class UnstructuredCollector(SemanticCollectorBase):
             return processed_data
 
         except Exception as e:
-            self._logger.error(f"Error processing batch: {str(e)}", exc_info=True)
+            self._logger.error(f"Error processing batch: {e!s}", exc_info=True)
             return []
 
-    def _prepare_input_directory(self, batch: List[UnstructuredInputDataModel]) -> None:
+    def _prepare_input_directory(self, batch: list[UnstructuredInputDataModel]) -> None:
         """
         Prepare input directory by creating symbolic links to files.
 
@@ -470,7 +471,7 @@ class UnstructuredCollector(SemanticCollectorBase):
 
                 self._logger.debug(f"Prepared input file: {filename}")
             except Exception as e:
-                self._logger.error(f"Error preparing input file {file_model.LocalPath}: {str(e)}")
+                self._logger.exception(f"Error preparing input file {file_model.LocalPath}: {e!s}")
 
     def _create_processing_script(self) -> str:
         """
@@ -583,7 +584,7 @@ if __name__ == "__main__":
                 return False
             return True
         except Exception as e:
-            self._logger.error(f"Error checking Docker availability: {str(e)}")
+            self._logger.exception(f"Error checking Docker availability: {e!s}")
             return False
 
     def _check_image_exists(self) -> bool:
@@ -604,7 +605,7 @@ if __name__ == "__main__":
             image_full_name = f"{self.DOCKER_IMAGE}:{self.DOCKER_TAG}"
             return image_full_name in images
         except Exception as e:
-            self._logger.error(f"Error checking Docker image: {str(e)}")
+            self._logger.exception(f"Error checking Docker image: {e!s}")
             return False
 
     def _pull_docker_image(self) -> bool:
@@ -628,13 +629,13 @@ if __name__ == "__main__":
             self._logger.info("Docker image pulled successfully")
             return True
         except Exception as e:
-            self._logger.error(f"Error pulling Docker image: {str(e)}")
+            self._logger.exception(f"Error pulling Docker image: {e!s}")
             return False
 
     def _run_docker_container(
         self,
         container_name: str,
-        volumes: List[Dict[str, str]],
+        volumes: list[dict[str, str]],
         script_path: str,
         output_prefix: str,
     ) -> bool:
@@ -651,15 +652,13 @@ if __name__ == "__main__":
             bool: True if successful, False otherwise
         """
         # Remove existing container if it exists
-        try:
+        with contextlib.suppress(Exception):
             subprocess.run(
                 ["docker", "rm", "-f", container_name],
                 capture_output=True,
                 text=True,
                 check=False,
             )
-        except Exception:
-            pass
 
         # Prepare volume mount arguments
         volume_args = []
@@ -702,14 +701,14 @@ if __name__ == "__main__":
             return True
 
         except Exception as e:
-            self._logger.error(f"Error running Docker container: {str(e)}")
+            self._logger.exception(f"Error running Docker container: {e!s}")
             return False
 
     def _parse_output_file(
         self,
         output_file: str,
-        batch: List[UnstructuredInputDataModel],
-    ) -> List[Dict[str, Any]]:
+        batch: list[UnstructuredInputDataModel],
+    ) -> list[dict[str, Any]]:
         """
         Parse the output file from unstructured.io.
 
@@ -727,7 +726,7 @@ if __name__ == "__main__":
         file_elements = {}
 
         try:
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 for line in f:
                     try:
                         element = json.loads(line)
@@ -738,7 +737,7 @@ if __name__ == "__main__":
 
                         file_elements[file_uuid].append(element)
                     except json.JSONDecodeError as e:
-                        self._logger.warning(f"Error parsing output line: {str(e)}")
+                        self._logger.warning(f"Error parsing output line: {e!s}")
 
             # Create result objects
             results = []
@@ -753,7 +752,7 @@ if __name__ == "__main__":
                         "Checksum": input_model.Checksum,
                         "Unstructured": elements,
                         "ExtractorName": self._name,
-                        "ProcessedTimestamp": datetime.now(timezone.utc).isoformat(),
+                        "ProcessedTimestamp": datetime.now(UTC).isoformat(),
                     }
                     results.append(result)
 
@@ -761,11 +760,11 @@ if __name__ == "__main__":
             return results
 
         except Exception as e:
-            self._logger.error(f"Error parsing output file: {str(e)}")
+            self._logger.exception(f"Error parsing output file: {e!s}")
             return []
 
 
-def main():
+def main() -> None:
     """Main function for testing the UnstructuredCollector."""
     import argparse
 
@@ -779,7 +778,6 @@ def main():
     args = parser.parse_args()
 
     if not args.dir:
-        print("Error: Directory not specified. Use --dir to specify a directory.")
         return
 
     # Create collector
@@ -804,29 +802,24 @@ def main():
             input_model = UnstructuredInputDataModel(
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=file_path,
-                ModificationTimestamp=datetime.fromtimestamp(os.path.getmtime(file_path), timezone.utc),
+                ModificationTimestamp=datetime.fromtimestamp(os.path.getmtime(file_path), UTC),
                 Length=os.path.getsize(file_path),
                 Checksum=None,  # We don't calculate checksum for this test
             )
 
             input_files.append(input_model)
 
-    print(f"Found {len(input_files)} files to process")
 
     # Collect data
     data = collector.collect_data(input_files)
 
     # Print results
-    print(f"Processed {len(data)} files")
-    print("Performance statistics:")
-    print(json.dumps(collector._perf_monitor.get_statistics(), indent=2))
 
     # Write results to file
     output_file = os.path.join(os.getcwd(), "unstructured_output.json")
     with open(output_file, "w") as f:
         json.dump(data, f, indent=2)
 
-    print(f"Output written to {output_file}")
 
 
 if __name__ == "__main__":

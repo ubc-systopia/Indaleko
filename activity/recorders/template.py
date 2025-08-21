@@ -27,8 +27,10 @@ import logging
 import os
 import sys
 import uuid
+
 from abc import abstractmethod
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 from activity.characteristics import ActivityDataCharacteristics
 from activity.recorders.base import RecorderBase
 from activity.recorders.registration_service import (
@@ -47,8 +51,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.timestamp import IndalekoTimestamp
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -78,7 +80,7 @@ class TemplateRecorder(RecorderBase):
     # Default description template
     DEFAULT_DESCRIPTION_TEMPLATE = "{name} records {activity_type} data"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         Initialize the recorder with sensible defaults.
 
@@ -116,7 +118,7 @@ class TemplateRecorder(RecorderBase):
             "collection_name",
             f"{self.__class__.__name__}Data",
         )
-        self._db_config_path = kwargs.get("db_config_path", None)
+        self._db_config_path = kwargs.get("db_config_path")
 
         # Service configuration
         self._provider_type = kwargs.get("provider_type", "Activity")
@@ -151,7 +153,7 @@ class TemplateRecorder(RecorderBase):
         if self._register_enabled:
             self._register_with_service_manager()
 
-    def _connect_to_db(self):
+    def _connect_to_db(self) -> None:
         """Connect to the Indaleko database."""
         try:
             # Create Indaleko instance and connect to database
@@ -213,7 +215,7 @@ class TemplateRecorder(RecorderBase):
                 f"Connected to database, collection: {self._collection_name}",
             )
         except Exception as e:
-            self._logger.error(f"Error connecting to database: {e}")
+            self._logger.exception(f"Error connecting to database: {e}")
             raise
 
     def _register_with_service_manager(self) -> None:
@@ -264,10 +266,10 @@ class TemplateRecorder(RecorderBase):
                     f"Registered recorder with service manager: {self._recorder_id}",
                 )
             except Exception as e:
-                self._logger.error(f"Error registering with service manager: {e}")
+                self._logger.exception(f"Error registering with service manager: {e}")
 
         except Exception as e:
-            self._logger.error(f"Error creating registration data: {e}")
+            self._logger.exception(f"Error creating registration data: {e}")
 
     def _get_source_identifier(self) -> IndalekoSourceIdentifierDataModel:
         """Get the source identifier for this recorder."""
@@ -383,7 +385,7 @@ class TemplateRecorder(RecorderBase):
 
             self._logger.info(f"Updated {stored_count} items in the database")
         except Exception as e:
-            self._logger.error(f"Error updating data: {e}")
+            self._logger.exception(f"Error updating data: {e}")
 
     def store_data(self, data: Any) -> None:
         """
@@ -401,7 +403,7 @@ class TemplateRecorder(RecorderBase):
 
             self._logger.debug(f"Stored data item: {document.get('_key', 'unknown')}")
         except Exception as e:
-            self._logger.error(f"Error storing data: {e}")
+            self._logger.exception(f"Error storing data: {e}")
 
     def process_data(self, data: Any) -> dict[str, Any]:
         """
@@ -416,11 +418,10 @@ class TemplateRecorder(RecorderBase):
         # Default implementation just converts to dict
         if hasattr(data, "model_dump"):
             return data.model_dump()
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             return data
-        else:
-            # Try to convert to JSON and back to dict
-            return json.loads(json.dumps(data, default=str))
+        # Try to convert to JSON and back to dict
+        return json.loads(json.dumps(data, default=str))
 
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the characteristics of this recorder."""
@@ -496,17 +497,15 @@ class TemplateRecorder(RecorderBase):
             except StopIteration:
                 return {}
         except Exception as e:
-            self._logger.error(f"Error getting latest database update: {e}")
+            self._logger.exception(f"Error getting latest database update: {e}")
             return {}
 
 
-def main():
+def main() -> None:
     """Test the template recorder."""
     logging.basicConfig(level=logging.INFO)
 
     # Cannot instantiate this class directly since it has abstract methods
-    print("TemplateRecorder provides a base implementation with sensible defaults.")
-    print("Extend this class to create your own recorders with minimal code.")
 
 
 if __name__ == "__main__":

@@ -22,7 +22,9 @@ import argparse
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.media.youtube_collector import YouTubeActivityCollector
 from activity.collectors.ambient.media.youtube_data_model import YouTubeVideoActivity
 from activity.recorders.ambient.youtube_recorder import YouTubeActivityRecorder
+
 
 # pylint: enable=wrong-import-position
 
@@ -125,7 +128,7 @@ def create_demo_activity():
     )
 
     # Create activity
-    activity = YouTubeVideoActivity(
+    return YouTubeVideoActivity(
         Record=record,
         Timestamp=datetime.now(UTC),
         SemanticAttributes=semantic_attrs,
@@ -149,10 +152,9 @@ def create_demo_activity():
         },
     )
 
-    return activity
 
 
-def run_demo():
+def run_demo() -> None:
     """Run a demonstration with simulated data."""
     logger.info("Running in demo mode with simulated data")
 
@@ -177,10 +179,10 @@ def run_demo():
         else:
             logger.error("Failed to store demo activity")
     except Exception as e:
-        logger.error(f"Error storing demo activity: {e}")
+        logger.exception(f"Error storing demo activity: {e}")
 
 
-def main():
+def main() -> None:
     """Main function."""
     args = parse_args()
 
@@ -202,7 +204,7 @@ def main():
             with open(args.oauth_credentials) as f:
                 oauth_credentials = json.load(f)
         except Exception as e:
-            logger.error(f"Error loading OAuth credentials: {e}")
+            logger.exception(f"Error loading OAuth credentials: {e}")
             return
 
     # Create collector
@@ -247,7 +249,7 @@ def main():
         else:
             logger.error("Failed to collect and store activities")
     except Exception as e:
-        logger.error(f"Error in collect_and_store: {e}")
+        logger.exception(f"Error in collect_and_store: {e}")
 
 
 if __name__ == "__main__":

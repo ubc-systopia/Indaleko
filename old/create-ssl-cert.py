@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from cryptography.x509.oid import NameOID
 
+
 # Generate private key
 private_key = rsa.generate_private_key(
     public_exponent=65537,

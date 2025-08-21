@@ -24,8 +24,10 @@ import os
 import sys
 import unittest
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +45,7 @@ from query.memory.query_pattern_analysis import (
     QueryPatternAnalyzer,
     QueryRefinementType,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -68,9 +71,9 @@ class TestQueryPatternAnalysis(unittest.TestCase):
 
     def test_init(self):
         """Test initialization."""
-        self.assertIsNotNone(self.analyzer)
-        self.assertEqual(self.analyzer.db_config, self.mock_db_config)
-        self.assertIsNotNone(self.analyzer.data)
+        assert self.analyzer is not None
+        assert self.analyzer.db_config == self.mock_db_config
+        assert self.analyzer.data is not None
 
     @patch(
         "query.memory.query_pattern_analysis.QueryPatternAnalyzer._process_query_entities",
@@ -101,9 +104,9 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         result = self.analyzer.load_query_history()
 
         # Assertions
-        self.assertEqual(result, 2)
-        self.assertEqual(len(self.analyzer.data.queries), 2)
-        self.assertEqual(len(self.analyzer.data.query_timeline), 2)
+        assert result == 2
+        assert len(self.analyzer.data.queries) == 2
+        assert len(self.analyzer.data.query_timeline) == 2
         mock_process.assert_called()
 
     def test_extract_entities(self):
@@ -118,7 +121,7 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         }
 
         entities = self.analyzer._extract_entities(query_data)
-        self.assertEqual(entities, ["entity1", "entity2"])
+        assert entities == ["entity1", "entity2"]
 
         # Test with direct ParsedResults path
         query_data = {
@@ -126,29 +129,29 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         }
 
         entities = self.analyzer._extract_entities(query_data)
-        self.assertEqual(entities, ["entity3", "entity4"])
+        assert entities == ["entity3", "entity4"]
 
         # Test with empty data
         query_data = {}
         entities = self.analyzer._extract_entities(query_data)
-        self.assertEqual(entities, [])
+        assert entities == []
 
     def test_query_has_results(self):
         """Test checking if a query has results."""
         # Test with results
         query_data = {"QueryHistory": {"RawResults": [{"result": 1}, {"result": 2}]}}
 
-        self.assertTrue(self.analyzer._query_has_results(query_data))
+        assert self.analyzer._query_has_results(query_data)
 
         # Test with empty results
         query_data = {"QueryHistory": {"RawResults": []}}
 
-        self.assertFalse(self.analyzer._query_has_results(query_data))
+        assert not self.analyzer._query_has_results(query_data)
 
         # Test with alternative path
         query_data = {"RawResults": [{"result": 1}]}
 
-        self.assertTrue(self.analyzer._query_has_results(query_data))
+        assert self.analyzer._query_has_results(query_data)
 
     def test_calculate_query_similarity(self):
         """Test calculating similarity between queries."""
@@ -157,28 +160,28 @@ class TestQueryPatternAnalysis(unittest.TestCase):
             "test query",
             "test query",
         )
-        self.assertEqual(similarity, 1.0)
+        assert similarity == 1.0
 
         # Test similar queries
         similarity = self.analyzer._calculate_query_similarity(
             "test query",
             "test queries",
         )
-        self.assertGreater(similarity, 0.7)
+        assert similarity > 0.7
 
         # Test dissimilar queries
         similarity = self.analyzer._calculate_query_similarity(
             "test query",
             "completely different",
         )
-        self.assertLess(similarity, 0.3)
+        assert similarity < 0.3
 
         # Test with empty strings
         similarity = self.analyzer._calculate_query_similarity("", "")
-        self.assertEqual(similarity, 0.0)
+        assert similarity == 0.0
 
         similarity = self.analyzer._calculate_query_similarity("test", "")
-        self.assertEqual(similarity, 0.0)
+        assert similarity == 0.0
 
     def test_determine_refinement_type(self):
         """Test determining refinement type between queries."""
@@ -189,7 +192,7 @@ class TestQueryPatternAnalysis(unittest.TestCase):
             ["documents"],
             ["documents", "week"],
         )
-        self.assertEqual(refinement_type, QueryRefinementType.TEMPORAL_REFINEMENT)
+        assert refinement_type == QueryRefinementType.TEMPORAL_REFINEMENT
 
         # Test location refinement
         refinement_type = self.analyzer._determine_refinement_type(
@@ -198,7 +201,7 @@ class TestQueryPatternAnalysis(unittest.TestCase):
             ["restaurants"],
             ["restaurants", "downtown"],
         )
-        self.assertEqual(refinement_type, QueryRefinementType.LOCATION_REFINEMENT)
+        assert refinement_type == QueryRefinementType.LOCATION_REFINEMENT
 
         # Test entity change
         refinement_type = self.analyzer._determine_refinement_type(
@@ -207,7 +210,7 @@ class TestQueryPatternAnalysis(unittest.TestCase):
             ["documents", "Python"],
             ["documents", "JavaScript"],
         )
-        self.assertEqual(refinement_type, QueryRefinementType.CHANGE_ENTITY)
+        assert refinement_type == QueryRefinementType.CHANGE_ENTITY
 
         # Test narrowing
         refinement_type = self.analyzer._determine_refinement_type(
@@ -216,7 +219,7 @@ class TestQueryPatternAnalysis(unittest.TestCase):
             ["documents"],
             ["documents", "PDF", "programming"],
         )
-        self.assertEqual(refinement_type, QueryRefinementType.NARROW)
+        assert refinement_type == QueryRefinementType.NARROW
 
     def test_process_query_entities(self):
         """Test processing and analyzing entities in a query."""
@@ -238,15 +241,15 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         self.analyzer._process_query_entities(query_id, query_data)
 
         # Verify entity usage was created
-        self.assertIn("documents", self.analyzer.data.entity_usage)
-        self.assertIn("Python", self.analyzer.data.entity_usage)
+        assert "documents" in self.analyzer.data.entity_usage
+        assert "Python" in self.analyzer.data.entity_usage
 
         # Verify entity usage data
         documents_usage = self.analyzer.data.entity_usage["documents"]
-        self.assertEqual(documents_usage.mention_count, 1)
-        self.assertEqual(documents_usage.success_rate, 1.0)  # Had results
-        self.assertEqual(documents_usage.intents, {"search": 1})
-        self.assertEqual(documents_usage.co_occurring_entities, {"Python": 1})
+        assert documents_usage.mention_count == 1
+        assert documents_usage.success_rate == 1.0  # Had results
+        assert documents_usage.intents == {"search": 1}
+        assert documents_usage.co_occurring_entities == {"Python": 1}
 
         # Process another query with the same entities
         query_id2 = "test_query_2"
@@ -271,11 +274,11 @@ class TestQueryPatternAnalysis(unittest.TestCase):
 
         # Verify entity usage was updated
         documents_usage = self.analyzer.data.entity_usage["documents"]
-        self.assertEqual(documents_usage.mention_count, 2)
-        self.assertEqual(documents_usage.success_rate, 0.5)  # 1 out of 2 had results
-        self.assertEqual(documents_usage.intents, {"search": 2})
-        self.assertEqual(documents_usage.co_occurring_entities["Python"], 2)
-        self.assertEqual(documents_usage.co_occurring_entities["web development"], 1)
+        assert documents_usage.mention_count == 2
+        assert documents_usage.success_rate == 0.5  # 1 out of 2 had results
+        assert documents_usage.intents == {"search": 2}
+        assert documents_usage.co_occurring_entities["Python"] == 2
+        assert documents_usage.co_occurring_entities["web development"] == 1
 
     def create_mock_query_timeline(self):
         """Create a mock query timeline for testing."""
@@ -403,26 +406,26 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         chains = self.analyzer.analyze_query_chains()
 
         # Verify chains were detected
-        self.assertGreaterEqual(len(chains), 2)  # Should detect at least 2 chains
+        assert len(chains) >= 2  # Should detect at least 2 chains
 
         # Verify chain properties
         for chain in chains:
             # Check that chains have multiple queries
-            self.assertGreaterEqual(len(chain.queries), 2)
+            assert len(chain.queries) >= 2
 
             # Check that chains have timestamps
-            self.assertIsNotNone(chain.start_time)
-            self.assertIsNotNone(chain.end_time)
+            assert chain.start_time is not None
+            assert chain.end_time is not None
 
             # Check that chain duration is calculated
-            self.assertGreater(chain.duration, 0)
+            assert chain.duration > 0
 
             # Check that transition patterns are recorded
-            self.assertGreaterEqual(len(chain.transition_patterns), 1)
+            assert len(chain.transition_patterns) >= 1
 
             # If this is a refinement chain, check shared entities
             if chain.chain_type == QueryChainType.REFINEMENT:
-                self.assertGreaterEqual(len(chain.shared_entities), 1)
+                assert len(chain.shared_entities) >= 1
 
     def test_detect_query_patterns(self):
         """Test detecting patterns in query behavior."""
@@ -448,15 +451,15 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         patterns = self.analyzer.detect_query_patterns()
 
         # Verify patterns were detected
-        self.assertGreaterEqual(len(patterns), 1)
+        assert len(patterns) >= 1
 
         # Verify pattern properties
         for pattern in patterns:
-            self.assertIsNotNone(pattern.pattern_name)
-            self.assertIsNotNone(pattern.description)
-            self.assertIsNotNone(pattern.pattern_type)
-            self.assertGreaterEqual(pattern.confidence, 0.0)
-            self.assertLessEqual(pattern.confidence, 1.0)
+            assert pattern.pattern_name is not None
+            assert pattern.description is not None
+            assert pattern.pattern_type is not None
+            assert pattern.confidence >= 0.0
+            assert pattern.confidence <= 1.0
 
     def test_generate_query_suggestions(self):
         """Test generating query suggestions based on patterns."""
@@ -479,15 +482,15 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         suggestions = self.analyzer.generate_query_suggestions(context)
 
         # Verify suggestions were generated
-        self.assertGreaterEqual(len(suggestions), 1)
+        assert len(suggestions) >= 1
 
         # Verify suggestion properties
         for suggestion in suggestions:
-            self.assertIsNotNone(suggestion.title)
-            self.assertIsNotNone(suggestion.content)
-            self.assertIsNotNone(suggestion.suggestion_type)
-            self.assertGreaterEqual(suggestion.confidence, 0.0)
-            self.assertLessEqual(suggestion.confidence, 1.0)
+            assert suggestion.title is not None
+            assert suggestion.content is not None
+            assert suggestion.suggestion_type is not None
+            assert suggestion.confidence >= 0.0
+            assert suggestion.confidence <= 1.0
 
     def test_calculate_metrics(self):
         """Test calculating metrics on query behavior."""
@@ -506,22 +509,22 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         metrics = self.analyzer.calculate_metrics()
 
         # Verify metrics
-        self.assertIsNotNone(metrics)
-        self.assertEqual(metrics.total_queries, len(timeline))
-        self.assertGreaterEqual(metrics.successful_queries, 0)
-        self.assertGreaterEqual(metrics.success_rate, 0.0)
-        self.assertLessEqual(metrics.success_rate, 1.0)
+        assert metrics is not None
+        assert metrics.total_queries == len(timeline)
+        assert metrics.successful_queries >= 0
+        assert metrics.success_rate >= 0.0
+        assert metrics.success_rate <= 1.0
 
         # Verify temporal metrics
-        self.assertIsNotNone(metrics.queries_by_hour)
-        self.assertIsNotNone(metrics.queries_by_day)
+        assert metrics.queries_by_hour is not None
+        assert metrics.queries_by_day is not None
 
         # Verify content metrics
-        self.assertIsNotNone(metrics.top_entities)
-        self.assertIsNotNone(metrics.top_intents)
+        assert metrics.top_entities is not None
+        assert metrics.top_intents is not None
 
         # Verify chain metrics
-        self.assertGreaterEqual(metrics.avg_chain_length, 0.0)
+        assert metrics.avg_chain_length >= 0.0
 
     def test_analyze_and_generate(self):
         """Test the complete analysis and suggestion generation flow."""
@@ -572,14 +575,14 @@ class TestQueryPatternAnalysis(unittest.TestCase):
                             mock_generate_suggestions.assert_called_once()
 
                             # Verify summary
-                            self.assertEqual(summary["query_count"], 5)
-                            self.assertEqual(summary["chain_count"], 2)
-                            self.assertEqual(summary["pattern_count"], 3)
-                            self.assertEqual(summary["success_rate"], 0.75)
-                            self.assertEqual(summary["refinement_rate"], 0.5)
+                            assert summary["query_count"] == 5
+                            assert summary["chain_count"] == 2
+                            assert summary["pattern_count"] == 3
+                            assert summary["success_rate"] == 0.75
+                            assert summary["refinement_rate"] == 0.5
 
                             # Verify suggestions
-                            self.assertEqual(len(suggestions), 2)
+                            assert len(suggestions) == 2
 
 
 class MockQueryGeneratorTests(unittest.TestCase):
@@ -691,15 +694,15 @@ class MockQueryGeneratorTests(unittest.TestCase):
         # Run analysis
         # 1. Analyze chains
         chains = self.analyzer.analyze_query_chains()
-        self.assertGreaterEqual(len(chains), 1)
+        assert len(chains) >= 1
 
         # 2. Detect patterns
         patterns = self.analyzer.detect_query_patterns()
-        self.assertGreaterEqual(len(patterns), 1)
+        assert len(patterns) >= 1
 
         # 3. Calculate metrics
         metrics = self.analyzer.calculate_metrics()
-        self.assertIsNotNone(metrics)
+        assert metrics is not None
 
         # 4. Generate suggestions
         suggestions = self.analyzer.generate_query_suggestions()
@@ -719,10 +722,7 @@ class MockQueryGeneratorTests(unittest.TestCase):
         # Check for temporal patterns (hour-based)
         has_hour_pattern = any(p.pattern_type == "temporal_hour" for p in patterns)
         # Note: This might fail if not enough patterns for the hours, but should generally work
-        self.assertTrue(
-            has_hour_pattern,
-            "Should detect at least one temporal hour pattern",
-        )
+        assert has_hour_pattern, "Should detect at least one temporal hour pattern"
 
     def generate_mock_query(
         self,
@@ -779,34 +779,20 @@ def run_demo():
     summary, suggestions = analyzer.analyze_and_generate()
 
     # Print results
-    print("\nQuery Pattern Analysis Summary:")
-    print(f"Processed {summary['query_count']} queries")
-    print(f"Detected {summary['chain_count']} query chains")
-    print(f"Identified {summary['pattern_count']} patterns")
 
     if summary["top_entities"]:
-        print(f"\nTop entities: {', '.join(summary['top_entities'])}")
+        pass
 
     if summary["top_intents"]:
-        print(f"Top intents: {', '.join(summary['top_intents'])}")
+        pass
 
-    print(f"\nSuccess rate: {summary['success_rate']:.1%}")
-    print(f"Refinement rate: {summary['refinement_rate']:.1%}")
 
-    print("\nDetected Patterns:")
-    for i, pattern in enumerate(analyzer.data.query_patterns, 1):
-        print(
-            f"{i}. {pattern.pattern_name} ({pattern.pattern_type}, confidence: {pattern.confidence:.2f})",
-        )
-        print(f"   {pattern.description}")
+    for _i, _pattern in enumerate(analyzer.data.query_patterns, 1):
+        pass
 
     if suggestions:
-        print("\nGenerated Suggestions:")
-        for i, suggestion in enumerate(suggestions, 1):
-            print(
-                f"{i}. {suggestion.title} ({suggestion.suggestion_type}, confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   {suggestion.content}")
+        for _i, _suggestion in enumerate(suggestions, 1):
+            pass
 
 
 def main():

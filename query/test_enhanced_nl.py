@@ -27,6 +27,7 @@ import json
 import os
 import sys
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -44,6 +45,7 @@ from query.query_processing.query_translator.enhanced_aql_translator import (
 )
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
 
 # pylint: enable=wrong-import-position
 
@@ -71,9 +73,8 @@ def get_api_key(api_key_file: str | None = None) -> str:
 
 def print_section(title, content=None):
     """Helper function to print a formatted section."""
-    print(f"\n{'-' * 5} {title} {'-' * 5}")
     if content is not None:
-        print(content)
+        pass
 
 
 def print_color(text, color=None):
@@ -89,9 +90,9 @@ def print_color(text, color=None):
     }
 
     if color and color in colors:
-        print(f"{colors[color]}{text}{colors['reset']}")
+        pass
     else:
-        print(text)
+        pass
 
 
 def process_query(
@@ -162,9 +163,8 @@ def process_query(
         if output_file:
             with open(output_file, "w") as f:
                 f.write(output)
-            print(f"Results saved to {output_file}")
         else:
-            print(output)
+            pass
         return
 
     # Format and display results
@@ -173,13 +173,8 @@ def process_query(
 
     # Display query understanding
     print_section("Enhanced Understanding")
-    print(f"Primary Intent: {query_understanding.intent.primary_intent}")
     if query_understanding.intent.secondary_intents:
-        print(
-            f"Secondary Intents: {', '.join(query_understanding.intent.secondary_intents)}",
-        )
-    print(f"Description: {query_understanding.intent.description}")
-    print(f"Overall Confidence: {query_understanding.confidence:.2f}")
+        pass
 
     # Display entities
     if query_understanding.entities:
@@ -206,8 +201,8 @@ def process_query(
     # Display bind variables
     if translated_query.bind_vars:
         print_section("Bind Variables")
-        for key, value in translated_query.bind_vars.items():
-            print(f"- {key}: {value}")
+        for _key, _value in translated_query.bind_vars.items():
+            pass
 
     # Display confidence and explanation
     print_section("Translation Confidence", f"{translated_query.confidence:.2f}")
@@ -222,23 +217,19 @@ def process_query(
                     f"- {hint.description} ({hint.affected_component})",
                     "yellow",
                 )
-            elif hint.severity == "error" or hint.severity == "critical":
+            elif hint.severity in {"error", "critical"}:
                 print_color(f"- {hint.description} ({hint.affected_component})", "red")
             else:
                 print_color(f"- {hint.description}", "green")
 
             if hint.recommendation:
-                print(f"  Recommendation: {hint.recommendation}")
+                pass
 
     # Display context information
     if query_understanding.context:
         print_section("Context Information")
-        print(f"Collections: {', '.join(query_understanding.context.collections)}")
         if query_understanding.context.temporal_context:
-            temp = query_understanding.context.temporal_context
-            print(
-                f"Temporal Context: {temp.time_field} {temp.start_time or ''} - {temp.end_time or ''}",
-            )
+            pass
 
     # Display suggested facets
     if query_understanding.suggested_facets:
@@ -246,7 +237,7 @@ def process_query(
         for facet in query_understanding.suggested_facets:
             print_color(f"- {facet.facet_name}: {facet.facet_description}", "magenta")
             if facet.example_values:
-                print(f"  Example values: {', '.join(facet.example_values)}")
+                pass
 
     # Display conversational response
     print_section("Conversational Response")
@@ -255,20 +246,17 @@ def process_query(
     # Display execution results if available
     if execute and "execution_results" in result:
         print_section("Query Results")
-        for i, res in enumerate(result["execution_results"]):
-            print(f"Result {i+1}:")
-            if isinstance(res, dict) and "Label" in res:
-                print(f"  - {res['Label']}")
-            elif isinstance(res, dict) and "Path" in res:
-                print(f"  - {res['Path']}")
+        for _i, res in enumerate(result["execution_results"]):
+            if (isinstance(res, dict) and "Label" in res) or (isinstance(res, dict) and "Path" in res):
+                pass
             elif isinstance(res, dict):
-                for j, (k, v) in enumerate(res.items()):
+                for j, (_k, _v) in enumerate(res.items()):
                     if j < 3:  # Limit to first 3 fields
-                        print(f"  - {k}: {v}")
+                        pass
                 if len(res) > 3:
-                    print(f"  - ... and {len(res) - 3} more fields")
+                    pass
             else:
-                print(f"  - {res}")
+                pass
 
 
 def main():

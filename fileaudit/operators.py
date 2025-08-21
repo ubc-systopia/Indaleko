@@ -30,7 +30,7 @@ class InputReader(IReader):
 
     """
 
-    def __init__(self, cmd: list[str]):
+    def __init__(self, cmd: list[str]) -> None:
         """
         Initialize InputReader with the provided command.
 
@@ -77,7 +77,7 @@ class InputReader(IReader):
 
 
 class FileInputReader(IReader):
-    def __init__(self, input_file_path: str):
+    def __init__(self, input_file_path: str) -> None:
         from os import path
 
         self.input_filepath = input_file_path
@@ -116,7 +116,7 @@ class ToList(IOperator):
 
     """
 
-    def __init__(self, sep=" ", remove_empty_fields=False):
+    def __init__(self, sep=" ", remove_empty_fields=False) -> None:
         """
         Initialize ToList with the provided parameters.
 
@@ -169,9 +169,7 @@ class ToList(IOperator):
 
             if start != -1 and end != -1:
                 fields = (
-                    fields[: start - 1]
-                    + ["[" + " ".join(fields[start:end])]
-                    + fields[end:]
+                    [*fields[:start - 1], "[" + " ".join(fields[start:end]), *fields[end:]]
                 )
 
             return (0, fields)
@@ -210,7 +208,7 @@ class FilterField(IOperator):
 
     """
 
-    def __init__(self, filter_args: tuple[int, str]):
+    def __init__(self, filter_args: tuple[int, str]) -> None:
         """
         Initialize FilterField with the provided parameters.
 
@@ -260,7 +258,7 @@ class FilterFields(IOperator):
         execute(): Execute the filtering process based on provided parameters.
     """
 
-    def __init__(self, pos: int, queries: list[str], exact_match=None):
+    def __init__(self, pos: int, queries: list[str], exact_match=None) -> None:
         """
         Initialize FilterFields with the provided parameters.
 
@@ -295,8 +293,7 @@ class FilterFields(IOperator):
                 ):
                     return (0, input_list)
             return (1, input_list)
-        else:
-            return (1, input_list)
+        return (1, input_list)
 
 
 class Canonize:
@@ -310,10 +307,8 @@ class Canonize:
     no_path_syscalls = ("write", "read", "close")
     no_fid_syscalls = ("mkdir", "rename")
 
-    def __init__(self):
-        """
-        Initializes Canonize object.
-        """
+    def __init__(self) -> None:
+        """Initializes Canonize object."""
 
     def clean(self, word: str) -> str:
         """
@@ -329,7 +324,7 @@ class Canonize:
 
     def extract_fd(self, word: str) -> str:
         """
-        Extracts file ID from the given string. It has to have the F=XXX pattern
+        Extracts file ID from the given string. It has to have the F=XXX pattern.
 
         Args:
             word (str): Input string.
@@ -399,7 +394,7 @@ class Canonize:
                 if (
                     (token.startswith("(") and token.endswith(")"))
                     or (token.startswith("[") and token.endswith("]"))
-                    or (token.startswith("B=") or token.startswith("F="))
+                    or (token.startswith(("B=", "F=")))
                 ):
                     beg_idx = i
                     break

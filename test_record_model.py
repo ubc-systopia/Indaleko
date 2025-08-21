@@ -9,7 +9,9 @@ field names and data types.
 import json
 import os
 import sys
+
 from datetime import UTC, datetime
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -19,6 +21,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+
 
 # Create source identifier for the record
 source_identifier = IndalekoSourceIdentifierDataModel(
@@ -30,6 +33,7 @@ source_identifier = IndalekoSourceIdentifierDataModel(
 # Import our data management utilities
 from utils.misc.data_management import encode_binary_data
 
+
 # Create record data model with the correct field names
 # Using SourceIdentifier (not SourceId) and properly encoded Data
 record = IndalekoRecordDataModel(
@@ -38,8 +42,3 @@ record = IndalekoRecordDataModel(
     Data=encode_binary_data(json.dumps({"test": "value"}).encode("utf-8")),
 )
 
-print("Successfully created IndalekoRecordDataModel with:")
-print(f"- SourceIdentifier: {record.SourceIdentifier}")
-print(f"- Timestamp: {record.Timestamp}")
-print(f"- Data: {record.Data}")
-print(f"- Model dump: {record.model_dump(exclude_none=True)}")

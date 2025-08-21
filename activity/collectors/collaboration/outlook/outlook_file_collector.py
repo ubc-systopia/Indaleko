@@ -25,12 +25,14 @@ import sys
 import threading
 import time
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, request
 from pyngrok import ngrok
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,12 +42,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+import builtins
+import contextlib
+
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.collaboration.collaboration_base import CollaborationCollector
 from activity.collectors.collaboration.data_models.email_file_share import (
     EmailFileShareData,
 )
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
+
 
 # pylint: enable=wrong-import-position
 
@@ -66,7 +72,7 @@ class OutlookFileShareCollector(CollaborationCollector):
         port: int = 5000,
         manifest_dir: str | None = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the Outlook file sharing collector.
 
@@ -138,7 +144,7 @@ class OutlookFileShareCollector(CollaborationCollector):
             self.logger.info(f"ngrok tunnel started at: {self.public_url}")
             return self.public_url
         except Exception as e:
-            self.logger.error(f"Failed to start ngrok tunnel: {e}")
+            self.logger.exception(f"Failed to start ngrok tunnel: {e}")
             raise
 
     def stop_ngrok_tunnel(self) -> None:
@@ -148,7 +154,7 @@ class OutlookFileShareCollector(CollaborationCollector):
                 ngrok.disconnect(self.ngrok_tunnel.public_url)
                 self.logger.info("ngrok tunnel stopped")
             except Exception as e:
-                self.logger.error(f"Error stopping ngrok tunnel: {e}")
+                self.logger.exception(f"Error stopping ngrok tunnel: {e}")
             self.ngrok_tunnel = None
             self.public_url = None
 
@@ -290,8 +296,8 @@ class OutlookFileShareCollector(CollaborationCollector):
         os.makedirs(os.path.join(os.path.dirname(__file__), "static"), exist_ok=True)
 
         @app.route("/")
-        def index():
-            """Home page"""
+        def index() -> str:
+            """Home page."""
             return f"""
             <html>
             <head>
@@ -323,15 +329,15 @@ class OutlookFileShareCollector(CollaborationCollector):
 
         @app.route("/manifest")
         def manifest():
-            """Serve the manifest file"""
+            """Serve the manifest file."""
             manifest_path = self.generate_manifest()
             with open(manifest_path, encoding="utf-8") as f:
                 content = f.read()
             return content, 200, {"Content-Type": "application/xml"}
 
         @app.route("/taskpane")
-        def taskpane():
-            """Serve the taskpane.html content"""
+        def taskpane() -> str:
+            """Serve the taskpane.html content."""
             return f"""
             <!DOCTYPE html>
             <html>
@@ -393,8 +399,8 @@ class OutlookFileShareCollector(CollaborationCollector):
             """
 
         @app.route("/static/addin.js")
-        def addin_js():
-            """Serve the add-in JavaScript"""
+        def addin_js() -> str:
+            """Serve the add-in JavaScript."""
             return f"""
             // Indaleko Outlook Add-in
 
@@ -613,7 +619,7 @@ class OutlookFileShareCollector(CollaborationCollector):
 
         @app.route("/static/<path:filename>")
         def static_files(filename):
-            """Serve static files"""
+            """Serve static files."""
             if filename in ["icon-16.png", "icon-32.png", "icon-80.png"]:
                 # Generate a simple colored square as an icon
                 from PIL import Image, ImageDraw
@@ -624,7 +630,7 @@ class OutlookFileShareCollector(CollaborationCollector):
 
                 # Draw a white "I" in the center
                 if size >= 32:
-                    font_size = size // 2
+                    size // 2
                     draw.rectangle(
                         [size // 4, size // 4, 3 * size // 4, 3 * size // 4],
                         fill="#FFFFFF",
@@ -645,7 +651,7 @@ class OutlookFileShareCollector(CollaborationCollector):
 
         @app.route("/api/email-files", methods=["POST"])
         def receive_email_files():
-            """API endpoint to receive email file data"""
+            """API endpoint to receive email file data."""
             try:
                 data = request.json
                 if not data:
@@ -672,12 +678,12 @@ class OutlookFileShareCollector(CollaborationCollector):
                     200,
                 )
             except Exception as e:
-                self.logger.error(f"Error processing email file data: {e}")
+                self.logger.exception(f"Error processing email file data: {e}")
                 return jsonify({"error": str(e)}), 500
 
         @app.route("/help")
-        def help_page():
-            """Help page for the add-in"""
+        def help_page() -> str:
+            """Help page for the add-in."""
             return """
             <html>
             <head>
@@ -773,7 +779,7 @@ class OutlookFileShareCollector(CollaborationCollector):
                     f"Processed file share: {file_share['filename']} from {sender} to {recipients}",
                 )
         except Exception as e:
-            self.logger.error(f"Error processing email data: {e}")
+            self.logger.exception(f"Error processing email data: {e}")
 
     def run_server(self) -> None:
         """Run the Flask server in a separate thread."""
@@ -791,7 +797,7 @@ class OutlookFileShareCollector(CollaborationCollector):
         self.generate_manifest()
 
         # Function to run in thread
-        def run_flask():
+        def run_flask() -> None:
             self.flask_app.run(host="127.0.0.1", port=self.port)
 
         # Start server in thread
@@ -849,16 +855,7 @@ class OutlookFileShareCollector(CollaborationCollector):
             self.run_server()
 
         # For demonstration purposes, provide instructions to the user
-        manifest_path = self.manifest_dir / "outlook-addin-manifest.xml"
-        print("\nOutlook File Sharing Collector is active.")
-        print(f"Public URL: {self.public_url}")
-        print(f"Manifest: {manifest_path}")
-        print("\nTo use this collector:")
-        print("1. Open Outlook")
-        print("2. Go to Get Add-ins")
-        print("3. Choose 'My Add-ins' > 'Add a custom add-in' > 'Add from file'")
-        print(f"4. Select the manifest file at: {manifest_path}")
-        print("5. Send emails with attachments or links to collect data\n")
+        self.manifest_dir / "outlook-addin-manifest.xml"
 
         # In a real implementation, we would wait for data, but for now we'll return any existing data
         return self.get_file_shares()
@@ -922,7 +919,7 @@ class OutlookFileShareCollector(CollaborationCollector):
         return email_share.model_dump()
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
-        """Get the characteristics of the collector"""
+        """Get the characteristics of the collector."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_FILE_SHARE,
             ActivityDataCharacteristics.ACTIVITY_DATA_COLLABORATION,
@@ -930,11 +927,11 @@ class OutlookFileShareCollector(CollaborationCollector):
         ]
 
     def get_collectorr_name(self) -> str:
-        """Get the name of the collector"""
+        """Get the name of the collector."""
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
-        """Get the ID of the collector"""
+        """Get the ID of the collector."""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> dict:
@@ -1029,8 +1026,8 @@ class OutlookFileShareCollector(CollaborationCollector):
         return EmailFileShareData.model_json_schema()
 
 
-def main():
-    """Main function for testing the collector"""
+def main() -> None:
+    """Main function for testing the collector."""
     # Set up logging
     logging.basicConfig(level=logging.INFO)
 
@@ -1072,37 +1069,26 @@ def main():
 
         # Get and print the collected data
         file_shares = collector.get_file_shares()
-        print(f"\nCollected {len(file_shares)} file shares:")
-        for i, file_share in enumerate(file_shares):
-            print(f"\nFile Share {i+1}:")
-            print(f"  Filename: {file_share['filename']}")
-            print(f"  Type: {file_share['attachment_type']}")
-            print(f"  Sender: {file_share['sender']}")
-            print(f"  Recipients: {', '.join(file_share['recipients'])}")
+        for _i, _file_share in enumerate(file_shares):
+            pass
 
         # Process and print a model
         if file_shares:
-            model = collector.process_data(file_shares[0])
-            print("\nProcessed Model:")
-            print(json.dumps(model, indent=2, default=str))
+            collector.process_data(file_shares[0])
 
         # Keep server running
-        print("\nPress Ctrl+C to stop the server...")
         while True:
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print("\nStopping server...")
         collector.stop_server()
 
     except Exception as e:
         logging.exception(f"Error in main: {e}")
 
         # Try to clean up
-        try:
+        with contextlib.suppress(builtins.BaseException):
             collector.stop_server()
-        except:
-            pass
 
 
 if __name__ == "__main__":

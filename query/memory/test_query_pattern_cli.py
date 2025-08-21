@@ -23,7 +23,9 @@ import json
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.memory.test_query_pattern_analysis import MockQueryGeneratorTests
+
 
 # pylint: enable=wrong-import-position
 
@@ -46,65 +49,43 @@ def run_demo():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    print("Indaleko Query Pattern Analysis Demo")
-    print("===================================\n")
 
     # Create a test instance that generates mock data
     test_obj = MockQueryGeneratorTests()
     test_obj.setUp()
 
     # Run the test that generates mock data
-    print("Generating mock query data...")
     test_obj.test_with_generated_queries()
 
     # Use the analyzer with the generated data
     analyzer = test_obj.analyzer
 
     # Run the complete analysis
-    print("\nRunning query pattern analysis...")
     summary, suggestions = analyzer.analyze_and_generate()
 
     # Print the summary
-    print("\nQuery Pattern Analysis Results:")
     if summary and isinstance(summary, dict):
-        print(f"- Processed {summary.get('query_count', 0)} mock queries")
-        print(f"- Detected {summary.get('chain_count', 0)} query chains")
-        print(f"- Identified {summary.get('pattern_count', 0)} patterns")
 
         if summary.get("top_entities"):
-            print(f"\nTop entities: {', '.join(summary['top_entities'])}")
+            pass
 
         if summary.get("top_intents"):
-            print(f"Top intents: {', '.join(summary['top_intents'])}")
+            pass
     else:
-        print("- No summary information available")
+        pass
 
     # Print the patterns
-    print("\nDetected Query Patterns:")
-    for i, pattern in enumerate(analyzer.data.query_patterns, 1):
-        print(
-            f"{i}. {pattern.pattern_name} ({pattern.pattern_type}, confidence: {pattern.confidence:.2f})",
-        )
-        print(f"   {pattern.description}")
+    for _i, _pattern in enumerate(analyzer.data.query_patterns, 1):
+        pass
 
     # Print the suggestions
     if suggestions:
-        print("\nGenerated Suggestions:")
-        for i, suggestion in enumerate(suggestions, 1):
-            print(
-                f"{i}. {suggestion.title} ({suggestion.suggestion_type}, confidence: {suggestion.confidence:.2f})",
-            )
-            print(f"   {suggestion.content}")
+        for _i, _suggestion in enumerate(suggestions, 1):
+            pass
 
     # Calculate metrics
-    print("\nCalculating query metrics...")
     metrics = analyzer.calculate_metrics()
 
-    print("\nQuery Metrics Summary:")
-    print(f"- Total queries: {metrics.total_queries}")
-    print(f"- Success rate: {metrics.success_rate:.1%}")
-    print(f"- Avg query length: {metrics.avg_query_length:.1f} characters")
-    print(f"- Avg entity count: {metrics.avg_entity_count:.1f} entities per query")
 
     # Automatically save results to file
     filename = "query_patterns.json"
@@ -131,7 +112,6 @@ def run_demo():
     with open(filename, "w") as f:
         json.dump(results, f, indent=2, default=str)
 
-    print(f"\nResults saved to {filename}")
 
 
 def main():

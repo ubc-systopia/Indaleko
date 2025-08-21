@@ -24,6 +24,7 @@ import sys
 from icecream import ic
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,11 +35,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class Hardware(IndalekoBaseModel):
-    """Defines the machine Hardware information"""
+    """Defines the machine Hardware information."""
 
     CPU: str = Field(..., title="CPU", description="Processor Architecture.")
 
@@ -57,7 +59,7 @@ class Hardware(IndalekoBaseModel):
     )
 
     class Config:
-        """Configuration for the hardware data model"""
+        """Configuration for the hardware data model."""
 
         json_schema_extra = {
             "example": {
@@ -69,8 +71,8 @@ class Hardware(IndalekoBaseModel):
         }
 
 
-def main():
-    """Main function for the software data model"""
+def main() -> None:
+    """Main function for the software data model."""
     ic("Testing Software Data Model")
     Hardware.test_model_main()
 

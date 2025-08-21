@@ -29,8 +29,10 @@ import logging
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,18 +46,17 @@ if os.environ.get("INDALEKO_ROOT") is None:
 try:
     import google.auth
     import google.auth.transport.requests
+
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
     from googleapiclient.errors import HttpError
 except ImportError:
-    print("Google API client libraries not found. Please install them with:")
-    print(
-        "pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib",
-    )
     sys.exit(1)
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.base import CollectorBase
 from activity.collectors.storage.cloud.google_drive.data_models.google_drive_activity_model import (
@@ -68,6 +69,7 @@ from activity.collectors.storage.cloud.google_drive.data_models.google_drive_act
 from activity.data_model.activity_classification import IndalekoActivityClassification
 from utils.misc.directory_management import indaleko_default_config_dir
 
+
 # pylint: enable=wrong-import-position
 
 # Set up logging
@@ -75,7 +77,7 @@ logger = logging.getLogger(__name__)
 
 
 # Configure logging when debug is enabled
-def configure_debug_logging():
+def configure_debug_logging() -> None:
     """Configure logging for debug mode."""
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
@@ -104,7 +106,7 @@ GDRIVE_COLLECTOR_UUID = "3e7d8f29-7c73-41c5-b3d4-1a9b42567890"
 class GoogleDriveActivityCollector(CollectorBase):
     """Google Drive Activity Collector for Indaleko."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the Google Drive Activity Collector.
 
         Args:
@@ -220,7 +222,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                 self._deep_update(default_config, loaded_config)
                 logger.info(f"Loaded configuration from {self.config_path}")
             except Exception as e:
-                logger.error(f"Error loading configuration: {e}")
+                logger.exception(f"Error loading configuration: {e}")
         else:
             logger.info(
                 f"Configuration file not found at {self.config_path}, using defaults",
@@ -235,7 +237,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                     json.dump(default_config, f, indent=2)
                 logger.info(f"Created default configuration at {self.config_path}")
             except Exception as e:
-                logger.error(f"Error saving default configuration: {e}")
+                logger.exception(f"Error saving default configuration: {e}")
 
         # Update instance variables from config
         self.credentials_file = default_config["credentials_file"]
@@ -274,7 +276,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                 logger.info(f"Loaded state from {self.state_file}")
                 return state
             except Exception as e:
-                logger.error(f"Error loading state: {e}")
+                logger.exception(f"Error loading state: {e}")
 
         logger.info(f"No state file found at {self.state_file}, using default state")
         return default_state
@@ -289,7 +291,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                 json.dump(self.state, f, indent=2)
             logger.info(f"Saved state to {self.state_file}")
         except Exception as e:
-            logger.error(f"Error saving state: {e}")
+            logger.exception(f"Error saving state: {e}")
 
     def _authenticate(self) -> None:
         """Authenticate with Google Drive API."""
@@ -345,7 +347,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                 raise RuntimeError("Failed to initialize Drive Activity API client")
             logger.info("Initialized Drive Activity API client")
         except Exception as e:
-            logger.error(f"Error initializing API clients: {e}")
+            logger.exception(f"Error initializing API clients: {e}")
             raise RuntimeError(f"Failed to initialize API clients: {e}")
 
     def _get_user_info(self, actor: dict[str, Any]) -> GDriveUserInfo:
@@ -443,8 +445,7 @@ class GoogleDriveActivityCollector(CollectorBase):
 
         # Get basic file information
         file_id = drive_item.get("name", "unknown")
-        if file_id.startswith("items/"):
-            file_id = file_id[6:]  # Remove 'items/' prefix
+        file_id = file_id.removeprefix("items/")  # Remove 'items/' prefix
 
         # Get detailed file information using Drive API
         try:
@@ -535,22 +536,22 @@ class GoogleDriveActivityCollector(CollectorBase):
         # Check each action type
         if "create" in action_detail:
             return GDriveActivityType.CREATE
-        elif "edit" in action_detail:
+        if "edit" in action_detail:
             return GDriveActivityType.EDIT
-        elif "delete" in action_detail:
+        if "delete" in action_detail:
             return GDriveActivityType.DELETE
-        elif "move" in action_detail:
+        if "move" in action_detail:
             return GDriveActivityType.MOVE
-        elif "rename" in action_detail:
+        if "rename" in action_detail:
             return GDriveActivityType.RENAME
-        elif "comment" in action_detail:
+        if "comment" in action_detail:
             return GDriveActivityType.COMMENT
-        elif "dlpChange" in action_detail:
+        if "dlpChange" in action_detail:
             # Data Loss Prevention changes usually involve sharing settings
             return GDriveActivityType.SHARE
-        elif "permissionChange" in action_detail:
+        if "permissionChange" in action_detail:
             return GDriveActivityType.SHARE
-        elif "reference" in action_detail:
+        if "reference" in action_detail:
             if "copy" in action_detail["reference"]:
                 return GDriveActivityType.COPY
         elif "restore" in action_detail:
@@ -569,7 +570,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         try:
             # Get timestamp
             timestamp_str = activity.get("timestamp")
-            timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            timestamp = datetime.fromisoformat(timestamp_str)
 
             # Get actors (users) involved
             actors = activity.get("actors", [])
@@ -628,8 +629,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                         if "driveItem" in parent:
                             drive_item = parent["driveItem"]
                             destination_folder_id = drive_item.get("name")
-                            if destination_folder_id.startswith("items/"):
-                                destination_folder_id = destination_folder_id[6:]
+                            destination_folder_id = destination_folder_id.removeprefix("items/")
 
                             # Get folder name
                             try:
@@ -709,7 +709,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                 activity_classification=activity_classification,
             )
         except Exception as e:
-            logger.error(f"Error extracting activity details: {e}")
+            logger.exception(f"Error extracting activity details: {e}")
             if self.debug:
                 logger.debug(f"Activity data: {activity}")
             return None
@@ -797,7 +797,7 @@ class GoogleDriveActivityCollector(CollectorBase):
             if isinstance(start_time, str):
                 # Parse the string to datetime if necessary
                 try:
-                    dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    dt = datetime.fromisoformat(start_time)
                     # Convert back to RFC 3339 string format
                     start_time_rfc = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                 except ValueError:
@@ -837,7 +837,7 @@ class GoogleDriveActivityCollector(CollectorBase):
             )
             return activities, next_page_token
         except HttpError as e:
-            logger.error(f"Error querying Drive Activity API: {e}")
+            logger.exception(f"Error querying Drive Activity API: {e}")
             return [], None
 
     def collect_data(self) -> bool:
@@ -936,13 +936,13 @@ class GoogleDriveActivityCollector(CollectorBase):
 
                     logger.info(f"Stored {len(self.activities)} activities to database")
                 except ImportError as e:
-                    logger.error(
+                    logger.exception(
                         f"Recorder not found: {e}. Make sure activity/recorders/storage/cloud/gdrive/recorder.py exists",
                     )
                 except Exception as e:
-                    logger.error(f"Error storing activities in database: {e}")
+                    logger.exception(f"Error storing activities in database: {e}")
         except Exception as e:
-            logger.error(f"Error storing activities: {e}")
+            logger.exception(f"Error storing activities: {e}")
             return False
 
         return True
@@ -989,7 +989,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         logger.warning(f"Data not found for ID: {data_id}")
         return {}
 
-    def get_cursor(self, activity_context: uuid.UUID = None) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid.UUID | None = None) -> uuid.UUID:
         """Get a position cursor for the data."""
         logger.debug(f"Getting cursor for activity context: {activity_context}")
         # Return a UUID based on the last page token
@@ -1030,7 +1030,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                     # Store data
                     success = self.store_data()
         except Exception as e:
-            logger.error(f"Error running collector: {e}")
+            logger.exception(f"Error running collector: {e}")
             if self.debug:
                 logger.exception("Detailed error:")
             success = False
@@ -1043,7 +1043,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         return success
 
 
-def main():
+def main() -> None:
     """Main entry point for command-line execution."""
     parser = argparse.ArgumentParser(
         description="Google Drive Activity Collector for Indaleko",
@@ -1095,11 +1095,8 @@ def main():
                     state_file = config.get("state_file")
 
         if state_file and os.path.exists(state_file):
-            try:
+            with contextlib.suppress(Exception):
                 os.remove(state_file)
-                print(f"Removed state file {state_file} for full collection")
-            except Exception as e:
-                print(f"Error removing state file: {e}")
 
     # Create and run collector
     collector = GoogleDriveActivityCollector(**kwargs)

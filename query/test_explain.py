@@ -26,6 +26,7 @@ import os
 import sys
 import uuid
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -38,14 +39,14 @@ from db import IndalekoDBConfig
 from query.search_execution.data_models.query_execution_plan import QueryExecutionPlan
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 
+
 # pylint: enable=wrong-import-position
 
 
 def print_section(title, content=None):
     """Helper function to print a formatted section."""
-    print(f"\n{'-' * 5} {title} {'-' * 5}")
     if content is not None:
-        print(content)
+        pass
 
 
 def print_color(text, color=None):
@@ -61,9 +62,9 @@ def print_color(text, color=None):
     }
 
     if color and color in colors:
-        print(f"{colors[color]}{text}{colors['reset']}")
+        pass
     else:
-        print(text)
+        pass
 
 
 def test_explain(
@@ -120,9 +121,8 @@ def test_explain(
         if output_file:
             with open(output_file, "w") as f:
                 f.write(output)
-            print(f"Execution plan saved to {output_file}")
         else:
-            print(output)
+            pass
         return
 
     # Format and display the execution plan
@@ -133,16 +133,11 @@ def test_explain(
     summary = execution_plan.analysis.summary
     if summary:
         print_section("Summary")
-        print(f"Estimated Cost: {execution_plan.plan.estimatedCost:.2f}")
-        print(f"Collections Used: {len(execution_plan.plan.collections)}")
-        for coll in execution_plan.plan.collections:
-            print(f"  - {coll}")
-        print(f"Operations: {len(execution_plan.plan.nodes)}")
-        print(f"Cacheable: {execution_plan.cacheable}")
+        for _coll in execution_plan.plan.collections:
+            pass
 
         # Show indexes used
         if execution_plan.analysis.indexes_used:
-            print("\nIndexes Used:")
             for idx in execution_plan.analysis.indexes_used:
                 print_color(f"  - {idx}", "green")
 
@@ -161,61 +156,19 @@ def test_explain(
     # Alternative plans
     if execution_plan.alternative_plans:
         print_section("Alternative Plans")
-        print(
-            f"Found {len(execution_plan.alternative_plans)} alternative execution plans",
-        )
-        for i, plan in enumerate(execution_plan.alternative_plans[:3], 1):  # Show top 3
-            print(f"\nPlan {i} - Cost: {plan.estimatedCost:.2f}")
+        for _i, plan in enumerate(execution_plan.alternative_plans[:3], 1):  # Show top 3
             if hasattr(plan, "rules") and plan.rules:
-                print(f"Rules: {', '.join(plan.rules[:3])}...")
+                pass
 
     # Execution stats
     if execution_plan.stats:
         print_section("Optimization Stats")
-        for key, value in execution_plan.stats.items():
-            print(f"- {key.replace('rules', 'Rules ').title()}: {value}")
+        for _key, _value in execution_plan.stats.items():
+            pass
 
 
 def print_help():
     """Print extended help text with examples."""
-    help_text = """
-EXPLAIN Query Analyzer for Indaleko
-===================================
-
-This tool helps analyze and optimize AQL queries by showing execution plans,
-cost estimates, and optimization recommendations.
-
-EXAMPLES:
-
-1. Basic usage with default query:
-   python -m query.test_explain
-
-2. Analyze a specific query:
-   python -m query.test_explain --query "FOR doc IN Objects FILTER doc.Record.Attributes.Path LIKE '%pdf' RETURN doc"
-
-3. Using bind variables:
-   python -m query.test_explain --query "FOR doc IN Objects FILTER doc.Record.Attributes.Size > @size RETURN doc" --bind-vars '{"size": 1000000}'
-
-4. Compare two queries:
-   python -m query.test_explain --query "FOR doc IN Objects RETURN doc" --compare "FOR doc IN Objects LIMIT 100 RETURN doc"
-
-5. Generate JSON output:
-   python -m query.test_explain --query "FOR doc IN Objects RETURN doc" --json
-
-6. Show all possible execution plans:
-   python -m query.test_explain --query "FOR doc IN Objects RETURN doc" --all-plans
-
-7. Save results to a file:
-   python -m query.test_explain --query "FOR doc IN Objects RETURN doc" --json --output plans.json
-
-RECOMMENDATIONS:
-
-- Use --all-plans to see alternative execution strategies
-- Compare queries with --compare to identify more efficient patterns
-- Export plans with --json for sharing or documentation
-- Use specific collection names from IndalekoDBCollections class
-"""
-    print(help_text)
 
 
 def main():
@@ -279,11 +232,7 @@ def main():
     if args.bind_vars:
         try:
             bind_vars = json.loads(args.bind_vars)
-        except json.JSONDecodeError as e:
-            print(f"Error parsing bind variables: {e}")
-            print(
-                "Please provide bind variables as valid JSON, e.g. '{\"size\": 1000000}'",
-            )
+        except json.JSONDecodeError:
             sys.exit(1)
 
     # Run the test
@@ -298,9 +247,6 @@ def main():
 
     # Compare with another query if requested
     if args.compare:
-        print("\n\n" + "=" * 50)
-        print("COMPARING WITH ALTERNATIVE QUERY")
-        print("=" * 50 + "\n")
         test_explain(
             query=args.compare,
             all_plans=args.all_plans,

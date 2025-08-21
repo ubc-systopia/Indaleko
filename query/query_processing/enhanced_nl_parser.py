@@ -23,7 +23,9 @@ import logging
 import os
 import sys
 import uuid
+
 from textwrap import dedent
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +52,7 @@ from query.query_processing.nl_parser import NLParser
 from query.result_analysis.data_models.facet_data_model import DynamicFacets
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -71,7 +74,7 @@ class EnhancedNLParser(NLParser):
         self,
         llm_connector: OpenAIConnector,
         collections_metadata: IndalekoDBCollectionsMetadata,
-    ):
+    ) -> None:
         """
         Initialize the enhanced parser.
 
@@ -316,9 +319,8 @@ class EnhancedNLParser(NLParser):
 
         # Parse the response
         response_data = json.loads(response.choices[0].message.content)
-        enhanced_understanding = EnhancedQueryUnderstanding(**response_data)
+        return EnhancedQueryUnderstanding(**response_data)
 
-        return enhanced_understanding
 
     def _update_query_history(
         self,

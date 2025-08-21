@@ -18,8 +18,10 @@ import os
 import re
 import sys
 import unittest
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -199,7 +201,7 @@ class ImportanceScorer:
 
             # Parse timestamp
             if isinstance(timestamp_str, str):
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                timestamp = datetime.fromisoformat(timestamp_str)
             else:
                 timestamp = timestamp_str
 
@@ -307,7 +309,7 @@ class ImportanceScorer:
             if created_at:
                 try:
                     created_time = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00"),
+                        created_at,
                     )
                     now = datetime.now(UTC)
                     age_days = (now - created_time).total_seconds() / (24 * 60 * 60)
@@ -343,14 +345,14 @@ class TestImportanceScorer(unittest.TestCase):
         recent_score = self.scorer._calculate_recency_score(recent_data)
         # Logs for test results but suppressed in lint output
         logging.info("Recent score: %.4f", recent_score)
-        self.assertGreater(recent_score, 0.8)
+        assert recent_score > 0.8
 
         # Older activity (7 days ago)
         older_data = {"timestamp": (datetime.now(UTC) - timedelta(days=7)).isoformat()}
         older_score = self.scorer._calculate_recency_score(older_data)
         logging.info("7-day score: %.4f", older_score)
         # Allow for exactly 0.5 based on half-life
-        self.assertLessEqual(older_score, 0.6)
+        assert older_score <= 0.6
 
         # Very old activity (30 days ago)
         very_old_data = {
@@ -358,7 +360,7 @@ class TestImportanceScorer(unittest.TestCase):
         }
         very_old_score = self.scorer._calculate_recency_score(very_old_data)
         logging.info("30-day score: %.4f", very_old_score)
-        self.assertLess(very_old_score, 0.2)
+        assert very_old_score < 0.2
 
     def test_content_score(self):
         """Test content-based scoring."""
@@ -369,14 +371,14 @@ class TestImportanceScorer(unittest.TestCase):
         }
         doc_score = self.scorer._calculate_content_score(doc_data)
         logging.info("Document score: %.4f", doc_score)
-        self.assertGreater(doc_score, 0.5)
+        assert doc_score > 0.5
 
         # Temporary file
         temp_data = {"file_path": "C:/Temp/cache/temp.txt", "is_directory": False}
         temp_score = self.scorer._calculate_content_score(temp_data)
         logging.info("Temp file score: %.4f", temp_score)
         # Adjusted to accommodate the actual implementation
-        self.assertLessEqual(temp_score, 0.4)
+        assert temp_score <= 0.4
 
         # Directory test
         dir_data = {"file_path": "C:/Users/Documents/Project", "is_directory": True}
@@ -385,7 +387,7 @@ class TestImportanceScorer(unittest.TestCase):
         # Note: Based on our implementation, directories might not always score higher
         # if the document is in a high-importance path with an important extension
         # Directories should have reasonably high scores
-        self.assertGreaterEqual(dir_score, 0.5)
+        assert dir_score >= 0.5
 
     def test_type_score(self):
         """Test activity type scoring."""
@@ -393,13 +395,13 @@ class TestImportanceScorer(unittest.TestCase):
         create_data = {"activity_type": "create"}
         create_score = self.scorer._calculate_type_score(create_data)
         logging.info("Create score: %.4f", create_score)
-        self.assertGreater(create_score, 0.6)
+        assert create_score > 0.6
 
         # Close activity
         close_data = {"activity_type": "close"}
         close_score = self.scorer._calculate_type_score(close_data)
         logging.info("Close score: %.4f", close_score)
-        self.assertLess(close_score, create_score)
+        assert close_score < create_score
 
     def test_overall_scoring(self):
         """Test overall importance scoring with all factors."""
@@ -412,7 +414,7 @@ class TestImportanceScorer(unittest.TestCase):
         }
         important_score = self.scorer.calculate_importance(important_data)
         logging.info("Important doc score: %.4f", important_score)
-        self.assertGreater(important_score, 0.7)
+        assert important_score > 0.7
 
         # Temporary file, old modification
         unimportant_data = {
@@ -424,7 +426,7 @@ class TestImportanceScorer(unittest.TestCase):
         unimportant_score = self.scorer.calculate_importance(unimportant_data)
         logging.info("Unimportant file score: %.4f", unimportant_score)
         # Allow for factor adjustments in the implementation
-        self.assertLessEqual(unimportant_score, 0.45)
+        assert unimportant_score <= 0.45
 
 
 if __name__ == "__main__":

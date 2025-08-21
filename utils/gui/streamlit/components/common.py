@@ -1,5 +1,5 @@
 """
-Common UI utility functions and components
+Common UI utility functions and components.
 
 This module provides shared UI components and helper functions
 used across the Indaleko GUI.
@@ -40,7 +40,7 @@ def normalize_for_display(item):
     result = {}
     for key, value in item.items():
         # Skip complex nested objects or convert them to strings
-        if isinstance(value, (dict, list, tuple)) and key != "_key" and key != "_id":
+        if isinstance(value, (dict, list, tuple)) and key not in {"_key", "_id"}:
             # For complex objects, just store a string representation
             if isinstance(value, dict):
                 result[key] = "{...}"  # Dict representation
@@ -54,7 +54,7 @@ def normalize_for_display(item):
     return result
 
 
-def display_search_results(search_results):
+def display_search_results(search_results) -> None:
     """
     Display search results in the UI, with proper handling of different result types.
     This function uses a simple, direct approach that avoids dataframe conversion issues.
@@ -71,8 +71,8 @@ def display_search_results(search_results):
     if isinstance(search_results, dict) and (
         "_is_explain_result" in search_results
         or "plan" in search_results
-        or "nodes" in search_results
-        and len(search_results.get("nodes", [])) > 0
+        or ("nodes" in search_results
+        and len(search_results.get("nodes", [])) > 0)
     ):
         # It's a query plan, use dedicated display function
         display_query_plan(search_results)
@@ -91,7 +91,7 @@ def display_search_results(search_results):
             # Find common keys for headers (from first 5 items)
             for item in items_to_show[:5]:
                 if isinstance(item, dict):
-                    for key in item.keys():
+                    for key in item:
                         if key not in headers and not key.startswith("_"):
                             # Prioritize common fields
                             if key in ["Label", "name", "type", "size", "timestamp"]:
@@ -162,7 +162,7 @@ def display_search_results(search_results):
         st.code(str(search_results))
 
 
-def display_query_plan(explain_results):
+def display_query_plan(explain_results) -> None:
     """
     Dedicated function to display a query execution plan without using dataframes.
     This avoids PyArrow conversion errors by using Streamlit components directly.

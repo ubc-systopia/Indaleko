@@ -1,6 +1,6 @@
 """
 Project Indaleko
-Copyright (C) 2024-2025 Tony Mason
+Copyright (C) 2024-2025 Tony Mason.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import sys
 
 from pydantic import BaseModel
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,13 +36,12 @@ from query.query_processing.data_models.query_output import (
     LLMIntentQueryResponse,
 )
 
+
 # pylint: enable=wrong-import-position
 
 
 class ParserResults(BaseModel):
-    """
-    This data class is used to store the results from the NL parser.
-    """
+    """This data class is used to store the results from the NL parser."""
 
     OriginalQuery: str
     Intent: LLMIntentQueryResponse

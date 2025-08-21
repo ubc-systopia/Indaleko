@@ -23,6 +23,7 @@ import sys
 
 from pydantic import Field, field_validator
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,6 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.data_models.ambient_data_model import (
     BaseAmbientConditionDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 
@@ -102,13 +104,13 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     @field_validator("temperature", "target_temperature")
     @classmethod
     def validate_temperature(cls, value: float) -> float:
-        """Validate temperature is within reasonable bounds"""
+        """Validate temperature is within reasonable bounds."""
         if not -50.0 <= value <= 100.0:
             raise ValueError("Temperature must be between -50°C and 100°C")
         return round(value, 2)  # Round to 2 decimal places for consistency
 
     class Config:
-        """Configuration and example data for the thermostat sensor model"""
+        """Configuration and example data for the thermostat sensor model."""
 
         json_schema_extra = {
             "example": {
@@ -126,8 +128,8 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     ThermostatSensorData.test_model_main()
 
 

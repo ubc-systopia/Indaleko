@@ -1,15 +1,14 @@
 import json
 import logging
+
 from datetime import datetime
 from typing import Any
 
 
 class LoggingService:
-    """
-    A service for logging various events and metrics in the system.
-    """
+    """A service for logging various events and metrics in the system."""
 
-    def __init__(self, log_file: str = "upi_log.log", level: int = logging.INFO):
+    def __init__(self, log_file: str = "upi_log.log", level: int = logging.INFO) -> None:
         """
         Initialize the logging service.
 
@@ -32,7 +31,7 @@ class LoggingService:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
-    def log_query(self, query: str, metadata: dict[str, Any] = None):
+    def log_query(self, query: str, metadata: dict[str, Any] | None = None) -> None:
         """
         Log a user query.
 
@@ -49,7 +48,7 @@ class LoggingService:
             log_data.update(metadata)
         self.logger.info(json.dumps(log_data))
 
-    def log_result(self, query: str, num_results: int, execution_time: float):
+    def log_result(self, query: str, num_results: int, execution_time: float) -> None:
         """
         Log the results of a query.
 
@@ -67,7 +66,7 @@ class LoggingService:
         }
         self.logger.info(json.dumps(log_data))
 
-    def log_error(self, error_message: str, error_type: str, stack_trace: str = None):
+    def log_error(self, error_message: str, error_type: str, stack_trace: str | None = None) -> None:
         """
         Log an error that occurred in the system.
 
@@ -86,7 +85,7 @@ class LoggingService:
             log_data["stack_trace"] = stack_trace
         self.logger.error(json.dumps(log_data))
 
-    def log_system_metric(self, metric_name: str, metric_value: Any):
+    def log_system_metric(self, metric_name: str, metric_value: Any) -> None:
         """
         Log a system metric.
 
@@ -102,7 +101,7 @@ class LoggingService:
         }
         self.logger.info(json.dumps(log_data))
 
-    def log_user_action(self, action: str, metadata: dict[str, Any] = None):
+    def log_user_action(self, action: str, metadata: dict[str, Any] | None = None) -> None:
         """
         Log a user action.
 
